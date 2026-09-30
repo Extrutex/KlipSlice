@@ -108,7 +108,7 @@
   "model": "Anycubic Kobra S1",
   "stock_firmware": "GoKlipper (Kobra OS)",
   "moonraker": "root/mod",
-  "mod_project": "3DW VanillaKlipper (maintainer's KS1 project) and Rinkhals + app-vanilla-klipper: https://github.com/rinkhals-community/Rinkhals",
+  "mod_project": "Rinkhals + app-vanilla-klipper: https://github.com/rinkhals-community/Rinkhals",
   "sources": [
    "https://github.com/rinkhals-community/Rinkhals/",
    "https://blog.octoeverywhere.com/how-to-install-klipper-on-your-anycubic-3d-printer/"
