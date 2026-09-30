@@ -2213,13 +2213,7 @@ wxBoxSizer* MainFrame::create_side_tools()
             bool slice = true;
 
             auto curr_plate = m_plater->get_partplate_list().get_curr_plate();
-            #ifdef __linux__
-                PresetBundle* preset = wxGetApp().preset_bundle;
-                bool force_show_fila_group_dlg        = (preset && preset->is_bbl_vendor() && preset->get_printer_extruder_count() == 2);
-                slice = try_pop_up_before_slice(m_slice_select == eSliceAll, m_plater, curr_plate, force_show_fila_group_dlg);
-            #else
-                slice = try_pop_up_before_slice(m_slice_select == eSliceAll, m_plater, curr_plate, false);
-            #endif
+            slice = try_pop_up_before_slice(m_slice_select == eSliceAll, m_plater, curr_plate, false);
 
             if (slice) {
                 if (m_slice_select == eSliceAll)

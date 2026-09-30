@@ -414,7 +414,6 @@ public:
                                                    t_config_option_keys *keys = nullptr);
     std::string get_printer_id() const { return vendor ? vendor->id : ""; }
 
-    bool has_lidar(PresetBundle *preset_bundle);
     bool is_custom_defined();
 
     BedType get_default_bed_type(PresetBundle *preset_bundle);

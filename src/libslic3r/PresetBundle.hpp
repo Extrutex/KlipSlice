@@ -354,7 +354,8 @@ public:
     // Orca: get vendor type
     VendorType get_current_vendor_type();
     // Vendor related handy functions
-    bool is_bbl_vendor() { return get_current_vendor_type() == VendorType::Marlin_BBL; }
+    // KLIPSLICE: no Bambu Lab vendor ships, so this is always false. Removed entirely in H2.
+    bool is_bbl_vendor() { return false; }
 
     // Whether using bbl network for print upload
     bool use_bbl_network();

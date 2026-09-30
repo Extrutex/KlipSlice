@@ -757,11 +757,6 @@ Slic3r::GUI::PageShp Tab::add_options_page(const wxString& title, const std::str
 wxString Tab::translate_category(const wxString& title, Preset::Type preset_type)
 {
     if (preset_type == Preset::TYPE_PRINTER && title.Contains("Extruder ")) {
-        auto preset = wxGetApp().preset_bundle;
-        if (preset && preset->is_bbl_vendor()) {
-            if (title == "Extruder 1") return _("Left Extruder");
-            if (title == "Extruder 2") return _("Right Extruder");
-        }
         return _("Extruder") + title.SubString(8, title.Last());
     }
     return _(title);
@@ -2286,32 +2281,6 @@ void Tab::on_value_change(const std::string& opt_key, const boost::any& value)
         }
     }
 
-    // Orca: allow different layer height for non-bbl printers
-    // TODO: allow this for BBL printers too?
-    if (m_preset_bundle->get_printer_extruder_count() > 1 && m_preset_bundle->is_bbl_vendor()) {
-        int extruder_idx = std::atoi(opt_key.substr(opt_key.find_last_of('#') + 1).c_str());
-        if (opt_key.find("min_layer_height") != std::string::npos) {
-            auto min_layer_height_from_nozzle = m_preset_bundle->full_config().option<ConfigOptionFloats>("min_layer_height")->values;
-            if (extruder_idx < min_layer_height_from_nozzle.size()) {
-                double value = min_layer_height_from_nozzle[extruder_idx];
-                std::fill(min_layer_height_from_nozzle.begin(), min_layer_height_from_nozzle.end(), value);
-            }
-            auto new_conf = *m_config;
-            new_conf.set_key_value("min_layer_height", new ConfigOptionFloats(min_layer_height_from_nozzle));
-            m_config_manipulation.apply(m_config, &new_conf);
-        }
-        else if (opt_key.find("max_layer_height") != std::string::npos) {
-            auto max_layer_height_from_nozzle = m_preset_bundle->full_config().option<ConfigOptionFloats>("max_layer_height")->values;
-            if (extruder_idx < max_layer_height_from_nozzle.size()) {
-                double value = max_layer_height_from_nozzle[extruder_idx];
-                std::fill(max_layer_height_from_nozzle.begin(), max_layer_height_from_nozzle.end(), value);
-            }
-            auto new_conf = *m_config;
-            new_conf.set_key_value("max_layer_height", new ConfigOptionFloats(max_layer_height_from_nozzle));
-            m_config_manipulation.apply(m_config, &new_conf);
-        }
-    }
-
     if (opt_key == "parallel_printheads_count" || opt_key == "parallel_printheads_bed_exclude_areas") {
         if (m_config->opt_bool("support_parallel_printheads")) {
             const int count = opt_key == "parallel_printheads_count" ? boost::any_cast<int>(value) : m_config->opt_int("parallel_printheads_count");
@@ -2506,18 +2475,8 @@ void Tab::on_presets_changed()
         }
     }
 
-    bool is_bbl_vendor_preset = m_preset_bundle->is_bbl_vendor();
-    if (is_bbl_vendor_preset) {
-        wxGetApp().plater()->get_partplate_list().set_render_option(true, true);
-        if (m_preset_bundle->printers.get_edited_preset().has_cali_lines(wxGetApp().preset_bundle)) {
-            wxGetApp().plater()->get_partplate_list().set_render_cali(true);
-        } else {
-            wxGetApp().plater()->get_partplate_list().set_render_cali(false);
-        }
-    } else {
-        wxGetApp().plater()->get_partplate_list().set_render_option(false, true);
-        wxGetApp().plater()->get_partplate_list().set_render_cali(false);
-    }
+    wxGetApp().plater()->get_partplate_list().set_render_option(false, true);
+    wxGetApp().plater()->get_partplate_list().set_render_cali(false);
 
     // Printer selected at the Printer tab, update "compatible" marks at the print and filament selectors.
     for (auto t: m_dependent_tabs)

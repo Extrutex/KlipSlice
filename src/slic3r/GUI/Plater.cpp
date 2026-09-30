@@ -993,9 +993,7 @@ void Sidebar::priv::layout_printer(bool isBBL, bool isDual)
     // ORCA show plate type combo box only when its supported
     PresetBundle &preset_bundle = *wxGetApp().preset_bundle;
     const auto& cfg = preset_bundle.printers.get_edited_preset().config;
-    // Orca: we use preset_bundle.is_bbl_vendor() instead of isBBL to determine if the plate type combo box should be shown
-    // ref: https://github.com/OrcaSlicer/OrcaSlicer/pull/11610#discussion_r2607411847
-    panel_printer_bed->Show(preset_bundle.is_bbl_vendor() || cfg.opt_bool("support_multi_bed_types"));
+    panel_printer_bed->Show(cfg.opt_bool("support_multi_bed_types"));
 
     extruder_dual_sizer->Show(isDual);
 
@@ -1006,9 +1004,8 @@ void Sidebar::priv::layout_printer(bool isBBL, bool isDual)
         int extruder_count = 0;
         const bool has_flow_variant = cfg.support_different_extruders(extruder_count);
 
-        // ORCA: a non-Bambu printer with several extruders lists one nozzle row per tool; Bambu's own
-        // multi-extruder printers keep the left/right pair above.
-        const bool multi_extruder_rows = !preset_bundle.is_bbl_vendor() && extruder_count > 1;
+        // ORCA: a printer with several extruders lists one nozzle row per tool.
+        const bool multi_extruder_rows = extruder_count > 1;
 
         // The variant box switches the machine variant. The card below lists the nozzles when there
         // are flow variants to choose or several extruders to show; otherwise the box says it all.
@@ -1819,14 +1816,6 @@ bool Sidebar::priv::switch_diameter_to(const wxString &diameter)
     preset->is_visible = true; // force visible
     return wxGetApp().get_tab(Preset::TYPE_PRINTER)->select_preset(preset->name);
 }
-
-static bool is_skip_high_flow_printer(const std::string& printer)
-{
-    static const std::set<std::string> invalidate_list = {
-        "Bambu Lab X1E"
-    };
-    return invalidate_list.count(printer);
-};
 
 // ---- Multi-nozzle sync helpers ----------------------------
 // Serialize/deserialize the machine nozzle config + chosen NozzleOption for the app_config
@@ -3661,8 +3650,6 @@ void Sidebar::update_all_preset_comboboxes()
     PresetBundle &preset_bundle = *wxGetApp().preset_bundle;
     const auto print_tech = preset_bundle.printers.get_edited_preset().printer_technology();
 
-    bool is_bbl_vendor = preset_bundle.is_bbl_vendor();
-
     auto p_mainframe = wxGetApp().mainframe;
     auto cfg = preset_bundle.printers.get_edited_preset().config;
     const bool use_printer_agents = wxGetApp().app_config->get_bool("use_printer_agents");
@@ -3728,7 +3715,7 @@ void Sidebar::update_all_preset_comboboxes()
 
     //p->m_staticText_filament_settings->Update();
 
-    if (is_bbl_vendor || cfg.opt_bool("support_multi_bed_types")) {
+    if (cfg.opt_bool("support_multi_bed_types")) {
         p->combo_printer_bed->Enable();
         // Orca: don't update bed type if loading project
         if (!p->plater->is_loading_project()) {
@@ -3760,7 +3747,7 @@ void Sidebar::update_all_preset_comboboxes()
     }
 
     // ORCA Hide plate selector if not supported by printer
-    p->panel_printer_bed->Show(is_bbl_vendor || cfg.opt_bool("support_multi_bed_types"));
+    p->panel_printer_bed->Show(cfg.opt_bool("support_multi_bed_types"));
 
     // Update the print choosers to only contain the compatible presets, update the dirty flags.
     //BBS
@@ -3860,14 +3847,12 @@ void Sidebar::update_presets(Preset::Type preset_type)
         // Update dual extrudes
         auto* nozzle_diameter = dynamic_cast<const ConfigOptionFloats*>(printer_preset.config.option("nozzle_diameter"));
         auto extruder_variants = printer_preset.config.option<ConfigOptionStrings>("extruder_variant_list");
-        std::string printer_model = printer_preset.config.option<ConfigOptionString>("printer_model")->value;
 
-        bool isBBL = preset_bundle.is_bbl_vendor();
         bool is_dual_extruder = extruder_variants->size() == 2;
         // why: agent mode drives the native device tab, so the sidebar lays out like BBL
         // (no physical-printer connect button).
         p->layout_printer(preset_bundle.use_bbl_network() || wxGetApp().app_config->get_bool("use_printer_agents"),
-                          isBBL && is_dual_extruder);
+                          false);
 
         // Update nozzle titles from printer config (e.g. "Main Nozzle" / "Auxiliary Nozzle" for N6)
         // UI left = DEPUTY_EXTRUDER_ID(1), UI right = MAIN_EXTRUDER_ID(0)
@@ -3886,7 +3871,7 @@ void Sidebar::update_presets(Preset::Type preset_type)
         auto diameters = wxGetApp().preset_bundle->printers.diameters_of_selected_printer();
         auto diameter = printer_preset.config.opt_string("printer_variant");
         auto extruder_max_nozzle_count = printer_preset.config.option<ConfigOptionIntsNullable>("extruder_max_nozzle_count");
-        auto update_extruder_variant = [printer_model, extruders_def, extruders, nozzle_volumes_def, nozzle_volumes, extruder_variants,diameter,extruder_max_nozzle_count](ExtruderGroup & extruder, size_t row, int index) {
+        auto update_extruder_variant = [extruders_def, extruders, nozzle_volumes_def, nozzle_volumes, extruder_variants,diameter,extruder_max_nozzle_count](ExtruderGroup & extruder, size_t row, int index) {
             ComboBox *combo_flow = extruder.rows[row].flow;
             combo_flow->Clear();
             // A profile may leave the per-extruder lists shorter than the nozzle count (they are
@@ -3909,8 +3894,7 @@ void Sidebar::update_presets(Preset::Type preset_type)
                     // Defensive: profiles restrict E3D to 0.4 / 0.6; keep it out elsewhere.
                     if (cur_volume_type == NozzleVolumeType::nvtE3DHighFlow && diameter != "0.4" && diameter != "0.6")
                         continue;
-                    if (cur_volume_type == NozzleVolumeType::nvtHighFlow && (diameter == "0.2" ||
-                        is_skip_high_flow_printer(printer_model)))
+                    if (cur_volume_type == NozzleVolumeType::nvtHighFlow && diameter == "0.2")
                         continue;
                     // The client data is the enum value, not the label position: E3D High Flow is 5
                     // but sits at position 4, and a position would write an invalid type.
@@ -6333,10 +6317,9 @@ void Sidebar::sync_ams_list(bool is_from_big_sync_btn)
 bool Sidebar::should_show_SEMM_buttons()
 {
     PresetBundle &preset_bundle = *wxGetApp().preset_bundle;
-    bool is_bbl_vendor = preset_bundle.is_bbl_vendor();
     auto cfg = preset_bundle.printers.get_edited_preset().config;
 
-    return cfg.opt_bool("single_extruder_multi_material") || is_bbl_vendor;
+    return cfg.opt_bool("single_extruder_multi_material");
 }
 
 void Sidebar::show_SEMM_buttons()
@@ -9397,13 +9380,6 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                             ConfigOption* bed_type_opt = preset_bundle->project_config.option("curr_bed_type");
                             if (bed_type_opt != nullptr) {
                                 BedType bed_type = (BedType)bed_type_opt->getInt();
-                                // update app config for bed type
-                                bool is_bbl_preset = preset_bundle->is_bbl_vendor();
-                                if (is_bbl_preset) {
-                                    AppConfig* app_config = wxGetApp().app_config;
-                                    if (app_config)
-                                        app_config->set("curr_bed_type", std::to_string(int(bed_type)));
-                                }
                                 q->on_bed_type_change(bed_type);
                             }
 
