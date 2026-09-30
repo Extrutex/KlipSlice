@@ -671,17 +671,17 @@ jobs:
 
       - name: Run external slicer regression tests
         if: runner.os == 'Linux' && inputs.arch != 'aarch64'
-        # The upstream orca-test-repo cases load Bambu projects whose printer
-        # presets KLIPSLICE no longer ships, and the CLI currently crashes on
-        # them. Non-blocking until that crash is fixed.
+        # The "worker crashed" failures were not a CLI crash: the suite seeds
+        # its datadir with the BBL vendor KLIPSLICE no longer ships, so the
+        # seed fixture called pytest.exit() on every worker. run.sh seeds from
+        # the Custom vendor and skips the Bambu-only cases with a reason.
+        # Non-blocking until the first green Linux run of the adapted suite.
         continue-on-error: true
         timeout-minutes: 20
         shell: bash
         run: |
-          test_repo_dir="${{ runner.temp }}/orca-test-repo"
-          rm -rf "$test_repo_dir"
-          git clone --depth 1 https://github.com/OrcaSlicer/orca-test-repo.git "$test_repo_dir"
-          python3 "$test_repo_dir/run_test.py" "${{ github.workspace }}/build/package/bin/klipslice"
+          bash "${{ github.workspace }}/tests/orca-test-repo/run.sh" \
+            "${{ github.workspace }}/build/package/bin/klipslice" "${{ runner.temp }}"
 
       - name: Build orca_custom_preset_tests
         if: github.ref == 'refs/heads/main' && runner.os == 'Linux' && !vars.SELF_HOSTED && inputs.arch != 'aarch64'
