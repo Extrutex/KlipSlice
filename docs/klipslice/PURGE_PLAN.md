@@ -312,3 +312,9 @@ Every commit that removes files also removes their `src/slic3r/CMakeLists.txt` e
 - About 40 commits and roughly −60k to −70k lines, not counting Stage 2.
 - Riskiest commits: D2 and D3 (StatusPanel/Monitor hand edits), E1 (GUI_App), F3 (ConfigWizard.hpp sits in GUI_App.hpp) and H4 (macOS `-Werror`).
 - There is no local compiler, so every commit needs at least a green L run. Commits that touch structure (A4, A5, C1, D2, E1, E4, F3, G6, H5) also need W and M.
+## 5. Owner decisions (2026-09-30)
+
+- **Name:** KLIPSLICE stays the product name (A4 uses `KLIPSLICE` / `klipslice` / `de.3dwindt.KLIPSLICE`).
+- **D2 vendors:** keep the Creality/Elegoo/Qidi/Snapmaker/Flashforge Klipper printers, but route them all through Moonraker. Their own agents and hosts go (G3–G5 run; H1 rewrites host_type to moonraker).
+- **D1 device tab:** no HORIZON embedding. Keep the native Moonraker agent path for now; Stage 2 is not scheduled.
+- **D3 Orca cloud:** keep for now. E5 is not scheduled.
