@@ -5,36 +5,8 @@
 	"description": "Artillery configurations",
 	"machine_model_list": [
 		{
-			"name": "Artillery Genius",
-			"sub_path": "machine/Artillery Genius.json"
-		},
-		{
-			"name": "Artillery Genius Pro",
-			"sub_path": "machine/Artillery Genius Pro.json"
-		},
-		{
-			"name": "Artillery Hornet",
-			"sub_path": "machine/Artillery Hornet.json"
-		},
-		{
 			"name": "Artillery M1 Pro",
 			"sub_path": "machine/Artillery M1 Pro.json"
-		},
-		{
-			"name": "Artillery Sidewinder X1",
-			"sub_path": "machine/Artillery Sidewinder X1.json"
-		},
-		{
-			"name": "Artillery Sidewinder X2",
-			"sub_path": "machine/Artillery Sidewinder X2.json"
-		},
-		{
-			"name": "Artillery Sidewinder X3 Plus",
-			"sub_path": "machine/Artillery Sidewinder X3 Plus.json"
-		},
-		{
-			"name": "Artillery Sidewinder X3 Pro",
-			"sub_path": "machine/Artillery Sidewinder X3 Pro.json"
 		},
 		{
 			"name": "Artillery Sidewinder X4 Plus",
@@ -151,60 +123,20 @@
 			"sub_path": "process/0.12mm High Quality @Artillery M1 Pro 0.4 nozzle.json"
 		},
 		{
-			"name": "0.15mm Optimal @Artillery Genius",
-			"sub_path": "process/0.15mm Optimal @Artillery Genius.json"
-		},
-		{
-			"name": "0.15mm Optimal @Artillery Genius Pro",
-			"sub_path": "process/0.15mm Optimal @Artillery Genius Pro.json"
-		},
-		{
 			"name": "0.16mm High Quality @Artillery M1 Pro 0.4 nozzle",
 			"sub_path": "process/0.16mm High Quality @Artillery M1 Pro 0.4 nozzle.json"
-		},
-		{
-			"name": "0.16mm Optimal @Artillery Hornet",
-			"sub_path": "process/0.16mm Optimal @Artillery Hornet.json"
 		},
 		{
 			"name": "0.16mm Optimal @Artillery M1 Pro 0.4 nozzle",
 			"sub_path": "process/0.16mm Optimal @Artillery M1 Pro 0.4 nozzle.json"
 		},
 		{
-			"name": "0.16mm Optimal @Artillery X1",
-			"sub_path": "process/0.16mm Optimal @Artillery X1.json"
-		},
-		{
 			"name": "0.20mm Standard @Artillery Genius",
 			"sub_path": "process/0.20mm Standard @Artillery Genius.json"
 		},
 		{
-			"name": "0.20mm Standard @Artillery Genius Pro",
-			"sub_path": "process/0.20mm Standard @Artillery Genius Pro.json"
-		},
-		{
-			"name": "0.20mm Standard @Artillery Hornet",
-			"sub_path": "process/0.20mm Standard @Artillery Hornet.json"
-		},
-		{
 			"name": "0.20mm Standard @Artillery M1 Pro 0.4 nozzle",
 			"sub_path": "process/0.20mm Standard @Artillery M1 Pro 0.4 nozzle.json"
-		},
-		{
-			"name": "0.20mm Standard @Artillery X1",
-			"sub_path": "process/0.20mm Standard @Artillery X1.json"
-		},
-		{
-			"name": "0.20mm Standard @Artillery X2",
-			"sub_path": "process/0.20mm Standard @Artillery X2.json"
-		},
-		{
-			"name": "0.20mm Standard @Artillery X3Plus 0.4 nozzle",
-			"sub_path": "process/0.20mm Standard @Artillery X3Plus 0.4 nozzle.json"
-		},
-		{
-			"name": "0.20mm Standard @Artillery X3Pro 0.4 nozzle",
-			"sub_path": "process/0.20mm Standard @Artillery X3Pro 0.4 nozzle.json"
 		},
 		{
 			"name": "0.20mm Standard @Artillery X4Plus 0.4 nozzle",
@@ -219,24 +151,8 @@
 			"sub_path": "process/0.20mm Strength @Artillery M1 Pro 0.4 nozzle.json"
 		},
 		{
-			"name": "0.24mm Draft @Artillery Hornet",
-			"sub_path": "process/0.24mm Draft @Artillery Hornet.json"
-		},
-		{
 			"name": "0.24mm Draft @Artillery M1 Pro 0.4 nozzle",
 			"sub_path": "process/0.24mm Draft @Artillery M1 Pro 0.4 nozzle.json"
-		},
-		{
-			"name": "0.24mm Draft @Artillery X1",
-			"sub_path": "process/0.24mm Draft @Artillery X1.json"
-		},
-		{
-			"name": "0.25mm Draft @Artillery Genius",
-			"sub_path": "process/0.25mm Draft @Artillery Genius.json"
-		},
-		{
-			"name": "0.25mm Draft @Artillery Genius Pro",
-			"sub_path": "process/0.25mm Draft @Artillery Genius Pro.json"
 		},
 		{
 			"name": "0.28mm Extra Draft @Artillery M1 Pro 0.4 nozzle",
@@ -369,48 +285,12 @@
 			"sub_path": "filament/Artillery PLA Silk @Artillery M1 Pro 0.8 nozzle.json"
 		},
 		{
-			"name": "fdm_filament_abs",
-			"sub_path": "filament/fdm_filament_abs.json"
-		},
-		{
-			"name": "fdm_filament_asa",
-			"sub_path": "filament/fdm_filament_asa.json"
-		},
-		{
-			"name": "fdm_filament_pet",
-			"sub_path": "filament/fdm_filament_pet.json"
-		},
-		{
 			"name": "fdm_filament_pla",
 			"sub_path": "filament/fdm_filament_pla.json"
 		},
 		{
-			"name": "fdm_filament_tpu",
-			"sub_path": "filament/fdm_filament_tpu.json"
-		},
-		{
-			"name": "Generic ABS @Artillery",
-			"sub_path": "filament/Generic ABS @Artillery.json"
-		},
-		{
-			"name": "Generic ASA @Artillery",
-			"sub_path": "filament/Generic ASA @Artillery.json"
-		},
-		{
-			"name": "Generic PETG @Artillery",
-			"sub_path": "filament/Generic PETG @Artillery.json"
-		},
-		{
 			"name": "Generic PLA @Artillery",
 			"sub_path": "filament/Generic PLA @Artillery.json"
-		},
-		{
-			"name": "Generic PLA-CF @Artillery",
-			"sub_path": "filament/Generic PLA-CF @Artillery.json"
-		},
-		{
-			"name": "Generic TPU @Artillery",
-			"sub_path": "filament/Generic TPU @Artillery.json"
 		},
 		{
 			"name": "Artillery ABS",
@@ -591,36 +471,8 @@
 			"sub_path": "machine/fdm_machine_common.json"
 		},
 		{
-			"name": "Artillery Genius 0.4 nozzle",
-			"sub_path": "machine/Artillery Genius 0.4 nozzle.json"
-		},
-		{
-			"name": "Artillery Genius Pro 0.4 nozzle",
-			"sub_path": "machine/Artillery Genius Pro 0.4 nozzle.json"
-		},
-		{
-			"name": "Artillery Hornet 0.4 nozzle",
-			"sub_path": "machine/Artillery Hornet 0.4 nozzle.json"
-		},
-		{
 			"name": "Artillery M1 Pro 0.4 nozzle",
 			"sub_path": "machine/Artillery M1 Pro 0.4 nozzle.json"
-		},
-		{
-			"name": "Artillery Sidewinder X1 0.4 nozzle",
-			"sub_path": "machine/Artillery Sidewinder X1 0.4 nozzle.json"
-		},
-		{
-			"name": "Artillery Sidewinder X2 0.4 nozzle",
-			"sub_path": "machine/Artillery Sidewinder X2 0.4 nozzle.json"
-		},
-		{
-			"name": "Artillery Sidewinder X3 Plus 0.4 nozzle",
-			"sub_path": "machine/Artillery Sidewinder X3 Plus 0.4 nozzle.json"
-		},
-		{
-			"name": "Artillery Sidewinder X3 Pro 0.4 nozzle",
-			"sub_path": "machine/Artillery Sidewinder X3 Pro 0.4 nozzle.json"
 		},
 		{
 			"name": "Artillery Sidewinder X4 Plus 0.4 nozzle",

@@ -7,10 +7,6 @@
 		{
 			"name": "Troodon 2.0 - Klipper",
 			"sub_path": "machine/Troodon2Klipper.json"
-		},
-		{
-			"name": "Troodon 2.0 - RRF",
-			"sub_path": "machine/Troodon2RRF.json"
 		}
 	],
 	"process_list": [
@@ -58,16 +54,8 @@
 			"sub_path": "machine/fdm_klipper_common.json"
 		},
 		{
-			"name": "fdm_rrf_common",
-			"sub_path": "machine/fdm_rrf_common.json"
-		},
-		{
 			"name": "Troodon 2.0 Klipper 0.4 nozzle",
 			"sub_path": "machine/Troodon 2.0 Klipper 0.4 nozzle.json"
-		},
-		{
-			"name": "Troodon 2.0 RRF 0.4 nozzle",
-			"sub_path": "machine/Troodon 2.0 RRF 0.4 nozzle.json"
 		}
 	]
 }

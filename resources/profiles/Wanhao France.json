@@ -5,18 +5,6 @@
 	"description": "Wanhao France D12 configurations",
 	"machine_model_list": [
 		{
-			"name": "D12 230 PRO M2 DIRECT",
-			"sub_path": "machine/D12 230 PRO M2 DIRECT.json"
-		},
-		{
-			"name": "D12 230 PRO M2 MONO DUAL",
-			"sub_path": "machine/D12 230 PRO M2 MONO DUAL.json"
-		},
-		{
-			"name": "D12 230 PRO M2 MONO DUAL PoopTool",
-			"sub_path": "machine/D12 230 PRO M2 MONO DUAL PoopTool.json"
-		},
-		{
 			"name": "D12 230 PRO SMARTPAD DIRECT",
 			"sub_path": "machine/D12 230 PRO SMARTPAD DIRECT.json"
 		},
@@ -29,18 +17,6 @@
 			"sub_path": "machine/D12 230 PRO SMARTPAD MONO DUAL PoopTool.json"
 		},
 		{
-			"name": "D12 300 PRO M2 DIRECT",
-			"sub_path": "machine/D12 300 PRO M2 DIRECT.json"
-		},
-		{
-			"name": "D12 300 PRO M2 MONO DUAL",
-			"sub_path": "machine/D12 300 PRO M2 MONO DUAL.json"
-		},
-		{
-			"name": "D12 300 PRO M2 MONO DUAL PoopTool",
-			"sub_path": "machine/D12 300 PRO M2 MONO DUAL PoopTool.json"
-		},
-		{
 			"name": "D12 300 PRO SMARTPAD DIRECT",
 			"sub_path": "machine/D12 300 PRO SMARTPAD DIRECT.json"
 		},
@@ -51,18 +27,6 @@
 		{
 			"name": "D12 300 PRO SMARTPAD MONO DUAL PoopTool",
 			"sub_path": "machine/D12 300 PRO SMARTPAD MONO DUAL PoopTool.json"
-		},
-		{
-			"name": "D12 500 PRO M2 DIRECT",
-			"sub_path": "machine/D12 500 PRO M2 DIRECT.json"
-		},
-		{
-			"name": "D12 500 PRO M2 MONO DUAL",
-			"sub_path": "machine/D12 500 PRO M2 MONO DUAL.json"
-		},
-		{
-			"name": "D12 500 PRO M2 MONO DUAL PoopTool",
-			"sub_path": "machine/D12 500 PRO M2 MONO DUAL PoopTool.json"
 		},
 		{
 			"name": "D12 500 PRO SMARTPAD DIRECT",
@@ -149,32 +113,12 @@
 			"sub_path": "filament/fdm_filament_common.json"
 		},
 		{
-			"name": "fdm_filament_abs",
-			"sub_path": "filament/fdm_filament_abs.json"
-		},
-		{
-			"name": "fdm_filament_asa",
-			"sub_path": "filament/fdm_filament_asa.json"
-		},
-		{
-			"name": "fdm_filament_pa",
-			"sub_path": "filament/fdm_filament_pa.json"
-		},
-		{
-			"name": "fdm_filament_pc",
-			"sub_path": "filament/fdm_filament_pc.json"
-		},
-		{
 			"name": "fdm_filament_pet",
 			"sub_path": "filament/fdm_filament_pet.json"
 		},
 		{
 			"name": "fdm_filament_pla",
 			"sub_path": "filament/fdm_filament_pla.json"
-		},
-		{
-			"name": "fdm_filament_tpu",
-			"sub_path": "filament/fdm_filament_tpu.json"
 		},
 		{
 			"name": "Generic PETG @Yumi",
@@ -203,18 +147,6 @@
 			"sub_path": "machine/fdm_machine_common.json"
 		},
 		{
-			"name": "D12 230 PRO M2 DIRECT 0.4 nozzle",
-			"sub_path": "machine/D12 230 PRO M2 DIRECT 0.4 nozzle.json"
-		},
-		{
-			"name": "D12 230 PRO M2 MONO DUAL 0.4 nozzle",
-			"sub_path": "machine/D12 230 PRO M2 MONO DUAL 0.4 nozzle.json"
-		},
-		{
-			"name": "D12 230 PRO M2 MONO DUAL 0.4 nozzle PoopTool",
-			"sub_path": "machine/D12 230 PRO M2 MONO DUAL 0.4 nozzle PoopTool.json"
-		},
-		{
 			"name": "D12 230 PRO SMARTPAD DIRECT 0.4 nozzle",
 			"sub_path": "machine/D12 230 PRO SMARTPAD DIRECT 0.4 nozzle.json"
 		},
@@ -227,18 +159,6 @@
 			"sub_path": "machine/D12 230 PRO SMARTPAD MONO DUAL 0.4 nozzle PoopTool.json"
 		},
 		{
-			"name": "D12 300 PRO M2 DIRECT 0.4 nozzle",
-			"sub_path": "machine/D12 300 PRO M2 DIRECT 0.4 nozzle.json"
-		},
-		{
-			"name": "D12 300 PRO M2 MONO DUAL 0.4 nozzle",
-			"sub_path": "machine/D12 300 PRO M2 MONO DUAL 0.4 nozzle.json"
-		},
-		{
-			"name": "D12 300 PRO M2 MONO DUAL PoopTool 0.4 nozzle",
-			"sub_path": "machine/D12 300 PRO M2 MONO DUAL PoopTool 0.4 nozzle.json"
-		},
-		{
 			"name": "D12 300 PRO SMARTPAD DIRECT 0.4 nozzle",
 			"sub_path": "machine/D12 300 PRO SMARTPAD DIRECT 0.4 nozzle.json"
 		},
@@ -249,18 +169,6 @@
 		{
 			"name": "D12 300 PRO SMARTPAD MONO DUAL PoopTool 0.4 nozzle",
 			"sub_path": "machine/D12 300 PRO SMARTPAD MONO DUAL PoopTool 0.4 nozzle.json"
-		},
-		{
-			"name": "D12 500 PRO M2 DIRECT 0.4 nozzle",
-			"sub_path": "machine/D12 500 PRO M2 DIRECT 0.4 nozzle.json"
-		},
-		{
-			"name": "D12 500 PRO M2 MONO DUAL 0.4 nozzle",
-			"sub_path": "machine/D12 500 PRO M2 MONO DUAL 0.4 nozzle.json"
-		},
-		{
-			"name": "D12 500 PRO M2 MONO DUAL PoopTool 0.4 nozzle",
-			"sub_path": "machine/D12 500 PRO M2 MONO DUAL PoopTool 0.4 nozzle.json"
 		},
 		{
 			"name": "D12 500 PRO SMARTPAD DIRECT 0.4 nozzle",

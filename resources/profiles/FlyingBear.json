@@ -5,10 +5,6 @@
 	"description": "FlyingBear configurations",
 	"machine_model_list": [
 		{
-			"name": "FlyingBear Ghost 6",
-			"sub_path": "machine/FlyingBear Ghost 6.json"
-		},
-		{
 			"name": "FlyingBear Ghost7",
 			"sub_path": "machine/Ghost7/FlyingBear Ghost7.json"
 		},
@@ -55,10 +51,6 @@
 			"sub_path": "process/0.24mm Draft @FlyingBear Reborn3.json"
 		},
 		{
-			"name": "fdm_process_marlin_common",
-			"sub_path": "process/fdm_process_marlin_common.json"
-		},
-		{
 			"name": "0.08mm Extra Fine @FlyingBear Ghost7",
 			"sub_path": "process/Ghost7/0.08mm Extra Fine @FlyingBear Ghost7.json"
 		},
@@ -97,26 +89,6 @@
 		{
 			"name": "0.24mm Draft @FlyingBear S1",
 			"sub_path": "process/S1/0.24mm Draft @FlyingBear S1.json"
-		},
-		{
-			"name": "fdm_process_ghost_6",
-			"sub_path": "process/fdm_process_ghost_6.json"
-		},
-		{
-			"name": "0.12mm Fine @FlyingBear Ghost 6 0.4 nozzle",
-			"sub_path": "process/0.12mm Fine @FlyingBear Ghost 6 0.4 nozzle.json"
-		},
-		{
-			"name": "0.16mm Optimal @FlyingBear Ghost 6 0.4 nozzle",
-			"sub_path": "process/0.16mm Optimal @FlyingBear Ghost 6 0.4 nozzle.json"
-		},
-		{
-			"name": "0.20mm Standard @FlyingBear Ghost 6 0.4 nozzle",
-			"sub_path": "process/0.20mm Standard @FlyingBear Ghost 6 0.4 nozzle.json"
-		},
-		{
-			"name": "0.24mm Draft @FlyingBear Ghost 6 0.4 nozzle",
-			"sub_path": "process/0.24mm Draft @FlyingBear Ghost 6 0.4 nozzle.json"
 		}
 	],
 	"filament_list": [
@@ -363,16 +335,8 @@
 			"sub_path": "machine/fdm_machine_common.json"
 		},
 		{
-			"name": "fdm_marlin_common",
-			"sub_path": "machine/fdm_marlin_common.json"
-		},
-		{
 			"name": "fdm_klipper_common",
 			"sub_path": "machine/fdm_klipper_common.json"
-		},
-		{
-			"name": "FlyingBear Ghost 6 0.4 nozzle",
-			"sub_path": "machine/FlyingBear Ghost 6 0.4 nozzle.json"
 		},
 		{
 			"name": "FlyingBear Ghost7 0.4 nozzle",
