@@ -318,3 +318,5 @@ Every commit that removes files also removes their `src/slic3r/CMakeLists.txt` e
 - **D2 vendors:** keep the Creality/Elegoo/Qidi/Snapmaker/Flashforge Klipper printers, but route them all through Moonraker. Their own agents and hosts go (G3–G5 run; H1 rewrites host_type to moonraker).
 - **D1 device tab:** no HORIZON embedding. Keep the native Moonraker agent path for now; Stage 2 is not scheduled.
 - **D3 Orca cloud:** keep for now. E5 is not scheduled.
+- **Custom printers (2026-09-30):** anyone must be able to create their own Klipper printer freely — converted machines (e.g. an Ender-3 or Prusa MK3 running Klipper) included. Keep `Custom/Generic Klipper Printer` and `Generic ToolChanger Printer`, keep the "Create printer" dialog working, and keep the full brand/model list in `CreatePresetsDialog.cpp` (do not trim it to stock-Klipper vendors). Flavor is always Klipper, host always Moonraker.
+- **System printer profiles** ship only for models that verifiably run real Klipper (stock or via an established mod); evidence per model in `docs/klipslice/printer-firmware.json`.
