@@ -2202,9 +2202,6 @@ void PreferencesDialog::create_items()
     auto associate_url_prusa   = create_item_link_association(L"prusaslicer", "Printables.com");
     g_sizer->Add(associate_url_prusa);
 
-    auto associate_url_bambu   = create_item_link_association(L"bambustudio", "Makerworld.com");
-    g_sizer->Add(associate_url_bambu);
-
     auto associate_url_cura    = create_item_link_association(L"cura", "Thingiverse.com");
     g_sizer->Add(associate_url_cura);
 

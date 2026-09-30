@@ -9,14 +9,14 @@ Requires the Windows SDK (makeappx.exe) unless -StageOnly is used.
 #>
 param(
     [string]$InstallDir = "build/OrcaSlicer",
-    [string]$OutputPath = "build/OrcaSlicer_Windows_MSIX.msix",
+    [string]$OutputPath = "build/KLIPSLICE_Windows_MSIX.msix",
     [ValidateSet("x64", "arm64")]
     [string]$Architecture = "x64",
     [string]$StagingDir = "",
     [switch]$StageOnly,
-    [string]$IdentityName = "OrcaSlicer.OrcaSlicer",
-    [string]$Publisher = "CN=38F7EA55-C73B-4072-B3B2-C8E0EA15BB82",
-    [string]$PublisherDisplayName = "OrcaSlicer"
+    [string]$IdentityName = "3DWindt.KLIPSLICE",
+    [string]$Publisher = "CN=3D-Windt",
+    [string]$PublisherDisplayName = "3D-Windt"
 )
 $ErrorActionPreference = 'Stop'
 

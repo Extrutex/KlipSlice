@@ -142,9 +142,8 @@ TEST_CASE("resolve_cli_input_path leaves inputs that must not be completed uncha
 #endif
     // These are downloaded rather than opened, and completing one would produce a path, not a URL.
     SECTION("a custom open protocol URL") {
-        for (const std::string url : {"orcaslicer://open/?file=https://example.com/model.3mf",
+        for (const std::string url : {"klipslice://open/?file=https://example.com/model.3mf",
                                       "prusaslicer://open/?file=https://example.com/model.3mf",
-                                      "bambustudio://open/?file=https://example.com/model.3mf",
                                       "cura://open/?file=https://example.com/model.3mf"})
             REQUIRE(resolve_cli_input_path(url) == url);
     }

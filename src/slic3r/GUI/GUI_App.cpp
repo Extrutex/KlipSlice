@@ -283,7 +283,7 @@ bool is_associate_files(std::wstring extend)
     wchar_t app_path[MAX_PATH];
     ::GetModuleFileNameW(nullptr, app_path, sizeof(app_path));
 
-    std::wstring prog_id             = L" Orca.Slicer.1";
+    std::wstring prog_id             = L"KLIPSLICE.1";
     std::wstring reg_base            = L"Software\\Classes";
     std::wstring reg_extension       = reg_base + L"\\." + extend;
 
@@ -448,37 +448,6 @@ private:
 };
 
 #ifdef __linux__
-static void migrate_flatpak_legacy_datadir(const boost::filesystem::path &data_dir_path)
-{
-    if(!boost::filesystem::exists("/.flatpak-info"))
-        return; // Not running as a Flatpak, nothing to migrate.
-    
-    namespace fs = boost::filesystem;
-
-    if (fs::exists(data_dir_path)){
-        std::cerr << "New Flatpak data dir: " << data_dir_path << std::endl;
-        return;
-    }
-    std::cerr << "Migrating Flatpak data dir: " << data_dir_path << std::endl;
-
-    std::string legacy_data_dir_str = data_dir_path.string();
-    boost::replace_first(legacy_data_dir_str, "com.orcaslicer.OrcaSlicer", "io.github.softfever.OrcaSlicer");
-    const fs::path legacy_data_dir(legacy_data_dir_str);
-
-    std::cerr << "Legacy Flatpak data dir: " << legacy_data_dir << std::endl;
-
-    if ( ! fs::exists(legacy_data_dir) || ! fs::is_directory(legacy_data_dir))
-        return;
-    std::cerr << "Legacy Flatpak data dir exists: " << legacy_data_dir << std::endl;
-
-    try {
-        std::cerr << "Migrating Flatpak data dir from " << legacy_data_dir << " to " << data_dir_path << std::endl;
-        copy_directory_recursively(legacy_data_dir, data_dir_path);
-    } catch (const std::exception &ex) {
-        std::cerr << "Failed to migrate Flatpak data dir from " << legacy_data_dir << " to " << data_dir_path << ": " << ex.what() << std::endl;
-    }
-}
-
 bool static check_old_linux_datadir(const wxString& app_name) {
     // If we are on Linux and the datadir does not exist yet, look into the old
     // location where the datadir was before version 2.3. If we find it there,
@@ -2593,7 +2562,6 @@ void GUI_App::init_app_config()
                 if (! wxGetEnv(wxS("XDG_CONFIG_HOME"), &dir) || dir.empty() )
                     dir = wxFileName::GetHomeDir() + wxS("/.config");
                 data_dir_path = boost::filesystem::path((dir + "/" + GetAppName()).ToUTF8().data());
-                migrate_flatpak_legacy_datadir(data_dir_path);
                 set_data_dir(data_dir_path.string());
             #endif
             if (!boost::filesystem::exists(data_dir_path)){
@@ -2945,7 +2913,7 @@ bool GUI_App::on_init_inner()
     wxLog::SetActiveTarget(new wxBoostLog());
 
 #ifdef __APPLE__
-    // Override wxWidgets' kAEGetURL handler so orcaslicer:// deep links keep
+    // Override wxWidgets' kAEGetURL handler so klipslice:// deep links keep
     // working after the wxWidgets 3.3.2 upgrade on macOS (#13119).
     register_mac_deep_link_handler();
 #endif
@@ -3197,7 +3165,7 @@ bool GUI_App::on_init_inner()
             associate_files(L"step");
             associate_files(L"stp");
         }
-        associate_url(L"orcaslicer");
+        associate_url(L"klipslice");
 
         if (app_config->get("associate_gcode") == "true")
             associate_files(L"gcode");
@@ -8595,7 +8563,7 @@ void GUI_App::open_preferences(PreferencesTab tab, const std::string& highlight_
                     associate_files(L"step");
                     associate_files(L"stp");
                 }
-                associate_url(L"orcaslicer");
+                associate_url(L"klipslice");
             }
             else {
                 if (app_config->get("associate_gcode") == "true")
@@ -9799,8 +9767,8 @@ void GUI_App::associate_files(std::wstring extend)
     ::GetModuleFileNameW(nullptr, app_path, sizeof(app_path));
 
     std::wstring prog_path = L"\"" + std::wstring(app_path) + L"\"";
-    std::wstring prog_id = L" Orca.Slicer.1";
-    std::wstring prog_desc = L"OrcaSlicer";
+    std::wstring prog_id = L"KLIPSLICE.1";
+    std::wstring prog_desc = L"KLIPSLICE";
     std::wstring prog_command = prog_path + L" \"%1\"";
     std::wstring reg_base = L"Software\\Classes";
     std::wstring reg_extension = reg_base + L"\\." + extend;
@@ -9826,8 +9794,8 @@ void GUI_App::disassociate_files(std::wstring extend)
     ::GetModuleFileNameW(nullptr, app_path, sizeof(app_path));
 
     std::wstring prog_path = L"\"" + std::wstring(app_path) + L"\"";
-    std::wstring prog_id = L" Orca.Slicer.1";
-    std::wstring prog_desc = L"OrcaSlicer";
+    std::wstring prog_id = L"KLIPSLICE.1";
+    std::wstring prog_desc = L"KLIPSLICE";
     std::wstring prog_command = prog_path + L" \"%1\"";
     std::wstring reg_base = L"Software\\Classes";
     std::wstring reg_extension = reg_base + L"\\." + extend;

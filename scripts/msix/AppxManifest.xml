@@ -16,7 +16,7 @@
             ProcessorArchitecture="@MSIX_ARCH@" />
 
   <Properties>
-    <DisplayName>OrcaSlicer</DisplayName>
+    <DisplayName>KLIPSLICE</DisplayName>
     <PublisherDisplayName>@MSIX_PUBLISHER_DISPLAY_NAME@</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
     <!-- Keep config in the real %APPDATA%\KLIPSLICE so it survives uninstall and
@@ -40,16 +40,16 @@
   </Resources>
 
   <Applications>
-    <Application Id="OrcaSlicer" Executable="klipslice.exe" EntryPoint="Windows.FullTrustApplication">
+    <Application Id="KLIPSLICE" Executable="klipslice.exe" EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
-        DisplayName="OrcaSlicer"
-        Description="Open-source slicer for FDM 3D printers"
+        DisplayName="KLIPSLICE"
+        Description="Open-source slicer for Klipper 3D printers"
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png" />
       <Extensions>
         <uap:Extension Category="windows.fileTypeAssociation">
-          <uap:FileTypeAssociation Name="orcaslicer-models">
+          <uap:FileTypeAssociation Name="klipslice-models">
             <uap:SupportedFileTypes>
               <uap:FileType>.3mf</uap:FileType>
               <uap:FileType>.stl</uap:FileType>
@@ -59,18 +59,15 @@
               <uap:FileType>.drc</uap:FileType>
             </uap:SupportedFileTypes>
             <rescap3:MigrationProgIds>
-              <rescap3:MigrationProgId>Orca.Slicer.1</rescap3:MigrationProgId>
+              <rescap3:MigrationProgId>KLIPSLICE.1</rescap3:MigrationProgId>
             </rescap3:MigrationProgIds>
           </uap:FileTypeAssociation>
         </uap:Extension>
         <uap:Extension Category="windows.protocol">
-          <uap:Protocol Name="orcaslicer" />
+          <uap:Protocol Name="klipslice" />
         </uap:Extension>
         <uap:Extension Category="windows.protocol">
           <uap:Protocol Name="prusaslicer" />
-        </uap:Extension>
-        <uap:Extension Category="windows.protocol">
-          <uap:Protocol Name="bambustudio" />
         </uap:Extension>
         <uap:Extension Category="windows.protocol">
           <uap:Protocol Name="cura" />

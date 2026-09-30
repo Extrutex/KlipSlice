@@ -32,10 +32,10 @@
     <array>
       <dict>
         <key>CFBundleURLName</key>
-        <string>OrcaSlicer Downloads</string>
+        <string>KLIPSLICE Downloads</string>
         <key>CFBundleURLSchemes</key>
         <array>
-          <string>orcaslicer</string>
+          <string>klipslice</string>
         </array>
       </dict>
     </array>
@@ -131,6 +131,8 @@
 	<true/>
 	<key>NSHumanReadableCopyright</key>
 	<string>${MACOSX_BUNDLE_COPYRIGHT}</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>KLIPSLICE connects to Klipper printers (Moonraker) on your local network to send and monitor print jobs.</string>
 	<key>NSAppTransportSecurity</key>  
 	<dict>
 		<!-- Disable App Transport Security. Resolves https://github.com/OrcaSlicer/OrcaSlicer/issues/791 -->
