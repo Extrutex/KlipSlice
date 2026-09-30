@@ -100,15 +100,25 @@ SCENARIO("Origin manipulation", "[GCodeWriter]") {
     }
 }
 
+// The config offers only Klipper, and handle_legacy() rewrites any other flavor string to
+// "klipper" on load. The engine still carries the other flavors' output paths, so tests that
+// cover them set the enum directly instead of going through set_deserialize.
+static std::string slice_cube_with_flavor(GCodeFlavor flavor, std::initializer_list<ConfigBase::SetDeserializeItem> config_items)
+{
+    DynamicPrintConfig config = DynamicPrintConfig::full_print_config();
+    config.set_deserialize_strict(config_items);
+    config.set_key_value("gcode_flavor", new ConfigOptionEnum<GCodeFlavor>(flavor));
+    return Slic3r::Test::slice({ cube(20) }, config);
+}
+
 // Verify that emit_machine_limits_to_gcode emits the correct max value across
 // used extruders (regression for commit b4ee665: "Emit max value of machine
 // limit among used extruders").
 TEST_CASE("Machine envelope emits max limit among used extruders", "[GCodeWriter]")
 {
     SECTION("Single extruder emits its configured values") {
-        const std::string gcode = Slic3r::Test::slice({ cube(20) }, {
+        const std::string gcode = slice_cube_with_flavor(gcfMarlinFirmware, {
             { "emit_machine_limits_to_gcode", "1" },
-            { "gcode_flavor",                "marlin2" },
             { "gcode_comments",              "1" },
             { "machine_start_gcode",         "" },
             { "layer_height",                "0.2" },
@@ -153,9 +163,8 @@ TEST_CASE("Machine envelope emits max limit among used extruders", "[GCodeWriter
     }
 
     SECTION("Legacy Marlin flavor emits correct format") {
-        const std::string gcode = Slic3r::Test::slice({ cube(20) }, {
+        const std::string gcode = slice_cube_with_flavor(gcfMarlinLegacy, {
             { "emit_machine_limits_to_gcode", "1" },
-            { "gcode_flavor",                "marlin" },
             { "gcode_comments",              "1" },
             { "machine_start_gcode",         "" },
             { "layer_height",                "0.2" },
@@ -851,8 +860,7 @@ SCENARIO("Shipped dual-nozzle change_filament_gcode resolves during a real slice
 
 TEST_CASE("Custom G-code motion limits are restored before generated moves", "[GCodeWriter]")
 {
-    const std::string gcode = Slic3r::Test::slice({ cube(20) }, {
-        { "gcode_flavor",                "marlin" },
+    const std::string gcode = slice_cube_with_flavor(gcfMarlinLegacy, {
         { "gcode_comments",              "1" },
         { "machine_start_gcode",         "" },
         { "layer_change_gcode",          "M204 S5000\nm205 x5 y5\n" },

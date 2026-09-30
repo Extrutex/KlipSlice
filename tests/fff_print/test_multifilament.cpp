@@ -600,9 +600,7 @@ TEST_CASE("Toolchange temperature commands are unchanged when the wipe tower wai
 {
     // 20x20x5 cubes at the default 0.2mm layer height are 25 layers, one filament each, so there is
     // a toolchange -- and a preheat ahead of it -- on every layer.
-    const std::string gcode = slice_with_object_overrides(
-        { make_cube(20., 20., 5.), make_cube(20., 20., 5.) },
-        multifilament_config(2, {
+    DynamicPrintConfig config = multifilament_config(2, {
             { "nozzle_diameter",                        "0.4,0.4" },
             { "printer_extruder_id",                    "1,2" },
             { "printer_extruder_variant",               "Direct Drive Standard,Direct Drive Standard" },
@@ -631,7 +629,15 @@ TEST_CASE("Toolchange temperature commands are unchanged when the wipe tower wai
             { "nozzle_temperature_initial_layer",       "215,215" },
             { "nozzle_temperature",                     "240,240" },
             { "wait_for_temp_on_wipe_tower",            0 },
-        }),
+        });
+    // The golden trace was captured under main's default flavor, legacy Marlin. The config now
+    // defaults to Klipper, which skips the start-of-print temperature block, so pin the flavor
+    // the golden was recorded with. Set as an enum: handle_legacy() maps the "marlin" string to
+    // "klipper".
+    config.set_key_value("gcode_flavor", new ConfigOptionEnum<GCodeFlavor>(gcfMarlinLegacy));
+    const std::string gcode = slice_with_object_overrides(
+        { make_cube(20., 20., 5.), make_cube(20., 20., 5.) },
+        config,
         // Object-level, so the used-filament count that gates the prime tower is derived from it.
         { { { "extruder", 1 } }, { { "extruder", 2 } } });
 
@@ -750,6 +756,10 @@ TEST_CASE("Each filament prints with its variant of the extruder's variant strin
             { "machine_start_gcode",              "; start temperature {nozzle_temperature_initial_layer[initial_extruder]}" },
         });
         config.option<ConfigOptionEnumsGeneric>("nozzle_volume_type", true)->values = { nozzle_volume_type };
+        // The temperatures are read from the start-of-print block, which the Klipper default
+        // leaves to the start macro. Pin the legacy Marlin flavor this test was written against
+        // (as an enum: handle_legacy() maps the "marlin" string to "klipper").
+        config.set_key_value("gcode_flavor", new ConfigOptionEnum<GCodeFlavor>(gcfMarlinLegacy));
         const std::string gcode = slice({ cube(20) }, config);
 
         std::set<int> temperatures;

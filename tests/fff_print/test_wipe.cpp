@@ -128,7 +128,7 @@ TEST_CASE("Wipe retraction preserves fractional speed with inward wipe disabled"
     INFO("relative E: " << relative_e);
     DynamicPrintConfig config = wipe_config("classic", false);
     config.set_deserialize_strict({
-        {"gcode_flavor", "marlin2"},
+        {"gcode_flavor", "klipper"},
         {"use_relative_e_distances", relative_e},
         {"retraction_speed", retraction_speed},
         {"retraction_length", "0.8"},
@@ -179,7 +179,7 @@ TEST_CASE("Inward wipe respects the minimum travel for retraction and Z hop", "[
     DynamicPrintConfig config = wipe_config(
         wall_generator, true, "50%", "10%", false, "3", "inner-outer-inner wall");
     config.set_deserialize_strict({
-        {"gcode_flavor", "marlin2"},
+        {"gcode_flavor", "klipper"},
         {"use_relative_e_distances", relative_e},
         {"reduce_crossing_wall", reduce_crossing_wall},
         {"retraction_minimum_travel", minimum_travel},

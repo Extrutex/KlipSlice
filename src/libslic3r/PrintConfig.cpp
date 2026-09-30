@@ -4329,35 +4329,14 @@ void PrintConfigDef::init_fff_params()
     def->label = L("G-code flavor");
     def->tooltip = L("What kind of G-code the printer is compatible with.");
     def->enum_keys_map = &ConfigOptionEnum<GCodeFlavor>::get_enum_values();
-    def->enum_values.push_back("marlin");
+    // KLIPSLICE targets Klipper only. The GCodeFlavor enum and its key map stay complete so
+    // every stored name still parses; PrintConfigDef::handle_legacy() rewrites any other
+    // flavor to "klipper" on load, which keeps validate()'s enum check satisfied.
     def->enum_values.push_back("klipper");
-    def->enum_values.push_back("reprapfirmware");
-    def->enum_values.push_back("repetier");
-    def->enum_values.push_back("marlin2");
-    //def->enum_values.push_back("reprap");
-    //def->enum_values.push_back("teacup");
-    //def->enum_values.push_back("makerware");
-    //def->enum_values.push_back("sailfish");
-    //def->enum_values.push_back("mach3");
-    //def->enum_values.push_back("machinekit");
-    //def->enum_values.push_back("smoothie");
-    //def->enum_values.push_back("no-extrusion");
-    def->enum_labels.push_back("Marlin(legacy)");
     def->enum_labels.push_back(L("Klipper"));
-    def->enum_labels.push_back("RepRapFirmware");
-    def->enum_labels.push_back("Repetier");
-    def->enum_labels.push_back("Marlin 2");
-    //def->enum_labels.push_back("RepRap/Sprinter");
-    //def->enum_labels.push_back("Teacup");
-    //def->enum_labels.push_back("MakerWare (MakerBot)");
-    //def->enum_labels.push_back("Sailfish (MakerBot)");
-    //def->enum_labels.push_back("Mach3/LinuxCNC");
-    //def->enum_labels.push_back("Machinekit");
-    //def->enum_labels.push_back("Smoothie");
-    //def->enum_labels.push_back(L("No extrusion"));
     def->mode = comAdvanced;
     def->readonly = false;
-    def->set_default_value(new ConfigOptionEnum<GCodeFlavor>(gcfMarlinLegacy));
+    def->set_default_value(new ConfigOptionEnum<GCodeFlavor>(gcfKlipper));
 
     def = this->add("gcode_skip_config_block", coBool);
     def->label = L("Skip G-code config block");
@@ -9099,6 +9078,10 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
     //BBS: handle legacy options
     if (opt_key == "curr_bed_type" && value == "SuperTack Plate") {
         value = "Supertack Plate";
+    } else if (opt_key == "gcode_flavor" && value != "klipper") {
+        // KLIPSLICE: Klipper is the only flavor. Projects and presets written for any other
+        // firmware (marlin, marlin2, reprapfirmware, repetier, ...) load as Klipper.
+        value = "klipper";
     } else if (opt_key == "enable_wipe_tower") {
         opt_key = "enable_prime_tower";
     } else if (opt_key == "wipe_tower_width") {

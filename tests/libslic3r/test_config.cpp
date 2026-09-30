@@ -1289,3 +1289,28 @@ TEST_CASE("Static print configs compare, order and hash by their option values",
         REQUIRE(c.optptr("gcode_flavor") == &c.gcode_flavor);
     }
 }
+
+TEST_CASE("The G-code flavor offers Klipper only and defaults to it", "[Config]")
+{
+    const ConfigOptionDef *def = print_config_def.get("gcode_flavor");
+    REQUIRE(def != nullptr);
+    CHECK(def->enum_values == std::vector<std::string>{ "klipper" });
+    CHECK(FullPrintConfig::defaults().gcode_flavor.value == gcfKlipper);
+}
+
+TEST_CASE("A stored G-code flavor loads as Klipper and passes validation", "[Config]")
+{
+    const char *stored = GENERATE("marlin", "marlin2", "reprapfirmware", "repetier", "smoothie", "machinekit", "klipper");
+    INFO("stored gcode_flavor: " << stored);
+    DynamicPrintConfig config = DynamicPrintConfig::full_print_config();
+    config.set_deserialize_strict("gcode_flavor", stored);
+    CHECK(config.opt_enum<GCodeFlavor>("gcode_flavor") == gcfKlipper);
+    CHECK(config.validate().count("gcode_flavor") == 0);
+}
+
+TEST_CASE("A non-Klipper G-code flavor set past the loader fails validation", "[Config]")
+{
+    DynamicPrintConfig config = DynamicPrintConfig::full_print_config();
+    config.set_key_value("gcode_flavor", new ConfigOptionEnum<GCodeFlavor>(gcfMarlinFirmware));
+    CHECK(config.validate().count("gcode_flavor") == 1);
+}
