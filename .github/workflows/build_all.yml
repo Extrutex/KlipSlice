@@ -1,54 +1,14 @@
 name: Build all
 
 on:
-  push:
-    branches:
-     - main
-     - release/*
-     - belt-printer
-    paths:
-     - 'deps/**'
-     - 'src/**'
-     - '**/CMakeLists.txt'
-     - 'version.inc'
-     - 'localization/**'
-     - 'resources/**'
-     - ".github/workflows/build_*.yml"
-     - ".github/workflows/unit_tests*.yml"
-     - 'build_win.bat'
-     - 'scripts/test_build_win.ps1'
-     - 'scripts/build_preset_cache.*'
-     - 'scripts/flatpak/**'
-     - 'scripts/msix/**'
-     - 'tests/**'
-
-  pull_request:
-    branches:
-     - main
-     - release/*
-    paths:
-     - 'deps/**'
-     - 'deps_src/**'
-     - 'src/**'
-     - '**/CMakeLists.txt'
-     - 'version.inc'
-     - ".github/workflows/build_*.yml"
-     - ".github/workflows/unit_tests*.yml"
-     - 'build_linux.sh'
-     - 'build_win.bat'
-     - 'scripts/test_build_win.ps1'
-     - 'build_release_macos.sh'
-     - 'scripts/build_preset_cache.*'
-     - 'scripts/flatpak/**'
-     - 'scripts/msix/**'
-     - 'tests/**'
-
-
-  schedule:
-      - cron: '0 17 * * *' # run once a day at 1 AM Singapore time (UTC+8)
-
+  # KLIPSLICE: private repo, macOS minutes bill 10x and Windows 2x.
+  # Builds run only on demand; pick the platforms per run.
   workflow_dispatch: # allows for manual dispatch
     inputs:
+      platforms:
+        description: 'Platforms to build (comma-separated: linux,windows,macos)'
+        type: string
+        default: 'linux'
       build-deps-only:
         description: 'Only build dependencies (bypasses caching)'
         type: boolean
@@ -62,6 +22,7 @@ concurrency:
 jobs:
   # build_win.bat ships a test suite. Run it before the Windows builds.
   check_build_script:
+    if: ${{ contains(inputs.platforms, 'windows') }}
     name: Windows build script tests
     runs-on: windows-latest
     steps:
@@ -87,7 +48,7 @@ jobs:
           && '[{"arch":"","os":"orca-lnx-server"}]'
           || '[{"arch":"","os":"ubuntu-24.04"},{"arch":"aarch64","os":"ubuntu-24.04-arm"}]') }}
     # Don't run scheduled builds on forks:
-    if: ${{ !cancelled() && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
+    if: ${{ contains(inputs.platforms, 'linux') && !cancelled() && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
     uses: ./.github/workflows/build_check_cache.yml
     with:
       os: ${{ matrix.os }}
@@ -105,7 +66,7 @@ jobs:
           || '[{"arch":"x64","os":"windows-latest","compiler":"clang"},{"arch":"arm64","os":"windows-11-vs2026-arm","compiler":"clang"}]') }}
     needs: check_build_script
     # Don't run scheduled builds on forks:
-    if: ${{ !cancelled() && needs.check_build_script.result == 'success' && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
+    if: ${{ contains(inputs.platforms, 'windows') && !cancelled() && needs.check_build_script.result == 'success' && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
     uses: ./.github/workflows/build_check_cache.yml
     with:
       os: ${{ matrix.os }}
@@ -122,7 +83,7 @@ jobs:
           - arm64
           - x86_64
     # Don't run scheduled builds on forks:
-    if: ${{ !cancelled() && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
+    if: ${{ contains(inputs.platforms, 'macos') && !cancelled() && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
     uses: ./.github/workflows/build_check_cache.yml
     with:
       os: ${{ vars.SELF_HOSTED && 'orca-macos-arm64' || 'macos-14' }}
@@ -133,7 +94,7 @@ jobs:
   build_macos_universal:
     name: Build macOS Universal
     needs: build_macos_arch
-    if: ${{ !cancelled() && needs.build_macos_arch.result == 'success' && !inputs.build-deps-only && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
+    if: ${{ contains(inputs.platforms, 'macos') && !cancelled() && needs.build_macos_arch.result == 'success' && !inputs.build-deps-only && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
     uses: ./.github/workflows/build_orca.yml
     with:
       os: ${{ vars.SELF_HOSTED && 'orca-macos-arm64' || 'macos-14' }}
@@ -253,7 +214,7 @@ jobs:
           - arch: aarch64
             runner: ubuntu-24.04-arm
     # Don't run scheduled builds on forks; skip entirely on self-hosted runners
-    if: ${{ !cancelled() && !vars.SELF_HOSTED && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
+    if: ${{ contains(inputs.platforms, 'linux') && !cancelled() && !vars.SELF_HOSTED && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
 
     runs-on: ${{ matrix.variant.runner }}
     env:
