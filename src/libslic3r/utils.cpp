@@ -1342,7 +1342,7 @@ std::string string_printf(const char *format, ...)
 
 std::string header_slic3r_generated()
 {
-	return std::string(SLIC3R_APP_NAME " " SoftFever_VERSION);
+	return std::string(SLIC3R_GCODE_PRODUCER " " SoftFever_VERSION);
 }
 
 std::string header_gcodeviewer_generated()

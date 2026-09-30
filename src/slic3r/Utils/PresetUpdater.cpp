@@ -1405,6 +1405,11 @@ void PresetUpdater::priv::check_new_vendors(const std::set<std::string>& system_
 {
     vendor_check_threads.emplace_back([this, system_vendors, callback]() {
         AppConfig* app_config = GUI::wxGetApp().app_config;
+        if (app_config->profile_update_url().empty()) {
+            BOOST_LOG_TRIVIAL(info) << "[Orca Updater] no profile update URL configured, skipping new vendor check";
+            GUI::wxGetApp().CallAfter([callback]() { callback({}, false); });
+            return;
+        }
         std::string url       = app_config->profile_update_url() + "/new?orcaslicer_version=" + Http::url_encode(SoftFever_VERSION);
 
         auto check_cancel = [this](Http::Progress, bool& cancel_http) {

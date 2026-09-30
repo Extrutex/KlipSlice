@@ -382,7 +382,7 @@ modules:
       # only exists in here, so the swap is a build step instead, against the
       # profiles the install above copied into /app.
       - cmake --build build_flatpak --target generate_system_cache -j$FLATPAK_BUILDER_N_JOBS
-      - ./scripts/build_preset_cache.sh -n -b build_flatpak /app/share/OrcaSlicer/profiles
+      - ./scripts/build_preset_cache.sh -n -b build_flatpak /app/share/KLIPSLICE/profiles
 
     # Built (not run) here when CI injects run-tests, then shipped to a separate
     # test job. Only the test sources compile; nothing installs to /app.

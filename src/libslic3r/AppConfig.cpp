@@ -40,8 +40,11 @@ using namespace nlohmann;
 
 namespace Slic3r {
 
-static const std::string VERSION_CHECK_URL = "https://check-version.orcaslicer.com/latest";
-static const std::string PROFILE_UPDATE_URL = "https://check-version.orcaslicer.com/profile";
+// KLIPSLICE: no update service yet (PURGE_PLAN D5). Empty URLs disable the app version check and the
+// profile OTA, so KLIPSLICE never reports to or pulls vendor profiles from the OrcaSlicer servers.
+// "version_check_url" / "orca_updater_url" in KLIPSLICE.conf still override these explicitly.
+static const std::string VERSION_CHECK_URL  = "";
+static const std::string PROFILE_UPDATE_URL = "";
 
 constexpr const char* CONFIG_ORCA_UPDATER_URL = "orca_updater_url";
 

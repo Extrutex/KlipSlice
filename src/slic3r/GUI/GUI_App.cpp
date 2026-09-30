@@ -6117,6 +6117,12 @@ void GUI_App::check_new_version_sf(bool show_tips, int by_user)
     AppConfig* app_config = wxGetApp().app_config;
     bool       check_stable_only = app_config->get_bool("check_stable_update_only");
     auto version_check_url = app_config->version_check_url();
+    if (version_check_url.empty()) {
+        BOOST_LOG_TRIVIAL(info) << "check_new_version_sf: no version check URL configured, skipping";
+        if (by_user != 0)
+            this->no_new_version();
+        return;
+    }
 
     UpdaterQuery query{
         detect_updater_iid(app_config),
