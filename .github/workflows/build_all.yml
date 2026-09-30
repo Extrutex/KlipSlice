@@ -5,7 +5,7 @@ on:
   # Every push/PR to main gets the Linux x86_64 gate (build + unit tests +
   # slice check). Windows/macOS/aarch64/flatpak run only on manual dispatch.
   push:
-    branches: [main]
+    branches: [main, dev]
     paths:
      - 'deps/**'
      - 'deps_src/**'
@@ -20,7 +20,7 @@ on:
      - '.github/workflows/build_*.yml'
      - '.github/workflows/unit_tests*.yml'
   pull_request:
-    branches: [main]
+    branches: [main, dev]
     paths:
      - 'deps/**'
      - 'deps_src/**'
