@@ -1312,7 +1312,7 @@ configure_file(${LIBDIR}/dev-utils/platform/unix/fhs.hpp.in ${LIBDIR_BIN}/dev-ut
 # uninstall registry key and upgrade GUID, so UNINSTALL_BEFORE_INSTALL only ever removes a
 # previous KLIPSLICE and never an installed OrcaSlicer.
 set (CPACK_PACKAGE_NAME "KLIPSLICE")
-set (CPACK_PACKAGE_VENDOR "3D-Windt")
+set (CPACK_PACKAGE_VENDOR "KLIPSLICE contributors")
 set (CPACK_PACKAGE_VERSION_MAJOR "${ORCA_VERSION_MAJOR}")
 set (CPACK_PACKAGE_VERSION_MINOR "${ORCA_VERSION_MINOR}")
 set (CPACK_PACKAGE_VERSION_PATCH "${ORCA_VERSION_PATCH}")

@@ -4,8 +4,8 @@
     <launchable type="desktop-id">de._3dwindt.KLIPSLICE.desktop</launchable>
     <name>KLIPSLICE</name>
     <summary>Slicer for Klipper printers</summary>
-    <developer id="de._3dwindt">
-        <name>3D-Windt</name>
+    <developer id="io.github.Extrutex">
+        <name>KLIPSLICE contributors</name>
     </developer>
     <url type="homepage">https://github.com/Extrutex/KlipSlice</url>
     <url type="bugtracker">https://github.com/Extrutex/KlipSlice/issues</url>
@@ -31,8 +31,9 @@
         </screenshot>
     </screenshots>
     <description>
-        <p>KLIPSLICE is a free and open-source FDM slicer for printers running Klipper, based on
-            OrcaSlicer. It sends jobs to the printer through Moonraker.</p>
+        <p>KLIPSLICE is a free and open-source, community-developed FDM slicer for printers
+            running Klipper, based on OrcaSlicer. It sends jobs to the printer through
+            Moonraker.</p>
         <p>Key features include advanced calibration tools, adaptive layer heights, tree supports
             and multi-material support.</p>
     </description>

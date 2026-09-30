@@ -14,9 +14,9 @@ param(
     [string]$Architecture = "x64",
     [string]$StagingDir = "",
     [switch]$StageOnly,
-    [string]$IdentityName = "3DWindt.KLIPSLICE",
-    [string]$Publisher = "CN=3D-Windt",
-    [string]$PublisherDisplayName = "3D-Windt"
+    [string]$IdentityName = "KLIPSLICE",
+    [string]$Publisher = "CN=KLIPSLICE contributors",
+    [string]$PublisherDisplayName = "KLIPSLICE contributors"
 )
 $ErrorActionPreference = 'Stop'
 

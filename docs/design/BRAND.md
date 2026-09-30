@@ -5,10 +5,10 @@ Status: design foundation, working title **KLIPSLICE**. Tokens: `docs/design/tok
 
 ## 0. Positioning
 
-KLIPSLICE is a B2B industrial slicer for Klipper-driven FDM production: machine builders,
-production engineers and senior engineers who run Voron/RatRig-class machines and
-jailbroken industrial printers in a production context. It is a hard fork of OrcaSlicer
-with every non-Klipper path removed.
+KLIPSLICE is a free, open-source (AGPL-3.0) community slicer for printers running Klipper,
+in the tradition of OrcaSlicer: built in the open by its contributors for anyone who runs
+Voron/RatRig-class machines, self-built printers or Klipper-converted machines. It is a
+hard fork of OrcaSlicer with every non-Klipper path removed.
 
 The product promise the design must carry: **the slicer knows the machine's real envelope
 and never lets a value leave it silently.** This is not cosmetic. Klipper does not clamp
@@ -94,11 +94,11 @@ pronounceable in German and English.
 | **STRATA** | Names the product's primitive, the layer, and pairs with HORIZON as a geological term — but sits close to *Stratasys*, an incumbent in exactly this industry. |
 | **TANTO** | The short blade of the KATANA family: literally a cutting tool, instantly reads as part of the suite. |
 
-**Recommendation:** KLIPSLICE stays the working title until the owner decides. If a
-rename happens, **DATUM** is the strongest candidate for a B2B engineering audience;
+**Recommendation:** KLIPSLICE stays the working title until the maintainers decide. If a
+rename happens, **DATUM** is the strongest candidate for an engineering-minded community;
 STRATA only after a trademark check against Stratasys. None of the three has been
-trademark-searched. The `KLIP` prefix leans on the Klipper project's name; whether
-that is acceptable for a commercial product is an open question for the owner.
+trademark-searched. The `KLIP` prefix leans on the Klipper project's name; whether the
+Klipper project is comfortable with that is an open question for the maintainers.
 
 ---
 
@@ -461,17 +461,15 @@ Verify `GUI_App::UpdateDarkUI` (`GUI_App.cpp:4290`, lightness correction at
 
 ---
 
-## 7. Open decisions for the owner
+## 7. Open decisions for the maintainers
 
 1. **Name:** keep KLIPSLICE, or DATUM / STRATA / TANTO (trademark search not done;
    `KLIP` prefix vs. the Klipper project name).
-2. **Brand umbrella:** KLIPSLICE is a B2B product — does it ship under 3D-Windt,
-   Agentic-Gateway, or its own mark? The dual-branding rule forbids mixing.
-3. **Accent-free chrome:** the spec removes teal entirely, including the primary button
+2. **Accent-free chrome:** the spec removes teal entirely, including the primary button
    (now aluminium). Confirm.
-4. **Export gate:** exceeding a `machine` limit blocks export until acknowledged
+3. **Export gate:** exceeding a `machine` limit blocks export until acknowledged
    (proposed). Alternative: hard block. `firmware` limits should hard-block, since
    Klipper rejects the command mid-print.
-5. **Caution threshold** 90 % and **stale threshold** 2 s are invented defaults.
-6. **Modified-value marker:** Orca's orange "modified" label colour is dropped in favour
+4. **Caution threshold** 90 % and **stale threshold** 2 s are invented defaults.
+5. **Modified-value marker:** Orca's orange "modified" label colour is dropped in favour
    of a neutral marker. Confirm this does not break users' Orca habits too hard.

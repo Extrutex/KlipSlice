@@ -598,9 +598,9 @@ jobs:
             -InstallDir "${{ github.workspace }}/${{ env.BUILD_DIR }}/OrcaSlicer" `
             -OutputPath "${{ github.workspace }}/${{ env.BUILD_DIR }}/KLIPSLICE_Windows_MSIX_${{ env.ver }}${{ env.ARCH_SUFFIX }}.msix" `
             -Architecture "${{ inputs.arch }}" `
-            -IdentityName "${{ vars.ORCA_MSIX_IDENTITY_NAME || '3DWindt.KLIPSLICE' }}" `
-            -Publisher "${{ vars.ORCA_MSIX_PUBLISHER || 'CN=3D-Windt' }}" `
-            -PublisherDisplayName "${{ vars.ORCA_MSIX_PUBLISHER_DISPLAY_NAME || '3D-Windt' }}"
+            -IdentityName "${{ vars.ORCA_MSIX_IDENTITY_NAME || 'KLIPSLICE' }}" `
+            -Publisher "${{ vars.ORCA_MSIX_PUBLISHER || 'CN=KLIPSLICE contributors' }}" `
+            -PublisherDisplayName "${{ vars.ORCA_MSIX_PUBLISHER_DISPLAY_NAME || 'KLIPSLICE contributors' }}"
 
       - name: Upload artifacts Win MSIX
         if: runner.os == 'Windows' && !vars.SELF_HOSTED
