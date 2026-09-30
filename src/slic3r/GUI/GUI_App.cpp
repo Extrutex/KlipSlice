@@ -143,7 +143,8 @@
 //BBS: DailyTip and UserGuide Dialog
 #include "WebDownPluginDlg.hpp"
 #include "WebGuideDialog.hpp"
-#include "ReleaseNote.hpp"
+#include "CommonDialogs.hpp"
+#include "ReleaseNote.hpp" // InputIpAddressDialog
 #include "PrivacyUpdateDialog.hpp"
 #include "ModelMall.hpp"
 #include "HintNotification.hpp"
