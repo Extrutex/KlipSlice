@@ -4,9 +4,6 @@
 #include "ICloudServiceAgent.hpp"
 #include "IPrinterAgent.hpp"
 #include "NetworkAgent.hpp"
-#include "OrcaCloudServiceAgent.hpp"
-#include "BBLCloudServiceAgent.hpp"
-#include "BBLNetworkPlugin.hpp"
 #include "libslic3r/AppConfig.hpp"
 #include <memory>
 #include <string>
@@ -16,6 +13,7 @@
 namespace Slic3r {
 static constexpr char ORCA_PRINTER_AGENT_ID[] = "orca";
 static constexpr char BBL_PRINTER_AGENT_ID[] = "bbl";
+static constexpr char MOONRAKER_PRINTER_AGENT_ID[] = "moonraker";
 
 // Factory function type for creating printer agents
 using PrinterAgentFactory =
@@ -139,25 +137,7 @@ public:
      * @param log_dir Directory for log files
      * @return Shared pointer to ICloudServiceAgent implementation
      */
-    static std::shared_ptr<ICloudServiceAgent> create_cloud_agent(const std::string& provider, const std::string& log_dir)
-    {
-        if (provider == ORCA_CLOUD_PROVIDER) {
-            return std::make_shared<OrcaCloudServiceAgent>(log_dir);
-        } else if (provider == BBL_CLOUD_PROVIDER) {
-            auto& plugin = BBLNetworkPlugin::instance();
-            if (!plugin.is_loaded()) {
-                return nullptr;
-            }
-            if (!plugin.has_agent()) {
-                plugin.create_agent(log_dir);
-            }
-            if (!plugin.has_agent()) {
-                return nullptr;
-            }
-            return std::make_shared<BBLCloudServiceAgent>();
-        }
-        return nullptr;
-    }
+    static std::shared_ptr<ICloudServiceAgent> create_cloud_agent(const std::string& provider, const std::string& log_dir);
 
     // Plugin printer agents
     static void register_python_plugin(const std::string& plugin_key);

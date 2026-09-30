@@ -3992,7 +3992,8 @@ std::string GUI_App::resolve_printer_agent_id(const std::string& stored_id)
 {
     if (!stored_id.empty())
         return stored_id;
-    return (preset_bundle && preset_bundle->is_bbl_vendor()) ? BBL_PRINTER_AGENT_ID : ORCA_PRINTER_AGENT_ID;
+    // KLIPSLICE: every printer is Klipper, so an unset printer_agent means Moonraker.
+    return MOONRAKER_PRINTER_AGENT_ID;
 }
 
 std::string GUI_App::canonical_printer_agent_id(const std::string& picked_id)

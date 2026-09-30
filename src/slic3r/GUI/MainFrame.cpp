@@ -74,6 +74,7 @@
 #include "DeviceCore/DevManager.h"
 
 #ifdef _WIN32
+#include <Windows.h> // dbt.h and the Win32 calls below need it; no longer reached via NetworkAgentFactory.hpp
 #include <dbt.h>
 #include <shlobj.h>
 #include <shellapi.h>

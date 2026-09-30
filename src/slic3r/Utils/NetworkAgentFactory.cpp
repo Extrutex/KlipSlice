@@ -1,6 +1,9 @@
 #include "NetworkAgentFactory.hpp"
 #include "IPrinterAgent.hpp"
 #include "ICloudServiceAgent.hpp"
+#include "OrcaCloudServiceAgent.hpp"
+#include "BBLCloudServiceAgent.hpp"
+#include "BBLNetworkPlugin.hpp"
 #include "BBLPrinterAgent.hpp"
 #include "OrcaPrinterAgent.hpp"
 #include "QidiPrinterAgent.hpp"
@@ -189,6 +192,26 @@ void NetworkAgentFactory::register_all_agents()
                                    return agent;
                                });
     }
+}
+
+std::shared_ptr<ICloudServiceAgent> NetworkAgentFactory::create_cloud_agent(const std::string& provider, const std::string& log_dir)
+{
+    if (provider == ORCA_CLOUD_PROVIDER) {
+        return std::make_shared<OrcaCloudServiceAgent>(log_dir);
+    } else if (provider == BBL_CLOUD_PROVIDER) {
+        auto& plugin = BBLNetworkPlugin::instance();
+        if (!plugin.is_loaded()) {
+            return nullptr;
+        }
+        if (!plugin.has_agent()) {
+            plugin.create_agent(log_dir);
+        }
+        if (!plugin.has_agent()) {
+            return nullptr;
+        }
+        return std::make_shared<BBLCloudServiceAgent>();
+    }
+    return nullptr;
 }
 
 std::unique_ptr<NetworkAgent> create_agent_from_config(const std::string& log_dir, AppConfig* app_config)

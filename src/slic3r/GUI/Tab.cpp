@@ -64,6 +64,7 @@
 #include "DeviceCore/DevManager.h"
 
 #ifdef WIN32
+	#include <Windows.h> // commctrl.h needs it; no longer reached via NetworkAgentFactory.hpp
 	#include <commctrl.h>
 #endif // WIN32
 
