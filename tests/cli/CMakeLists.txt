@@ -18,7 +18,7 @@ set_tests_properties(cli_strict_mode PROPERTIES
 
 add_test(NAME cli_project_missing_keys
     COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_cli_project_missing_keys.sh $<TARGET_FILE:OrcaSlicer> ${ORCA_CLI_TEST_PYTHON}
-        ${CMAKE_SOURCE_DIR}/resources/profiles/BBL)
+        ${CMAKE_SOURCE_DIR}/resources/profiles)
 set_tests_properties(cli_project_missing_keys PROPERTIES
     LABELS "CLI;RequiresApp"
     SKIP_RETURN_CODE 77

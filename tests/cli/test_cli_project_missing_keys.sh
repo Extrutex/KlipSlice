@@ -4,10 +4,10 @@
 # The GUI takes every key a project does not list as changed from the project's current system preset:
 # keys saved before an option existed, and keys holding an older system value. Keys the project lists
 # in different_settings_to_system keep the project's value. A project is exported from the shipped
-# Bambu Lab P1S presets; one printer key and one process key are removed, one printer key and one
+# Voron 2.4 350 presets; one printer key and one process key are removed, one printer key and one
 # process key are changed without being listed, one key is changed and listed, and it is sliced again.
 #
-# usage: test_cli_project_missing_keys.sh <orca-slicer binary> <python3> <resources/profiles/BBL>
+# usage: test_cli_project_missing_keys.sh <orca-slicer binary> <python3> <resources/profiles>
 set -u
 
 BIN="${1:-}"
@@ -44,8 +44,8 @@ slice() {
 }
 
 slice base "$WORK/cube.stl" \
-    --load-settings "$PROFILES/machine/Bambu Lab P1S 0.4 nozzle.json;$PROFILES/process/0.20mm Standard @BBL X1C.json" \
-    --load-filaments "$PROFILES/filament/Bambu PLA Basic @BBL P1S 0.4 nozzle.json"
+    --load-settings "$PROFILES/Voron/machine/Voron 2.4 350 0.4 nozzle.json;$PROFILES/Voron/process/0.20mm Standard @Voron.json" \
+    --load-filaments "$PROFILES/OrcaFilamentLibrary/filament/Generic PLA @System.json"
 
 # The removed keys, with their option defaults from PrintConfig.cpp; stale keys changed without being
 # listed as different, which must come back with the system value; and a listed key the project keeps.
@@ -53,7 +53,7 @@ slice base "$WORK/cube.stl" \
 import json, sys, zipfile
 
 src, dst = sys.argv[1], sys.argv[2]
-missing = {"extruder_clearance_dist_to_rod": "40", "sparse_infill_density": "20%"}
+missing = {"printable_height": "100", "sparse_infill_density": "20%"}
 with zipfile.ZipFile(src) as zin, zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED) as zout:
     for item in zin.infolist():
         data = zin.read(item.filename)

@@ -2,11 +2,42 @@ name: Build all
 
 on:
   # KLIPSLICE: private repo, macOS minutes bill 10x and Windows 2x.
-  # Builds run only on demand; pick the platforms per run.
+  # Every push/PR to main gets the Linux x86_64 gate (build + unit tests +
+  # slice check). Windows/macOS/aarch64/flatpak run only on manual dispatch.
+  push:
+    branches: [main]
+    paths:
+     - 'deps/**'
+     - 'deps_src/**'
+     - 'src/**'
+     - '**/CMakeLists.txt'
+     - 'cmake/**'
+     - 'version.inc'
+     - 'localization/**'
+     - 'resources/**'
+     - 'tests/**'
+     - 'build_linux.sh'
+     - '.github/workflows/build_*.yml'
+     - '.github/workflows/unit_tests*.yml'
+  pull_request:
+    branches: [main]
+    paths:
+     - 'deps/**'
+     - 'deps_src/**'
+     - 'src/**'
+     - '**/CMakeLists.txt'
+     - 'cmake/**'
+     - 'version.inc'
+     - 'localization/**'
+     - 'resources/**'
+     - 'tests/**'
+     - 'build_linux.sh'
+     - '.github/workflows/build_*.yml'
+     - '.github/workflows/unit_tests*.yml'
   workflow_dispatch: # allows for manual dispatch
     inputs:
       platforms:
-        description: 'Platforms to build (comma-separated: linux,windows,macos)'
+        description: 'Platforms (comma-separated): linux, linux-arm, flatpak, windows, macos'
         type: string
         default: 'linux'
       build-deps-only:
@@ -22,7 +53,7 @@ concurrency:
 jobs:
   # build_win.bat ships a test suite. Run it before the Windows builds.
   check_build_script:
-    if: ${{ contains(inputs.platforms, 'windows') }}
+    if: ${{ contains(inputs.platforms || 'linux', 'windows') }}
     name: Windows build script tests
     runs-on: windows-latest
     steps:
@@ -46,9 +77,9 @@ jobs:
       matrix:
         include: ${{ fromJSON(vars.SELF_HOSTED
           && '[{"arch":"","os":"orca-lnx-server"}]'
-          || '[{"arch":"","os":"ubuntu-24.04"},{"arch":"aarch64","os":"ubuntu-24.04-arm"}]') }}
+          || (contains(inputs.platforms || 'linux', 'linux-arm') && '[{"arch":"","os":"ubuntu-24.04"},{"arch":"aarch64","os":"ubuntu-24.04-arm"}]' || '[{"arch":"","os":"ubuntu-24.04"}]')) }}
     # Don't run scheduled builds on forks:
-    if: ${{ contains(inputs.platforms, 'linux') && !cancelled() && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
+    if: ${{ contains(inputs.platforms || 'linux', 'linux') && !cancelled() && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
     uses: ./.github/workflows/build_check_cache.yml
     with:
       os: ${{ matrix.os }}
@@ -66,7 +97,7 @@ jobs:
           || '[{"arch":"x64","os":"windows-latest","compiler":"clang"},{"arch":"arm64","os":"windows-11-vs2026-arm","compiler":"clang"}]') }}
     needs: check_build_script
     # Don't run scheduled builds on forks:
-    if: ${{ contains(inputs.platforms, 'windows') && !cancelled() && needs.check_build_script.result == 'success' && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
+    if: ${{ contains(inputs.platforms || 'linux', 'windows') && !cancelled() && needs.check_build_script.result == 'success' && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
     uses: ./.github/workflows/build_check_cache.yml
     with:
       os: ${{ matrix.os }}
@@ -83,7 +114,7 @@ jobs:
           - arm64
           - x86_64
     # Don't run scheduled builds on forks:
-    if: ${{ contains(inputs.platforms, 'macos') && !cancelled() && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
+    if: ${{ contains(inputs.platforms || 'linux', 'macos') && !cancelled() && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
     uses: ./.github/workflows/build_check_cache.yml
     with:
       os: ${{ vars.SELF_HOSTED && 'orca-macos-arm64' || 'macos-14' }}
@@ -94,7 +125,7 @@ jobs:
   build_macos_universal:
     name: Build macOS Universal
     needs: build_macos_arch
-    if: ${{ contains(inputs.platforms, 'macos') && !cancelled() && needs.build_macos_arch.result == 'success' && !inputs.build-deps-only && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
+    if: ${{ contains(inputs.platforms || 'linux', 'macos') && !cancelled() && needs.build_macos_arch.result == 'success' && !inputs.build-deps-only && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
     uses: ./.github/workflows/build_orca.yml
     with:
       os: ${{ vars.SELF_HOSTED && 'orca-macos-arm64' || 'macos-14' }}
@@ -113,7 +144,7 @@ jobs:
   unit_tests_linux_aarch64:
     name: Linux aarch64
     needs: build_linux
-    if: ${{ !cancelled() && success() && !vars.SELF_HOSTED }}
+    if: ${{ contains(inputs.platforms || 'linux', 'linux-arm') && !cancelled() && success() && !vars.SELF_HOSTED }}
     uses: ./.github/workflows/unit_tests.yml
     with:
       os: ubuntu-24.04-arm
@@ -152,18 +183,18 @@ jobs:
   # Profile-only PRs are covered by check_profiles.yml's nightly binary; this
   # covers src/engine PRs with the PR-built binary.
   slice_check_linux:
-    name: Slice check (Linux ${{ vars.SELF_HOSTED && 'x86_64' || 'aarch64' }})
+    name: Slice check (Linux x86_64)
     needs: build_linux
     if: ${{ !cancelled() && success() }}
     # Follows whichever Linux leg built the validator.
-    runs-on: ${{ vars.SELF_HOSTED && 'orca-lnx-server' || 'ubuntu-24.04-arm' }}
+    runs-on: ${{ vars.SELF_HOSTED && 'orca-lnx-server' || 'ubuntu-24.04' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
       - name: Download profile validator
         uses: actions/download-artifact@v8
         with:
-          name: ${{ github.sha }}-profile-validator-linux-${{ vars.SELF_HOSTED && 'x86_64' || 'aarch64' }}
+          name: ${{ github.sha }}-profile-validator-linux-x86_64
           path: validator-bin
       - name: Validate slice (expand custom g-code)
         timeout-minutes: 60
@@ -214,7 +245,7 @@ jobs:
           - arch: aarch64
             runner: ubuntu-24.04-arm
     # Don't run scheduled builds on forks; skip entirely on self-hosted runners
-    if: ${{ contains(inputs.platforms, 'linux') && !cancelled() && !vars.SELF_HOSTED && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
+    if: ${{ contains(inputs.platforms || 'linux', 'flatpak') && !cancelled() && !vars.SELF_HOSTED && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
 
     runs-on: ${{ matrix.variant.runner }}
     env:
