@@ -1599,8 +1599,6 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionIntsNullable,        filament_flush_temp))
     // Fast-purge flush temperature; consumed only when prime_volume_mode==pvmFast.
     ((ConfigOptionIntsNullable,        filament_flush_temp_fast))
-    // BBS
-    ((ConfigOptionBool,                scan_first_layer))
     ((ConfigOptionEnum<PowerLossRecoveryMode>, enable_power_loss_recovery))
     ((ConfigOptionBool,                enable_wrapping_detection))
     ((ConfigOptionInt,                 wrapping_detection_layers))
@@ -1689,7 +1687,6 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionFloatsOrPercentsNullable, initial_layer_travel_speed))
     ((ConfigOptionFloatsOrPercentsNullable, initial_layer_travel_acceleration))
     ((ConfigOptionFloatsOrPercentsNullable, initial_layer_travel_jerk))
-    ((ConfigOptionBool,                bbl_calib_mark_logo))
     ((ConfigOptionBool,                disable_m73))
 
     // Orca: mmu

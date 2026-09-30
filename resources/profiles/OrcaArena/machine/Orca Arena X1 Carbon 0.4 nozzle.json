@@ -20,7 +20,6 @@
 		"20",
 		"20"
 	],
-	"scan_first_layer": "1",
 	"machine_load_filament_time": "29",
 	"machine_unload_filament_time": "28",
 	"nozzle_type": "hardened_steel",

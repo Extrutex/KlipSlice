@@ -142,7 +142,6 @@
 	"machine_pause_gcode": "PAUSE",
 	"change_filament_gcode": "G2 Z{z_after_toolchange + 0.4} I0.86 J0.86 P1 F10000 ; spiral lift a little from second lift\n{if print_sequence == \"by object\"}\nG0 Z{max_layer_z + 0.8} F900\n{endif}\nG1 X0 Y160 F30000\nG1 Z{z_after_toolchange} F600",
 	"before_layer_change_gcode": ";BEFORE_LAYER_CHANGE\n;[layer_z]\nG92 E0\n",
-	"scan_first_layer": "0",
 	"thumbnails_format": "PNG",
 	"thumbnails": [
 		"96x96/PNG",

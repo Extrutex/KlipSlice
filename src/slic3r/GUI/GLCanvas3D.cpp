@@ -6133,16 +6133,8 @@ void GLCanvas3D::_render_arrange_menu(float left, float right, float bottom, flo
     if (imgui->bbl_checkbox(_L("Allow multiple materials on same plate"), settings_out.allow_multi_materials_on_same_plate))
         appcfg->set("arrange", multi_material_key.c_str(), settings_out.allow_multi_materials_on_same_plate);
 
-    // only show this option if the printer has micro Lidar and can do first layer scan
-    DynamicPrintConfig &current_config = wxGetApp().preset_bundle->printers.get_edited_preset().config;
-    const bool has_lidar = wxGetApp().preset_bundle->is_bbl_vendor();
-    auto                op             = current_config.option("scan_first_layer");
-    if (has_lidar && op && op->getBool()) {
-        if (imgui->bbl_checkbox(_L("Avoid extrusion calibration region"), settings_out.avoid_extrusion_cali_region))
-            appcfg->set("arrange", avoid_extrusion_key.c_str(), settings_out.avoid_extrusion_cali_region);
-    } else {
-        settings_out.avoid_extrusion_cali_region = false;
-    }
+    // The extrusion calibration region only exists on Bambu printers with a first layer scanner.
+    settings_out.avoid_extrusion_cali_region = false;
 
     // Align to Y axis. Only enable this option when auto rotation not enabled
     {

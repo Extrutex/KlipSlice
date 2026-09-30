@@ -4139,13 +4139,6 @@ void PrintConfigDef::init_fff_params()
     def->mode = comDevelop;
     def->set_default_value(new ConfigOptionBool(0));
 
-    // BBS
-    def = this->add("scan_first_layer", coBool);
-    def->label = L("Scan first layer");
-    def->tooltip = L("Enable this to allow the camera on the printer to check the quality of the first layer.");
-    def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionBool(false));
-
     // Orca
     def = this->add("enable_power_loss_recovery", coEnum);
     def->label = L("Power Loss Recovery");
@@ -6140,12 +6133,6 @@ void PrintConfigDef::init_fff_params()
                    "handle the retraction. This is only supported in recent Marlin.");
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBool(false));
-
-    def = this->add("bbl_calib_mark_logo", coBool);
-    def->label = L("Show auto-calibration marks");
-    //def->tooltip = L("");
-    def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionBool(true));
 
     def = this->add("disable_m73", coBool);
     def->label = L("Disable set remaining print time");
@@ -9328,6 +9315,7 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
         "smooth_coefficient", "overhang_totally_speed", "silent_mode",
         "overhang_speed_classic",
         "anisotropic_surfaces", // superseded by top_surface_fill_order / bottom_surface_fill_order
+        "scan_first_layer", "bbl_calib_mark_logo", // KLIPSLICE: Bambu-only options, removed
     };
 
     if (ignore.find(opt_key) != ignore.end()) {

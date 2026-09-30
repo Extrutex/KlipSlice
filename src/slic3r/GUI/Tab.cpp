@@ -5087,7 +5087,6 @@ void TabPrinter::build_fff()
         }
 
         optgroup->append_single_option_line("use_3mf");
-        optgroup->append_single_option_line("scan_first_layer" , "printer_basic_information_advanced#scan-first-layer");
         optgroup->append_single_option_line("enable_power_loss_recovery", "printer_basic_information_advanced#power-loss-recovery");
         //option  = optgroup->get_option("wrapping_exclude_area");
         //option.opt.full_width = true;
@@ -6101,8 +6100,7 @@ void TabPrinter::toggle_options()
         const auto &printer_cfg = m_preset_bundle->printers.get_edited_preset().config;
 
         // SoftFever: hide BBL specific settings
-        for (auto el : {"scan_first_layer", "bbl_calib_mark_logo", "bbl_use_printhost"})
-            toggle_line(el, is_BBL_printer);
+        toggle_line("bbl_use_printhost", is_BBL_printer);
 
         // SoftFever: hide non-BBL settings
         for (auto el : {"use_firmware_retraction", "use_relative_e_distances", "support_multi_bed_types", "pellet_modded_printer", "bed_mesh_max", "bed_mesh_min", "bed_mesh_probe_distance", "adaptive_bed_mesh_margin", "thumbnails"})

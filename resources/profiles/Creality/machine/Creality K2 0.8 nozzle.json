@@ -106,7 +106,6 @@
 	"printer_variant": "0.8",
 	"printhost_authorization_type": "key",
 	"purge_in_prime_tower": "1",
-	"scan_first_layer": "0",
 	"single_extruder_multi_material": "1",
 	"support_air_filtration": "1",
 	"support_chamber_temp_control": "0",

@@ -96,7 +96,6 @@
 	"retract_length_toolchange": [
 		"2"
 	],
-	"scan_first_layer": "0",
 	"auxiliary_fan": "0",
 	"single_extruder_multi_material": "1",
 	"change_filament_gcode": "M600",

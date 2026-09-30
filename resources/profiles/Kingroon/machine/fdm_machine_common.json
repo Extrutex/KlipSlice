@@ -152,7 +152,6 @@
 	"retraction_speed": [
 		"35"
 	],
-	"scan_first_layer": "0",
 	"deretraction_speed": [
 		"30"
 	],

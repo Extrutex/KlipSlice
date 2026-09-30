@@ -3522,10 +3522,6 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
         auto first_layer_filaments = print.get_slice_used_filaments(true);
         bool has_tpu_in_first_layer = std::any_of(first_layer_filaments.begin(), first_layer_filaments.end(), [&](unsigned int idx) { return m_config.filament_type.get_at(idx) == "TPU"; });
         this->placeholder_parser().set("has_tpu_in_first_layer", new ConfigOptionBool(has_tpu_in_first_layer));
-
-        if (print.calib_params().mode == CalibMode::Calib_PA_Line) {
-            this->placeholder_parser().set("scan_first_layer", new ConfigOptionBool(false));
-        }
     }
     {                                                                         // hold chamber temp for flat print: Flag
         double print_area_sum_threshold = 40000.0, pring_hight_threshold = 0.3; // thresholds in mm^2 and mm as units
@@ -5837,16 +5833,6 @@ LayerResult GCode::process_layer(
         const auto plr_mode = print.config().enable_power_loss_recovery.value;
         gcode += m_writer.enable_power_loss_recovery(plr_mode);
 
-        if (print.is_BBL_printer()) {
-            // BBS: open first layer inspection at second layer
-            if (print.config().scan_first_layer.value) {
-                // BBS: retract first to avoid droping when scan model
-                gcode += this->retract();
-                gcode += "M976 S1 P1 ; scan model before printing 2nd layer\n";
-                gcode += "M400 P100\n";
-                gcode += this->unretract();
-            }
-        }
       // Reset acceleration at sencond layer
       // Orca: only set once, don't need to call set_accel_and_jerk
       if (NOZZLE_CONFIG(default_acceleration) > 0 && NOZZLE_CONFIG(initial_layer_acceleration) > 0) {
