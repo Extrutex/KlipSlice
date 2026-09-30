@@ -1314,3 +1314,21 @@ TEST_CASE("A non-Klipper G-code flavor set past the loader fails validation", "[
     config.set_key_value("gcode_flavor", new ConfigOptionEnum<GCodeFlavor>(gcfMarlinFirmware));
     CHECK(config.validate().count("gcode_flavor") == 1);
 }
+
+TEST_CASE("The print host type defaults to Moonraker", "[Config]")
+{
+    const ConfigOptionDef *def = print_config_def.get("host_type");
+    REQUIRE(def != nullptr);
+    REQUIRE(def->default_value.get() != nullptr);
+    CHECK(def->default_value.get()->getInt() == int(htMoonraker));
+}
+
+TEST_CASE("A stored print host type loads as Moonraker", "[Config]")
+{
+    const char *stored = GENERATE("octoprint", "crealityprint", "elegoolink", "flashforge", "prusalink", "duet",
+                                  "simplyprint", "3dprinteros", "moonraker");
+    INFO("stored host_type: " << stored);
+    DynamicPrintConfig config;
+    config.set_deserialize_strict("host_type", stored);
+    CHECK(config.opt_enum<PrintHostType>("host_type") == htMoonraker);
+}

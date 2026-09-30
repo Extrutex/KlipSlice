@@ -258,7 +258,8 @@ constexpr uint32_t CACHE_MAGIC   = 0x4F52435A; // "ORCZ"
 // configs are read back by enum name and never pass through handle_legacy(), so
 // a cache written before the rewrite would keep serving the old value.
 // 3: gcode_flavor is rewritten to "klipper" on load.
-constexpr uint32_t CACHE_VERSION = 3;
+// 4: host_type is rewritten to "moonraker" on load.
+constexpr uint32_t CACHE_VERSION = 4;
 
 // A stamp-string read that refuses an absurd length before allocating anything.
 // The stamps are read from files named from the outside (peek_version is

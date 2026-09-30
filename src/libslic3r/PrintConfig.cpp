@@ -5402,8 +5402,11 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("host_type", coEnum);
     def->label = L("Host Type");
-    def->tooltip = L("Orca Slicer can upload G-code files to a printer host. This field must contain "
-                   "the kind of the host.");
+    def->tooltip = L("KLIPSLICE uploads G-code files to a Klipper printer through Moonraker. "
+                   "Projects and presets that name any other host type load as Moonraker.");
+    // KLIPSLICE routes every printer through Moonraker. The PrintHostType enum, its key map and
+    // the choice list below stay complete for now because the host dialog maps choice indices to
+    // enum values; PrintConfigDef::handle_legacy() rewrites any other stored host to "moonraker".
     def->enum_keys_map = &ConfigOptionEnum<PrintHostType>::get_enum_values();
     def->enum_values.push_back("prusalink");
     def->enum_values.push_back("prusaconnect");
@@ -5441,7 +5444,7 @@ void PrintConfigDef::init_fff_params()
     def->enum_labels.push_back("Moonraker (Klipper)");
     def->mode = comAdvanced;
     def->cli = ConfigOptionDef::nocli;
-    def->set_default_value(new ConfigOptionEnum<PrintHostType>(htOctoPrint));
+    def->set_default_value(new ConfigOptionEnum<PrintHostType>(htMoonraker));
 
     def = this->add("nozzle_volume", coFloats);
     def->label = L("Nozzle volume");
@@ -9082,6 +9085,10 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
         // KLIPSLICE: Klipper is the only flavor. Projects and presets written for any other
         // firmware (marlin, marlin2, reprapfirmware, repetier, ...) load as Klipper.
         value = "klipper";
+    } else if (opt_key == "host_type" && value != "moonraker") {
+        // KLIPSLICE: Moonraker is the only print host. Physical printers, presets and projects
+        // set up for OctoPrint, CrealityPrint, Elegoo Link, Flashforge, ... load as Moonraker.
+        value = "moonraker";
     } else if (opt_key == "enable_wipe_tower") {
         opt_key = "enable_prime_tower";
     } else if (opt_key == "wipe_tower_width") {
