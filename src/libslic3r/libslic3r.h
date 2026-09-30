@@ -6,6 +6,10 @@
 #define GCODEVIEWER_APP_NAME "OrcaSlicer G-code Viewer"
 #define GCODEVIEWER_APP_KEY  "OrcaSlicerGcodeViewer"
 #define GCODEVIEWER_BUILD_ID std::string("OrcaSlicer G-code Viewer-") + std::string(SLIC3R_VERSION) + std::string("-RC")
+// gettext domain of the UI catalogs (localization/i18n/<lang>/OrcaSlicer_<lang>.po -> resources/i18n/<lang>/OrcaSlicer.mo).
+// Deliberately independent of SLIC3R_APP_KEY so a rebrand of the app key does not orphan the translations
+// and upstream .po files keep merging unchanged.
+#define SLIC3R_L10N_DOMAIN "OrcaSlicer"
 
 // this needs to be included early for MSVC (listing it in Build.PL is not enough)
 #include <memory>
