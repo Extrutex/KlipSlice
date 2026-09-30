@@ -1,0 +1,184 @@
+/* ==========================================================================
+   KLIPSLICE design tokens
+   ==========================================================================
+   Dark-mode native. There is no light theme and no media query that switches
+   one on: a slicer is read against a dark 3D viewport, and a second theme
+   would double the wx colour map (StateColor.cpp) for no operational gain.
+
+   Provenance (see docs/design/BRAND.md §2 for the full table):
+   - Spacing scale, motion, font stacks        -> HORIZON src/styles.css :root
+   - Signal colours (path/limit/caution/ok)    -> HORIZON src/styles.css dark
+                                                  (--accent-2, --fault, --warn, --ok)
+   - Carbon / steel / aluminium neutral scale  -> INVENTED; hue 205-210 taken
+                                                  from HORIZON --bg #0b1114, then
+                                                  desaturated to read as metal
+   - Heatmap ramp                              -> INVENTED (the suite only has a
+                                                  diverging bed-mesh ramp)
+   - Radii 0/2 px                              -> INVENTED; deliberate deviation
+                                                  from HORIZON 8/12/18 px
+
+   Layering rule: primitives (--ks-carbon-*, --ks-alu-*, ...) are never used
+   directly in component code. Components use the ROLE tokens further down,
+   so a later retune touches one block, not every rule.
+   ========================================================================== */
+
+:root {
+  color-scheme: dark;
+
+  /* -- 1. Primitive neutral scale ---------------------------------------- */
+  /* carbon: surfaces. 950 is the darkest, used only for chrome edges.     */
+  --ks-carbon-950: #07090b;
+  --ks-carbon-900: #0b0e11;
+  --ks-carbon-850: #0f1317;
+  --ks-carbon-800: #141a1f;
+  --ks-carbon-750: #1a2127;
+  --ks-carbon-700: #222a31;
+
+  /* steel: structure (edges, disabled ink).                               */
+  --ks-steel-600: #2e3840;
+  --ks-steel-500: #3d4953;
+  --ks-steel-400: #5c6b77;
+
+  /* aluminium: ink. Anodised-aluminium greys, never pure white.           */
+  --ks-alu-300: #8b99a4;
+  --ks-alu-200: #b4c0c9;
+  --ks-alu-100: #d8e0e6;
+  --ks-alu-50: #eef3f6;
+
+  /* hairlines as solid hex (not rgba) so they map 1:1 onto wxColour,
+     which has no reliable alpha compositing on native controls.           */
+  --ks-line-subtle: #1c232a;
+  --ks-line: #262f37;
+
+  /* -- 2. Primitive signal colours (HORIZON dark theme, unchanged) ------- */
+  --ks-signal-path: #4db9ff;     /* HORIZON --accent-2 */
+  --ks-signal-limit: #ff6f5e;    /* HORIZON --fault    */
+  --ks-signal-caution: #ffc56a;  /* HORIZON --warn     */
+  --ks-signal-nominal: #74f0a7;  /* HORIZON --ok       */
+
+  /* Signal surfaces: solid pre-composited tints for rows/tiles in a state. */
+  --ks-signal-limit-surface: #2a1513;
+  --ks-signal-caution-surface: #2a2112;
+  --ks-signal-path-surface: #0f2433;
+
+  /* -- 3. Heatmap ramp (speed / flow / acceleration) --------------------- */
+  /* Blue -> neutral -> yellow. Luminance rises monotonically
+     (Y = .131 .161 .196 .240 .295 .358 .429 .508 .595 .691 .787), so the
+     scale survives 3D shading as a hue axis AND reads in greyscale. It
+     deliberately contains no red (reserved for --ks-signal-limit) and no
+     saturated azure (reserved for --ks-signal-path). r0 has 3.0:1 against
+     the viewport ground so the slowest paths never vanish.               */
+  --ks-ramp-0: #4b62a8;
+  --ks-ramp-1: #5a6ea6;
+  --ks-ramp-2: #6a7aa2;
+  --ks-ramp-3: #7b879e;
+  --ks-ramp-4: #8d9599;
+  --ks-ramp-5: #a0a393;
+  --ks-ramp-6: #b3b18a;
+  --ks-ramp-7: #c6bf7e;
+  --ks-ramp-8: #d9cd6e;
+  --ks-ramp-9: #ebdb5c;
+  --ks-ramp-10: #fbe84a;
+  --ks-ramp-over: var(--ks-signal-limit); /* out-of-range, always hatched */
+  --ks-ramp-travel: var(--ks-steel-400);  /* travel moves, dashed          */
+
+  /* -- 4. Role tokens (the only colours components may reference) ------- */
+  --ks-bg-chrome: var(--ks-carbon-950);   /* title bar, tab strip        */
+  --ks-bg-app: var(--ks-carbon-900);      /* window ground               */
+  --ks-bg-panel: var(--ks-carbon-850);    /* sidebar, dialogs            */
+  --ks-bg-raised: var(--ks-carbon-800);   /* group header, column header */
+  --ks-bg-field: var(--ks-carbon-750);    /* numeric input               */
+  --ks-bg-hover: var(--ks-carbon-700);    /* hover / selected row        */
+  --ks-bg-viewport: var(--ks-carbon-800); /* 3D canvas clear colour      */
+
+  --ks-ink-strong: var(--ks-alu-50);      /* values, active labels       */
+  --ks-ink: var(--ks-alu-100);            /* default text                */
+  --ks-ink-secondary: var(--ks-alu-200);  /* parameter labels            */
+  --ks-ink-muted: var(--ks-alu-300);      /* units, sources, captions    */
+  --ks-ink-disabled: var(--ks-steel-400); /* disabled only (WCAG-exempt) */
+  --ks-ink-on-signal: var(--ks-carbon-950);
+
+  --ks-edge-subtle: var(--ks-line-subtle);
+  --ks-edge: var(--ks-line);
+  --ks-edge-strong: var(--ks-steel-600);
+  --ks-edge-field: var(--ks-steel-400);   /* >= 3:1 on panel (1.4.11)    */
+  --ks-focus: var(--ks-alu-50);           /* focus ring is NOT an accent */
+
+  /* -- 5. Typography ------------------------------------------------------ */
+  /* Both families are SIL OFL 1.1 and get bundled in resources/fonts, so
+     the rendering is identical on Windows, macOS and Linux.              */
+  --ks-font-ui: "Inter", "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --ks-font-data: "IBM Plex Mono", "JetBrains Mono", ui-monospace, "SF Mono",
+    Consolas, monospace;
+
+  /* px, not rem: the desktop app maps these onto wx point sizes 1:1
+     (Label::Body_* / Head_*), see BRAND.md §6.                            */
+  --ks-text-micro: 11px;   /* column headers, caps labels   */
+  --ks-text-table: 12px;   /* table rows, units             */
+  --ks-text-ui: 13px;      /* default UI                    */
+  --ks-text-section: 15px; /* sidebar section title         */
+  --ks-text-title: 18px;   /* dialog / panel title          */
+  --ks-text-metric: 24px;  /* live metric tile value        */
+
+  --ks-leading-tight: 1.2;
+  --ks-leading-ui: 1.4;
+  --ks-tracking-caps: 0.08em;
+
+  /* -- 6. Space, size, shape --------------------------------------------- */
+  /* 4 px base, identical to HORIZON --space-1..7.                         */
+  --ks-space-1: 4px;
+  --ks-space-2: 8px;
+  --ks-space-3: 12px;
+  --ks-space-4: 16px;
+  --ks-space-5: 24px;
+  --ks-space-6: 32px;
+  --ks-space-7: 48px;
+
+  --ks-row: 28px;          /* parameter row                         */
+  --ks-row-header: 32px;   /* group header                          */
+  --ks-target: 24px;       /* minimum pointer target (WCAG 2.5.8)   */
+  --ks-sidebar-width: 460px; /* label column >= 150 px at 12 px type */
+
+  --ks-radius-0: 0;        /* panels, rows, viewport                */
+  --ks-radius-1: 2px;      /* fields, buttons, badges — the maximum */
+  --ks-stroke: 1px;
+  --ks-stroke-state: 3px;  /* left state bar on a row               */
+
+  /* -- 7. Motion (HORIZON --transition-fast / --transition-base) --------- */
+  --ks-motion-fast: 120ms ease;
+  --ks-motion-base: 220ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Global baseline every KLIPSLICE web surface (preview, embedded web
+   dialogs in resources/web) starts from. */
+html,
+body {
+  background: var(--ks-bg-app);
+  color: var(--ks-ink);
+  font-family: var(--ks-font-ui);
+  font-size: var(--ks-text-ui);
+  line-height: var(--ks-leading-ui);
+}
+
+/* Numbers never change width while they change value. */
+.ks-data,
+input[inputmode="decimal"],
+input[inputmode="numeric"],
+code,
+kbd,
+samp {
+  font-family: var(--ks-font-data);
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ks-focus);
+  outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ks-motion-fast: 0ms linear;
+    --ks-motion-base: 0ms linear;
+  }
+}
