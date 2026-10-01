@@ -52,7 +52,7 @@ slices for. The following is **roadmap, not implemented yet**:
 and file formats can still change without migration. Do not rely on KLIPSLICE for
 prints that matter.
 
-CI builds KLIPSLICE for Windows, macOS and Linux on every push.
+Every push is built and tested automatically for Windows, macOS and Linux.
 
 ## Build from source
 
@@ -106,6 +106,12 @@ Requires more than 10 GiB of available memory and free disk space.
 ```
 
 Output: `build/package/bin/klipslice` and `build/KLIPSLICE_Linux_V<version>.AppImage`
+
+## Contributing
+
+KLIPSLICE has a single maintainer. Bug reports are welcome; code changes are
+accepted only after they were agreed in an issue first. See
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Credits and license
 
