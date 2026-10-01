@@ -8,7 +8,7 @@ every path that does not lead to a Klipper machine removed.
 
 **Documentation:** <https://extrutex.github.io/KlipSlice-Wiki/> (English and German)
 
-> KLIPSLICE is an independent community project and is not affiliated with or
+> KLIPSLICE is an independent project and is not affiliated with or
 > endorsed by the Klipper project.
 
 ## What KLIPSLICE is
