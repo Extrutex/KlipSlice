@@ -222,7 +222,7 @@ void MsgDialog::apply_style(long style)
     logo->SetBitmap( create_scaled_bitmap(style & wxAPPLY        ? "completed" :
                                           style & wxICON_WARNING        ? "exclamation" : // ORCA "exclamation" used for dialogs "obj_warning" used for 16x16 areas
                                           style & wxICON_INFORMATION    ? "info"        :
-                                          style & wxICON_QUESTION       ? "question"    : "OrcaSlicer", this, 64, style & wxICON_ERROR));
+                                          style & wxICON_QUESTION       ? "question"    : GUI_App::symbol_name(), this, 64, style & wxICON_ERROR));
 }
 
 void MsgDialog::finalize()
@@ -457,7 +457,7 @@ ErrorDialog::ErrorDialog(wxWindow *parent, const wxString &temp_msg, bool has_co
     add_msg_content(this, content_sizer, msg, has_code_excerpts);
 
 	// Use a small bitmap for code excerpts, which cannot wrap and so need the width.
-	logo->SetBitmap(create_scaled_bitmap(wxGetApp().dark_mode() ? "KLIPSLICE_symbol_dark" : "KLIPSLICE_symbol_light", this, has_code_excerpts ? 48 : /*1*/64));
+	logo->SetBitmap(create_scaled_bitmap(GUI_App::symbol_name(), this, has_code_excerpts ? 48 : /*1*/64));
 
     SetMaxSize(MSG_DLG_MAX_SIZE);
 
