@@ -74,7 +74,7 @@ static const std::vector<std::string> printer_vendors =
      "Creality",           "DeltaMaker",         "Dremel",             "Elegoo",             "Flashforge",
      "FLSun",              "FlyingBear",         "Folgertech",         "Geeetech",           "Ginger Additive",
      "InfiMech",           "Kingroon",           "Lulzbot",            "MagicMaker",         "Mellow",
-     "Orca Arena Printer", "Peopoly",            "Positron 3D",        "Prusa",              "Qidi",
+     "Peopoly",            "Positron 3D",        "Prusa",              "Qidi",
      "Raise3D",            "RatRig",             "re3D",               "RolohaunDesign",     "SecKit",             
      "Snapmaker",          "Sovol",              "Thinker X400",       "Tronxy",             "TwoTrees",           
      "UltiMaker",          "Vivedino",           "Volumic",            "Voron",              "Voxelab",            
@@ -124,7 +124,6 @@ static const std::unordered_map<std::string, std::vector<std::string>> printer_m
      {"Lulzbot",           {"Lulzbot Taz 6",        "Lulzbot Taz 4 or 5",   "Lulzbot Taz Pro Dual", "Lulzbot Taz Pro S"}},
      {"MagicMaker",        {"MM hqs hj",   "MM hqs SF",   "MM hj SK",    "MM BoneKing", "MM slb"}},
      {"Mellow",            {"M1"}},
-     {"Orca Arena Printer",{"Orca Arena X1 Carbon"}},
      {"Peopoly",           {"Peopoly Magneto X"}},
      {"Positron 3D",       {"The Positron"}},
      {"Prusa",             {"Prusa CORE One", "Prusa CORE One HF", "Prusa CORE One L", "Prusa CORE One L HF", "MK4IS", "MK4S", "MK4S HF",
@@ -3475,7 +3474,7 @@ CreatePresetSuccessfulDialog::CreatePresetSuccessfulDialog(wxWindow *parent, con
     case FILAMENT:
         success_text = new wxStaticText(this, wxID_ANY, _L("Filament Created"));
         wxString prompt_text = _L("Please go to filament settings to edit your presets if you need to.\nPlease note that nozzle temperature, hot bed temperature, and maximum volumetric speed each have a significant impact on printing quality. Please set them carefully.");
-        wxString sync_text = sync_user_preset_need_enabled ? _L("\n\nOrca has detected that your user presets synchronization function is not enabled, "
+        wxString sync_text = sync_user_preset_need_enabled ? _L("\n\nKLIPSLICE has detected that your user presets synchronization function is not enabled, "
                                                                 "which may result in unsuccessful Filament settings on the Device page.\n"
                                                                 "Click \"Sync user presets\" to enable the synchronization function.") : "";
         next_step_text = new wxStaticText(this, wxID_ANY, prompt_text + sync_text);
