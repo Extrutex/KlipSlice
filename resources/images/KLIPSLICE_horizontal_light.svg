@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 233 64" width="466" height="128">
+  <title>KLIPSLICE horizontal lockup, direction A (Klipper-derived), light background.</title>
+  <path fill="#3d4953" d="M4 10L9 15H4Z M4 17H11L17 23H4Z M5 25H19L25 31H11Z M13 33H27L28 34V39H19Z M21 41H28V48Z M60 10L55 15H60Z M60 17H53L47 23H60Z M59 25H45L39 31H53Z M51 33H37L36 34V39H45Z M43 41H36V48Z"/>
+  <path fill="#1a86d6" d="M4 8H11L32 29L53 8H60L34.5 33.5V54L32.5 56H22V51H29.5V33.5Z"/>
+  <g fill="#0b0e11" transform="translate(76 20)">
+    <path d="M0 0H4V24H0Z M4 7.17L10.57 0H16L4 13.09Z M7.3 9.49L16 24H11.34L4 11.77Z"/>
+    <path transform="translate(22 0)" d="M0 0H4V20H13V24H0Z"/>
+    <path transform="translate(39 0)" d="M0 0H4V24H0Z"/>
+    <path transform="translate(49 0)" d="M0 0H12L15 3V11L12 14H4V24H0Z M4 4V10H11V4Z"/>
+    <path transform="translate(70 0)" d="M3 0H15V4H4V10H12L15 13V21L12 24H0V20H11V14H3L0 11V3Z"/>
+    <path transform="translate(91 0)" d="M0 0H4V20H13V24H0Z"/>
+    <path transform="translate(108 0)" d="M0 0H4V24H0Z"/>
+    <path transform="translate(118 0)" d="M3 0H15V4H4V20H15V24H3L0 21V3Z"/>
+    <path transform="translate(139 0)" d="M0 0H14V4H4V10H12V14H4V20H14V24H0Z"/>
+  </g>
+</svg>

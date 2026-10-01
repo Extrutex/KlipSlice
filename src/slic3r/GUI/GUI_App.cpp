@@ -289,13 +289,17 @@ bool is_associate_files(std::wstring extend)
 
 class SplashScreen : public wxSplashScreen
 {
+    // Splash window size in DIP; 2:1 like the KLIPSLICE_splash.svg artwork.
+    static constexpr int SPLASH_W = 600;
+    static constexpr int SPLASH_H = 300;
+
 public:
     SplashScreen(wxPoint pos = wxDefaultPosition)
         // No wxSPLASH_TIMEOUT — the splash is closed explicitly once MainFrame
         // is shown. The previous 1500 ms auto-timeout closed the splash long
         // before init finished, leaving the user staring at a frozen blank
         // screen during the slow load_presets / new MainFrame phases.
-        : wxSplashScreen(wxBitmap(FromDIP(wxSize(480,480),nullptr)), wxSPLASH_CENTRE_ON_SCREEN, 0, nullptr, wxID_ANY, wxDefaultPosition, wxDefaultSize,
+        : wxSplashScreen(wxBitmap(FromDIP(wxSize(SPLASH_W, SPLASH_H), nullptr)), wxSPLASH_CENTRE_ON_SCREEN, 0, nullptr, wxID_ANY, wxDefaultPosition, wxDefaultSize,
 #ifdef __APPLE__
             wxBORDER_NONE | wxFRAME_NO_TASKBAR | wxSTAY_ON_TOP
 #else
@@ -320,17 +324,19 @@ public:
         this->SetPosition(pos);
         this->CenterOnScreen();
 
-        scale_font(m_font_version, 1.65f); // only scale this one since it hasnt a preloaded font like Label::Body_24;
-
-        m_bg_color = StateColor::darkModeColorFor(wxColour("#FFFFFF"));
-        m_fg_color = StateColor::darkModeColorFor(wxColour("#6B6A6A"));
-        m_progress_bg_color = StateColor::darkModeColorFor(wxColour("#DFDFDF"));
-        m_progress_fg_color = StateColor::darkModeColorFor(wxColour("#009688"));
-        m_progress_h = FromDIP(6);
-        bool dark_mode = m_fg_color != wxColour("#6B6A6A");
+        // KLIPSLICE splash: always dark, independent of the colour mode. The artwork
+        // (resources/images/KLIPSLICE_splash.svg, 1200 x 600) carries the lockup, the
+        // tagline and a thin rule at y = 548; the version and the loading step are drawn
+        // left/right aligned above that rule, and the rule itself doubles as the progress bar.
+        m_bg_color          = wxColour("#0B0E11"); // carbon-900
+        m_fg_color          = wxColour("#8B99A4"); // alu-300
+        m_version_color     = wxColour("#B4C0C9"); // alu-200
+        m_progress_bg_color = wxColour("#262F37"); // line
+        m_progress_fg_color = wxColour("#4DB9FF"); // signal-path
         wxSize sz  = m_window->GetClientSize();
         BitmapCache bmp_cache;
-        m_logo_bmp = *bmp_cache.load_svg(dark_mode ? "splash_logo_dark" : "splash_logo", sz.GetWidth(), sz.GetHeight());
+        if (wxBitmap* bmp = bmp_cache.load_svg("KLIPSLICE_splash", 0, sz.GetHeight()))
+            m_logo_bmp = *bmp;
 
         m_window->Bind(wxEVT_PAINT, &SplashScreen::OnPaint, this);
         m_window->Refresh();
@@ -347,29 +353,28 @@ public:
         if (m_logo_bmp.IsOk())
             dc.DrawBitmap(m_logo_bmp, 0, 0, true);
 
-        wxRect rc = wxRect(0, 0, c_sz.GetWidth(), 0);
-        dc.SetTextForeground(m_fg_color);
-
-        dc.SetFont(m_font_version);
-        rc.y      = c_sz.GetHeight() * 0.72;
-        rc.height = dc.GetTextExtent(m_text_version).GetHeight();
-        dc.DrawLabel(m_text_version, rc, wxALIGN_CENTER);
+        // Layout in artwork units (1200 x 600), scaled to the client size.
+        const double k      = c_sz.GetWidth() / 1200.0;
+        const int    left   = int(106 * k + 0.5);
+        const int    right  = int(1094 * k + 0.5);
+        const int    rule_y = int(548 * k + 0.5);
+        const int    rule_h = std::max(2, int(2 * k + 0.5));
 
         dc.SetFont(m_font_action);
-        rc.y      = c_sz.GetHeight() * 0.85;
-        rc.height = dc.GetTextExtent(m_text_action).GetHeight();
-        dc.DrawLabel(m_text_action, rc, wxALIGN_CENTER);
+        const int text_h = dc.GetTextExtent(m_text_action + m_text_version).GetHeight();
+        const wxRect text_rc(left, rule_y - FromDIP(10) - text_h, right - left, text_h);
+        dc.SetTextForeground(m_fg_color);
+        dc.DrawLabel(m_text_action, text_rc, wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL);
+        dc.SetTextForeground(m_version_color);
+        dc.DrawLabel(m_text_version, text_rc, wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL);
 
-        const wxRect progress_rc(0, c_sz.GetHeight() - m_progress_h, c_sz.GetWidth(), m_progress_h);
-                
         dc.SetPen(*wxTRANSPARENT_PEN);
         dc.SetBrush(wxBrush(m_progress_bg_color));
-        dc.DrawRectangle(progress_rc);
-
-        const int fill_width = progress_rc.GetWidth() * m_progress * 0.01;
+        dc.DrawRectangle(left, rule_y, right - left, rule_h);
+        const int fill_width = (right - left) * m_progress / 100;
         if (fill_width > 0) {
             dc.SetBrush(wxBrush(m_progress_fg_color));
-            dc.DrawRectangle(0, progress_rc.GetTop(), fill_width, m_progress_h);
+            dc.DrawRectangle(left, rule_y, fill_width, rule_h);
         }
     }
 
@@ -422,14 +427,13 @@ private:
     wxColour m_bg_color;
     wxColour m_progress_bg_color;
     wxColour m_progress_fg_color;
+    wxColour m_version_color;
 
-    wxString m_text_version = GUI_App::format_display_version();
+    wxString m_text_version = wxString(SLIC3R_APP_NAME) + " " + GUI_App::format_display_version();
     wxString m_text_action  = _L("Loading configuration") + dots;
     int      m_progress     = 0;
-    int      m_progress_h   = 6;
 
-    wxFont m_font_version = Label::Body_16;
-    wxFont m_font_action  = Label::Body_16;
+    wxFont m_font_action  = Label::Body_13;
 };
 
 #ifdef __linux__

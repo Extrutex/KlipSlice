@@ -16,10 +16,9 @@ fi
 mv @SLIC3R_APP_CMD@ AppRun
 chmod +x AppRun
 
-# The icon assets keep their upstream file names until KLIPSLICE ships its own set.
-cp resources/images/OrcaSlicer_192px.png @SLIC3R_APP_KEY@.png
+cp resources/images/KLIPSLICE_192px.png @SLIC3R_APP_KEY@.png
 mkdir -p usr/share/icons/hicolor/192x192/apps
-cp resources/images/OrcaSlicer_192px.png usr/share/icons/hicolor/192x192/apps/@SLIC3R_APP_KEY@.png
+cp resources/images/KLIPSLICE_192px.png usr/share/icons/hicolor/192x192/apps/@SLIC3R_APP_KEY@.png
 cat <<EOF > de._3dwindt.KLIPSLICE.desktop
 [Desktop Entry]
 Name=@SLIC3R_APP_KEY@

@@ -1221,11 +1221,14 @@ elseif (SLIC3R_FHS)
         install(PROGRAMS "${ORCA_BUNDLED_UV_EXECUTABLE}" DESTINATION "${SLIC3R_FHS_RESOURCES}/tools/uv" RENAME "${ORCA_BUNDLED_UV_FILENAME}")
     endif()
     install(FILES src/dev-utils/platform/unix/de._3dwindt.KLIPSLICE.desktop DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/applications)
-    foreach(SIZE 32 128 192)
-        install(FILES ${SLIC3R_RESOURCES_DIR}/images/OrcaSlicer_${SIZE}px.png
+    foreach(SIZE 32 128 192 256 512)
+        install(FILES ${SLIC3R_RESOURCES_DIR}/images/KLIPSLICE_${SIZE}px.png
             DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/${SIZE}x${SIZE}/apps RENAME KLIPSLICE.png
         )
     endforeach()
+    install(FILES ${SLIC3R_RESOURCES_DIR}/images/KLIPSLICE.svg
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/scalable/apps
+    )
 elseif (CMAKE_MACOSX_BUNDLE)
     # install(DIRECTORY "${SLIC3R_RESOURCES_DIR}/" DESTINATION "${CMAKE_INSTALL_PREFIX}/KLIPSLICE.app/Contents/resources")
     if(ORCA_BUNDLED_UV_EXECUTABLE)
@@ -1264,7 +1267,7 @@ endif ()
 set (CPACK_PACKAGE_DESCRIPTION_SUMMARY "KLIPSLICE is an open source slicer for Klipper printers")
 set (CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/Extrutex/KlipSlice")
 set (CPACK_PACKAGE_INSTALL_DIRECTORY ${CPACK_PACKAGE_NAME})
-set (CPACK_PACKAGE_ICON "${CMAKE_SOURCE_DIR}/resources/images\\\\OrcaSlicer.ico")
+set (CPACK_PACKAGE_ICON "${CMAKE_SOURCE_DIR}/resources/images\\\\KLIPSLICE.ico")
 set (CPACK_NSIS_MUI_ICON "${CPACK_PACKAGE_ICON}")
 set (CPACK_NSIS_MUI_UNIICON "${CPACK_PACKAGE_ICON}")
 set (CPACK_NSIS_INSTALLED_ICON_NAME  "$INSTDIR\\\\klipslice.exe")
