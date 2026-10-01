@@ -118,13 +118,6 @@ function HandleStudio( pVal )
     } else {
       $("#LeftBoard").hide();
     }
-  } else if (strCmd == "network_plugin_installtip") {
-    // Bambu Cloud is unreachable without the network plugin, so its row only carries the tip.
-    let bMissing = pVal["show"] * 1 == 1;
-
-    $("#NoPluginTip").css("display", bMissing ? "block" : "none");
-    $("#BambuAccount").toggleClass("Disabled", bMissing).attr("aria-disabled", bMissing ? "true" : null);
-    if (bMissing) SetBambuSectionExpanded(true, false);
   } else if (strCmd == "modelmall_model_advise_get") {
     //alert('hot');
     if (m_HotModelList != null) {
@@ -492,15 +485,6 @@ function SetBambuLoginInfo(strAvatar, strName) { SetAccountSignedIn("bambu", str
 function SetBambuUserOffline() { SetAccountSignedOut("bambu"); }
 
 function SendMsg_GetBambuLoginInfo() { SendSimpleCommand("get_bambu_login_info"); }
-
-function BeginDownloadNetworkPlugin()
-{
-	var tSend={};
-	tSend['sequence_id']=Math.round(new Date() / 1000);
-	tSend['command']="begin_network_plugin_download";
-	
-	SendWXMessage( JSON.stringify(tSend) );		
-}
 
 function OutputKey(keyCode, isCtrlDown, isShiftDown, isCmdDown) {
 	var tSend = {};

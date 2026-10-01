@@ -491,30 +491,6 @@ void WebViewPanel::SendLoginInfo()
     }
 }
 
-void WebViewPanel::ShowNetpluginTip()
-{
-    // Install Network Plugin
-    const auto bblnetwork_enabled =wxGetApp().app_config->get_bool("installed_networking");
-    if(!bblnetwork_enabled) {
-        return;
-    }
-    bool        bValid       = wxGetApp().is_compatibility_version();
-
-    int nShow = 0;
-    if (!bValid) nShow = 1;
-
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": bValid=%1%, nShow=%2%")%bValid %nShow;
-
-    json m_Res           = json::object();
-    m_Res["command"]     = "network_plugin_installtip";
-    m_Res["sequence_id"] = "10001";
-    m_Res["show"]        = nShow;
-
-    wxString strJS = wxString::Format("window.postMessage(%s)", m_Res.dump(-1, ' ', false, json::error_handler_t::ignore));
-
-    RunScript(strJS);
-}
-
 void WebViewPanel::SendCloudProvidersInfo()
 {
     auto* app_config = wxGetApp().app_config;
@@ -628,7 +604,6 @@ void WebViewPanel::OnNavigationComplete(wxWebViewEvent& evt)
     if (wxGetApp().get_mode() == comDevelop)
         wxLogMessage("%s", "Navigation complete; url='" + evt.GetURL() + "'");
     UpdateState();
-    ShowNetpluginTip();
 }
 
 /**

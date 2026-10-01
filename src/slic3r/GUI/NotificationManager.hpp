@@ -159,12 +159,9 @@ enum class NotificationType
 	BBLGcodeOverlap,
 	//BBL: sequence print info
 	BBLSeqPrintInfo,
-	//BBL: plugin install hint
-	BBLPluginInstallHint,
     BBLFlushingVolumeZero,
     // A mixed-color filament references a deleted component, or its components disagree in type.
     BBLMixedFilamentBroken,
-	BBLPluginUpdateAvailable,
 	BBLPreviewOnlyMode,
     BBLPrinterConfigUpdateAvailable,
 	BBLUserPresetExceedLimit,
@@ -386,10 +383,6 @@ public:
     //BBS--preview only mode
     void bbl_show_preview_only_notification(const std::string &text);
     void bbl_close_preview_only_notification();
-
-    //BBS--PluginInstallHint
-    void bbl_show_plugin_install_notification(const std::string &text);
-    void bbl_close_plugin_install_notification();
 
 	//BBS--Objects Info
 	void bbl_show_objectsinfo_notification(const std::string &text, bool is_warning, bool is_hidden);
@@ -1109,16 +1102,6 @@ private:
 		_u8L("Integration failed.") },
         NotificationData{NotificationType::UndoDesktopIntegrationSuccess, NotificationLevel::RegularNotificationLevel, 10,
 		_u8L("Undo integration was successful.") },
-
-        NotificationData{NotificationType::BBLPluginUpdateAvailable, NotificationLevel::ImportantNotificationLevel, BBL_NOTICE_MAX_INTERVAL,
-			_u8L("New network plug-in available."),
-			_u8L("Details"),
-                         [](wxEvtHandler* evnthndlr) {
-                //BBS set feishu release page by default
-                 wxCommandEvent* evt = new wxCommandEvent(EVT_UPDATE_PLUGINS_WHEN_LAUNCH);
-				 wxQueueEvent(wxGetApp().plater(), evt);
-				 return true;
-             }},
 
         NotificationData{NotificationType::BBLPrinterConfigUpdateAvailable, NotificationLevel::ImportantNotificationLevel, BBL_NOTICE_MAX_INTERVAL,
                          _u8L("New printer config available."), _u8L("Details"),

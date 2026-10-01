@@ -251,26 +251,6 @@ body
 
 .AccountRow.MenuOpen .AccountChevron { transform: rotate(180deg); }
 
-#NoPluginTip
-{
-	display: none;
-	margin: 4px 0 2px;
-	padding: 8px 10px;
-	border-radius: 6px;
-	background-color: var(--account-warn-bg);
-}
-
-#NoPluginText
-{
-	line-height: 16px;
-}
-
-#NoPluginTip .LinkBtn
-{
-	color: var(--warn-color);
-	text-decoration: underline;
-}
-
 /*----Bambu Cloud, folded under the main account----*/
 #BambuCloudSection
 {

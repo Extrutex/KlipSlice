@@ -175,11 +175,6 @@ void MonitorPanel::init_tabpanel()
     add_build_steps_of(*m_status_info_panel);
     m_tabpanel->AddPage(m_status_info_panel, _L("Status"), true);
     add_build_step([this] {
-        std::string network_ver = Slic3r::NetworkAgent::get_version();
-        if (!network_ver.empty()) {
-            m_tabpanel->SetFooterText(wxString::Format(_L("Network plug-in v%s"), network_ver));
-        }
-
         show_status((int)MonitorStatus::MONITOR_NO_PRINTER);
     });
 }
@@ -359,7 +354,6 @@ bool MonitorPanel::Show(bool show)
         wxGetApp().mainframe->SetMinSize(wxGetApp().plater()->GetMinSize());
 #endif
         start_update();
-        update_network_version_footer();
 
         m_refresh_timer->Stop();
         m_refresh_timer->SetOwner(this);
@@ -436,26 +430,6 @@ std::string MonitorPanel::get_string_from_tab(PrinterTab tab)
         return "";
     }
     return "";
-}
-
-void MonitorPanel::update_network_version_footer()
-{
-    std::string binary_version = Slic3r::NetworkAgent::get_version();
-    if (binary_version.empty())
-        return;
-
-    std::string configured_version = wxGetApp().app_config->get_network_plugin_version();
-    std::string suffix = extract_suffix(configured_version);
-    std::string configured_base = extract_base_version(configured_version);
-
-    wxString footer_text;
-    if (!suffix.empty() && configured_base == binary_version) {
-        footer_text = wxString::Format(_L("Network plug-in v%s (%s)"), binary_version, suffix);
-    } else {
-        footer_text = wxString::Format(_L("Network plug-in v%s"), binary_version);
-    }
-
-    m_tabpanel->SetFooterText(footer_text);
 }
 
 } // GUI

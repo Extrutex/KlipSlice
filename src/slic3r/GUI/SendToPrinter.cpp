@@ -1678,7 +1678,6 @@ void SendToPrinterDialog::GetConnection()
     }
 
     NetworkAgent *agent         = wxGetApp().getAgent();
-    std::string   agent_version = agent ? agent->get_version() : "";
     std::string   dev_ver       = obj->get_ota_version();
     std::string   dev_id        = obj->get_dev_id();
 
@@ -1722,7 +1721,7 @@ void SendToPrinterDialog::GetConnection()
         else if (m_tutk_try_connect)
         {
             std::string protocols[] = {"", "\"tutk\"", "\"agora\"", "\"tutk\",\"agora\""};
-            agent->get_camera_url(obj->get_dev_id() + "|" + dev_ver + "|" + protocols[1], [this, m = dev_id, v = agent->get_version(), dv = dev_ver](std::string url) {
+            agent->get_camera_url(obj->get_dev_id() + "|" + dev_ver + "|" + protocols[1], [this, m = dev_id, v = std::string(), dv = dev_ver](std::string url) {
                 if (boost::algorithm::starts_with(url, "bambu:///")) {
                     url += "&device=" + m;
                     url += "&net_ver=" + v;

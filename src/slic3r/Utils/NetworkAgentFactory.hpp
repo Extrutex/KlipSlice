@@ -12,6 +12,7 @@
 
 namespace Slic3r {
 static constexpr char ORCA_PRINTER_AGENT_ID[] = "orca";
+// No longer registered; kept so access codes stored under the old Bambu agent id still resolve.
 static constexpr char BBL_PRINTER_AGENT_ID[] = "bbl";
 static constexpr char MOONRAKER_PRINTER_AGENT_ID[] = "moonraker";
 
@@ -133,7 +134,7 @@ public:
      * Create a cloud service agent based on provider type.
      * Handles authentication, project sync, and other cloud services.
      *
-     * @param provider Which implementation to use (Orca or BBL)
+     * @param provider Which implementation to use (only Orca is built in)
      * @param log_dir Directory for log files
      * @return Shared pointer to ICloudServiceAgent implementation
      */
@@ -161,8 +162,8 @@ private:
  * separately when a printer is selected, via create_printer_agent_by_id().
  *
  * Cloud provider: Always creates OrcaCloudServiceAgent as the primary provider.
- * Third-party cloud agents (e.g., Bambu) are created from the cloud_providers
- * AppConfig setting and added via NetworkAgent::add_cloud_agent().
+ * Third-party cloud agents named in the cloud_providers AppConfig setting are
+ * added via NetworkAgent::add_cloud_agent() when the factory knows them.
  *
  * @param log_dir Directory for log files
  * @param app_config Application configuration object

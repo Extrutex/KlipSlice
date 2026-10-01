@@ -1,5 +1,6 @@
 #include "ExportPresetBundleDialog.hpp"
 #include "slic3r/Utils/NetworkAgent.hpp"
+#include "libslic3r_version.h"
 #include "GUI_App.hpp"
 #include "ConfigWizard.hpp"
 #include "I18N.hpp"
@@ -342,7 +343,7 @@ void ExportPresetBundleDialog::OnExportData(const wxString& path, const wxString
     NetworkAgent* agent = wxGetApp().getAgent();
     std::string clock   = get_curr_time();
     if (agent) {
-        bundle_structure["version"]   = agent->get_version();
+        bundle_structure["version"]   = SLIC3R_VERSION;
         bundle_structure["bundle_id"] = agent->get_user_id() + "_" + std::string(filename.utf8_string()) + "_" + clock;
     } else {
         bundle_structure["version"] = "";

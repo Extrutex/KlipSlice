@@ -13,7 +13,9 @@
 #include "libslic3r/PresetBundle.hpp"
 #include "slic3r/GUI/UserNotification.hpp"
 #include "slic3r/Utils/CloudProvider.hpp"
-#include "slic3r/GUI/Jobs/UpgradeNetworkJob.hpp"
+#include "slic3r/GUI/Jobs/Job.hpp"
+#include <boost/filesystem.hpp>
+#include <boost/log/trivial.hpp>
 #include "slic3r/GUI/HttpServer.hpp"
 #include "../Utils/PrintHost.hpp"
 
@@ -26,6 +28,9 @@
 
 #include <mutex>
 #include <stack>
+
+// Many GUI sources reach boost::filesystem through this header as fs::.
+namespace fs = boost::filesystem;
 
 //#define BBL_HAS_FIRST_PAGE          1
 #define STUDIO_INACTIVE_TIMEOUT     15*60*1000
@@ -307,10 +312,6 @@ private:
     std::map<std::string, std::string> need_delete_presets;   // store setting ids of preset
     std::vector<bool> m_create_preset_blocked { false, false, false, false, false, false }; // excceed limit
     std::vector<std::string> m_pending_conflict_setting_ids; // setting_id from the most recent 409 conflict
-    bool m_networking_compatible { false };
-    bool m_networking_need_update { false };
-    bool m_networking_cancel_update { false };
-    std::shared_ptr<UpgradeNetworkJob> m_upgrade_network_job;
 
     // ORCA: for installing vendors on the main thread when presets to be synced requires it
     // vendor structure is:
@@ -499,7 +500,6 @@ public:
 
     wxString        transition_tridid(int trid_id) const;
     void            ShowUserGuide();
-    void            ShowDownNetPluginDlg();
     void            ShowUserLogin(bool show = true, const std::string& provider = ORCA_CLOUD_PROVIDER);
     void            ShowOnlyFilament();
     // Orca auth
@@ -773,45 +773,21 @@ public:
     // URL download - PrusaSlicer gets system call to open prusaslicer:// URL which should contain address of download
     void            start_download(std::string url);
 
-    std::string     get_plugin_url(std::string name, std::string country_code);
-    int             download_plugin(std::string name, std::string package_name, InstallProgressFn pro_fn = nullptr, WasCancelledFn cancel_fn = nullptr);
-    int             install_plugin(std::string name, std::string package_name, InstallProgressFn pro_fn = nullptr, WasCancelledFn cancel_fn = nullptr);
     std::string     get_http_url(std::string country_code, std::string path = {});
     std::string     get_model_http_url(std::string country_code);
-    bool            use_legacy_network_plugin() const;
-    bool            is_compatibility_version();
-    bool            check_networking_version();
-    void            cancel_networking_install();
-    void            restart_networking();
     void            check_config_updates_from_updater() { check_updates(false); }
 
-    void            show_network_plugin_download_dialog(bool is_update = false);
-    // One-time normalization of an older full-version identity (config 02.08.01.53 + file
-    // ..._02.08.01.53.dylib) to the AA.BB.CC series form, with no re-download. Runs at startup
-    // before the plug-in is loaded.
-    void            migrate_network_plugin_config();
-    bool            hot_reload_network_plugin();
-    bool            install_network_plugin_from_ota(bool& had_cache);
-    std::string     get_latest_network_version() const;
-    bool            has_network_update_available() const;
-    // Orca: return the client version to report to Bambu servers. Pinned to
-    // 01.10.01.50 when the legacy network plugin lacks get_my_token support
-    // so the auth server stays on the ?access_token= redirect path.
+    // Client version reported in the web views' user agent.
     std::string     get_bbl_client_version();
 
 private:
-    int             updating_bambu_networking();
     bool            on_init_inner();
-    void            copy_network_if_available();
-    bool            on_init_network(bool try_backup = false);
+    bool            on_init_network();
     void            init_networking_callbacks();
     void            init_app_config();
     // GUI-side subscriptions to plugin loader events (dialog refresh,
     // network-agent registration, plate revalidation).
     void            init_plugin_gui_wiring();
-    void            remove_old_networking_plugins();
-    void            drain_pending_events(int timeout_ms);
-    bool            wait_for_network_idle(int timeout_ms);
     bool            check_older_app_config(Semver current_version, bool backup);
     void            copy_older_config();
     void            window_pos_save(wxTopLevelWindow* window, const std::string &name);

@@ -57,7 +57,7 @@ enum class FilamentSyncMode {
  * - OrcaPrinterAgent: Stub implementation (printer ops not yet supported)
  * - PrinterAgentPluginCapability: Python printer-agent plugin capability that
  *   implements IPrinterAgent directly and is handed out as the live agent
- * - BBLPrinterAgent: Wrapper around Bambu Lab's proprietary DLL
+ * - MoonrakerPrinterAgent (and its vendor subclasses): native Klipper/Moonraker agent
  *
  * Token Access:
  * Printer agents receive an ICloudServiceAgent instance via set_cloud_agent() to

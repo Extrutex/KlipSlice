@@ -239,9 +239,6 @@ wxDEFINE_EVENT(EVT_PUBLISH_FINISHED,                wxCommandEvent);
 //BBS: repair model
 wxDEFINE_EVENT(EVT_REPAIR_MODEL,                    wxCommandEvent);
 wxDEFINE_EVENT(EVT_FILAMENT_COLOR_CHANGED,          wxCommandEvent);
-wxDEFINE_EVENT(EVT_INSTALL_PLUGIN_NETWORKING,       wxCommandEvent);
-wxDEFINE_EVENT(EVT_UPDATE_PLUGINS_WHEN_LAUNCH,       wxCommandEvent);
-wxDEFINE_EVENT(EVT_INSTALL_PLUGIN_HINT,             wxCommandEvent);
 wxDEFINE_EVENT(EVT_PREVIEW_ONLY_MODE_HINT,          wxCommandEvent);
 //BBS: change light/dark mode
 wxDEFINE_EVENT(EVT_GLCANVAS_COLOR_MODE_CHANGED,     SimpleEvent);
@@ -7392,8 +7389,6 @@ struct Plater::priv
     //BBS: add model repair
     void on_repair_model(wxCommandEvent &event);
     void on_filament_color_changed(wxCommandEvent &event);
-    void show_install_plugin_hint(wxCommandEvent &event);
-    void install_network_plugin(wxCommandEvent &event);
     void show_preview_only_hint(wxCommandEvent &event);
     //BBS: add part plate related logic
     void on_plate_right_click(RBtnPlateEvent&);
@@ -7528,7 +7523,6 @@ private:
     void update_after_undo_redo(const UndoRedo::Snapshot& snapshot, bool temp_snapshot_was_taken = false);
     void on_action_export_to_sdcard(SimpleEvent&);
     void on_action_export_to_sdcard_all(SimpleEvent&);
-    void update_plugin_when_launch(wxCommandEvent& event);
     // path to project folder stored with no extension
     boost::filesystem::path     m_project_folder;
 
@@ -7677,9 +7671,6 @@ Plater::priv::priv(Plater *q, MainFrame *main_frame)
     this->q->Bind(EVT_PUBLISH, &priv::on_action_publish, this);
     this->q->Bind(EVT_REPAIR_MODEL, &priv::on_repair_model, this);
     this->q->Bind(EVT_FILAMENT_COLOR_CHANGED, &priv::on_filament_color_changed, this);
-    this->q->Bind(EVT_INSTALL_PLUGIN_NETWORKING, &priv::install_network_plugin, this);
-    this->q->Bind(EVT_INSTALL_PLUGIN_HINT, &priv::show_install_plugin_hint, this);
-    this->q->Bind(EVT_UPDATE_PLUGINS_WHEN_LAUNCH, &priv::update_plugin_when_launch, this);
     this->q->Bind(EVT_PREVIEW_ONLY_MODE_HINT, &priv::show_preview_only_hint, this);
     this->q->Bind(EVT_GLCANVAS_COLOR_MODE_CHANGED, &priv::on_change_color_mode, this);
     this->q->Bind(wxEVT_SYS_COLOUR_CHANGED, &priv::on_apple_change_color_mode, this);
@@ -13391,22 +13382,11 @@ void Plater::priv::on_tab_selection_changing(wxBookCtrlEvent& e)
     const wxString new_name = main_frame->m_tabpanel->GetPageName(new_sel);
     sidebar_layout.show = new_name == TAB_ID_PREPARE || new_name == TAB_ID_PREVIEW;
     update_sidebar();
-    int old_sel = e.GetOldSelection();
     const bool use_printer_agents = wxGetApp().app_config->get_bool("use_printer_agents");
     const bool use_native_device_tab = wxGetApp().preset_bundle &&
         (wxGetApp().preset_bundle->use_bbl_device_tab() || use_printer_agents);
-    if (use_native_device_tab && new_name == TAB_ID_MONITOR) {
-        // BBL network module is only required for BBL-vendor printers.
-        // Non-BBL Python plugins (e.g. moonraker) drive the Device tab without it.
-        if (!use_printer_agents && wxGetApp().preset_bundle->is_bbl_vendor() && !Slic3r::NetworkAgent::is_network_module_loaded()) {
-            e.Veto();
-            BOOST_LOG_TRIVIAL(info) << boost::format("skipped tab switch from %1% to %2%, lack of network plugins") % old_sel % new_sel;
-            if (q) {
-                wxCommandEvent* evt = new wxCommandEvent(EVT_INSTALL_PLUGIN_HINT);
-                wxQueueEvent(q, evt);
-            }
-        }
-    } else {
+    // The native Device tab is driven by the printer agents and needs no web view reload.
+    if (!(use_native_device_tab && new_name == TAB_ID_MONITOR)) {
         // Pointer test, not a name lookup: in printer-agents mode this page is TAB_ID_MONITOR_WEB
         // while the native Device tab holds TAB_ID_MONITOR, and in legacy-web mode it holds
         // TAB_ID_MONITOR itself.
@@ -13589,55 +13569,6 @@ void Plater::priv::on_filament_color_changed(wxCommandEvent &event)
 
     // A mixed slot's colour is derived from its components, so recompute the swatches.
     sidebar->update_mixed_filament_list();
-}
-
-void Plater::priv::install_network_plugin(wxCommandEvent &event)
-{
-    wxGetApp().ShowDownNetPluginDlg();
-    return;
-}
-
-void Plater::priv::update_plugin_when_launch(wxCommandEvent &event)
-{
-    std::string data_dir_str = data_dir();
-    boost::filesystem::path data_dir_path(data_dir_str);
-    auto cache_folder = data_dir_path / "ota";
-    std::string changelog_file = cache_folder.string() + "/plugins/network_plugins.json";
-
-    UpdatePluginDialog dlg(wxGetApp().mainframe);
-    dlg.update_info(changelog_file);
-    auto result = dlg.ShowModal();
-
-    auto app_config = wxGetApp().app_config;
-    if (!app_config) return;
-
-    if (result == wxID_OK) {
-        // Apply the downloaded update right away and hot-reload the plug-in, the same
-        // way a manual version switch in Preferences behaves. When a file is still in
-        // use and cannot be replaced, fall back to installing on the next launch.
-        bool had_cache = false;
-        if (wxGetApp().install_network_plugin_from_ota(had_cache)) {
-            notification_manager->close_notification_of_type(NotificationType::BBLPluginUpdateAvailable);
-            app_config->set("update_network_plugin", "false");
-            if (wxGetApp().hot_reload_network_plugin()) {
-                MessageDialog dlg_ok(wxGetApp().mainframe, _L("Network plug-in switched successfully."), _L("Success"), wxOK | wxICON_INFORMATION);
-                dlg_ok.ShowModal();
-            } else {
-                MessageDialog dlg_fail(wxGetApp().mainframe, _L("Failed to load network plug-in. Please restart the application."), _L("Restart Required"), wxOK | wxICON_WARNING);
-                dlg_fail.ShowModal();
-            }
-        } else {
-            app_config->set("update_network_plugin", had_cache ? "true" : "false");
-        }
-    }
-    else if (result == wxID_NO) {
-        app_config->set("update_network_plugin", "false");
-    }
-}
-
-void Plater::priv::show_install_plugin_hint(wxCommandEvent &event)
-{
-    notification_manager->bbl_show_plugin_install_notification(into_u8(_L("The network plug-in was not detected. Network related features are unavailable.")));
 }
 
 void Plater::priv::show_preview_only_hint(wxCommandEvent &event)

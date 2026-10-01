@@ -4392,12 +4392,6 @@ void MainFrame::load_printer_url()
 bool MainFrame::is_printer_view() const { return m_tabpanel->GetSelectedPageName() == TAB_ID_MONITOR; }
 
 
-void MainFrame::refresh_plugin_tips()
-{
-    if (WebViewPanel* home = WebViewPanel::if_built())
-        home->ShowNetpluginTip();
-}
-
 void MainFrame::RunScript(wxString js)
 {
     if (WebViewPanel* home = WebViewPanel::if_built())

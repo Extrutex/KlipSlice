@@ -102,8 +102,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/DownloaderFileGet.cpp
     GUI/DownloaderFileGet.hpp
     GUI/Downloader.hpp
-    GUI/DownloadProgressDialog.cpp
-    GUI/DownloadProgressDialog.hpp
     GUI/PluginSource.hpp
     GUI/PluginSort.hpp
     GUI/PluginStatus.hpp
@@ -316,8 +314,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/Jobs/SLAImportJob.cpp
     GUI/Jobs/SLAImportJob.hpp
     GUI/Jobs/ThreadSafeQueue.hpp
-    GUI/Jobs/UpgradeNetworkJob.cpp
-    GUI/Jobs/UpgradeNetworkJob.hpp
     GUI/Jobs/Worker.hpp
     GUI/KBShortcutsDialog.cpp
     GUI/KBShortcutsDialog.hpp
@@ -507,14 +503,10 @@ set(SLIC3R_GUI_SOURCES
     GUI/UnsavedChangesDialog.hpp
     GUI/UpdateDialogs.cpp
     GUI/UpdateDialogs.hpp
-    GUI/NetworkPluginDialog.cpp
-    GUI/NetworkPluginDialog.hpp
     GUI/UserManager.cpp
     GUI/UserManager.hpp
     GUI/UserNotification.cpp
     GUI/UserNotification.hpp
-    GUI/WebDownPluginDlg.cpp
-    GUI/WebDownPluginDlg.hpp
     GUI/WebGuideDialog.cpp
     GUI/WebGuideDialog.hpp
     GUI/WebUserLoginDialog.cpp
@@ -723,12 +715,6 @@ set(SLIC3R_GUI_SOURCES
     Utils/MoonrakerPrinterAgent.hpp
     Utils/Moonraker.cpp
     Utils/Moonraker.hpp
-    Utils/BBLCloudServiceAgent.cpp
-    Utils/BBLCloudServiceAgent.hpp
-    Utils/BBLPrinterAgent.cpp
-    Utils/BBLPrinterAgent.hpp
-    Utils/BBLNetworkPlugin.cpp
-    Utils/BBLNetworkPlugin.hpp
     Utils/Obico.cpp
     Utils/Obico.hpp
     Utils/OctoPrint.cpp

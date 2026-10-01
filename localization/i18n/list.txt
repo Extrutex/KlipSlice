@@ -108,14 +108,12 @@ src/slic3r/GUI/Jobs/SendJob.cpp
 src/slic3r/GUI/Jobs/EmbossJob.cpp
 src/slic3r/GUI/Jobs/PlaterWorker.hpp
 src/slic3r/GUI/Jobs/SLAImportJob.cpp
-src/slic3r/GUI/Jobs/UpgradeNetworkJob.cpp
 src/slic3r/GUI/AboutDialog.cpp
 src/slic3r/GUI/ActionRegistry.cpp
 src/slic3r/GUI/AMSMaterialsSetting.cpp
 src/slic3r/GUI/AmsMappingPopup.cpp
 src/slic3r/GUI/AMSSetting.cpp
 src/slic3r/GUI/BBLTopbar.cpp
-src/slic3r/GUI/DownloadProgressDialog.cpp
 src/slic3r/GUI/RecenterDialog.cpp
 src/slic3r/GUI/BackgroundSlicingProcess.cpp
 src/slic3r/GUI/BedShapeDialog.cpp
@@ -250,7 +248,6 @@ src/slic3r/GUI/Gizmos/GLGizmoBrimEars.hpp
 src/slic3r/GUI/FilamentBitmapUtils.cpp
 src/slic3r/GUI/FilamentBitmapUtils.hpp
 src/slic3r/GUI/FilamentPickerDialog.cpp
-src/slic3r/GUI/NetworkPluginDialog.cpp
 src/slic3r/GUI/RammingChart.cpp
 src/slic3r/GUI/StepMeshDialog.cpp
 src/slic3r/GUI/FilamentPickerDialog.hpp

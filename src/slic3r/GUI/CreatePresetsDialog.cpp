@@ -3929,7 +3929,7 @@ ExportConfigsDialog::ExportCase ExportConfigsDialog::archive_preset_bundle_to_fi
             NetworkAgent *agent = wxGetApp().getAgent();
             std::string   clock = get_curr_timestmp();
             if (agent) {
-                bundle_structure["version"]   = agent->get_version();
+                bundle_structure["version"]   = SLIC3R_VERSION;
                 bundle_structure["bundle_id"] = agent->get_user_id() + "_" + printer_preset_name_ + "_" + clock;
             } else {
                 bundle_structure["version"]   = "";
@@ -4048,7 +4048,7 @@ ExportConfigsDialog::ExportCase ExportConfigsDialog::archive_filament_bundle_to_
             NetworkAgent *agent = wxGetApp().getAgent();
             std::string   clock = get_curr_timestmp();
             if (agent) {
-                bundle_structure["version"]   = agent->get_version();
+                bundle_structure["version"]   = SLIC3R_VERSION;
                 bundle_structure["bundle_id"] = agent->get_user_id() + "_" + filament_name + "_" + clock;
             } else {
                 bundle_structure["version"]   = "";

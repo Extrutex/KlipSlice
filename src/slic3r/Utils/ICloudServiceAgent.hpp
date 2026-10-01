@@ -30,7 +30,6 @@ namespace Slic3r {
  *
  * Implementations:
  * - OrcaCloudServiceAgent: Native implementation for Orca Cloud (includes OAuth PKCE)
- * - BBLCloudServiceAgent: Wrapper around Bambu Lab's proprietary DLL
  *
  * Token Sharing Pattern:
  * IPrinterAgent receives an ICloudServiceAgent instance via set_cloud_agent() to

@@ -6,7 +6,6 @@
 #include <boost/log/trivial.hpp>
 #include "libslic3r/Utils.hpp"
 #include "NetworkAgent.hpp"
-#include "BBLNetworkPlugin.hpp"
 
 namespace Slic3r {
 
@@ -33,56 +32,6 @@ int invoke_on_all_cloud_agents(const std::map<std::string, std::shared_ptr<IClou
 } // namespace
 
 // ============================================================================
-// Static methods - delegate to BBLNetworkPlugin
-// ============================================================================
-
-std::string NetworkAgent::get_libpath_in_current_directory(std::string library_name)
-{
-    return BBLNetworkPlugin::get_libpath_in_current_directory(library_name);
-}
-
-std::string NetworkAgent::get_versioned_library_path(const std::string& version)
-{
-    return BBLNetworkPlugin::get_versioned_library_path(version);
-}
-
-bool NetworkAgent::versioned_library_exists(const std::string& version) { return BBLNetworkPlugin::versioned_library_exists(version); }
-
-bool NetworkAgent::legacy_library_exists() { return BBLNetworkPlugin::legacy_library_exists(); }
-
-void NetworkAgent::remove_legacy_library() { BBLNetworkPlugin::remove_legacy_library(); }
-
-std::vector<std::string> NetworkAgent::scan_plugin_versions() { return BBLNetworkPlugin::scan_plugin_versions(); }
-
-int NetworkAgent::initialize_network_module(bool using_backup, const std::string& version)
-{
-    return BBLNetworkPlugin::instance().initialize(using_backup, version);
-}
-
-int NetworkAgent::unload_network_module() { return BBLNetworkPlugin::instance().unload(); }
-
-bool NetworkAgent::is_network_module_loaded() { return BBLNetworkPlugin::instance().is_loaded(); }
-
-#if defined(_MSC_VER) || defined(_WIN32)
-HMODULE NetworkAgent::get_bambu_source_entry() { return BBLNetworkPlugin::instance().get_bambu_source_entry(); }
-#else
-void* NetworkAgent::get_bambu_source_entry() { return BBLNetworkPlugin::instance().get_bambu_source_entry(); }
-#endif
-
-std::string NetworkAgent::get_version() { return BBLNetworkPlugin::instance().get_version(); }
-
-void* NetworkAgent::get_network_function(const char* name) { return BBLNetworkPlugin::instance().get_network_function(name); }
-
-NetworkLibraryLoadError NetworkAgent::get_load_error() { return BBLNetworkPlugin::instance().get_load_error(); }
-
-void NetworkAgent::clear_load_error() { BBLNetworkPlugin::instance().clear_load_error(); }
-
-void NetworkAgent::set_load_error(const std::string& message, const std::string& technical_details, const std::string& attempted_path)
-{
-    BBLNetworkPlugin::instance().set_load_error(message, technical_details, attempted_path);
-}
-
-// ============================================================================
 // Constructors
 // ============================================================================
 
@@ -100,11 +49,7 @@ NetworkAgent::NetworkAgent(std::shared_ptr<ICloudServiceAgent> cloud_agent, std:
     m_cloud_agents.emplace(cloud_agent->get_id(), std::move(cloud_agent));
 }
 
-NetworkAgent::~NetworkAgent()
-{
-    // Note: We don't destroy the agent here anymore since it's managed by BBLNetworkPlugin singleton
-    // The singleton manages the agent lifecycle
-}
+NetworkAgent::~NetworkAgent() = default;
 
 void NetworkAgent::add_cloud_agent(const std::string& provider, std::shared_ptr<ICloudServiceAgent> agent)
 {
@@ -132,8 +77,6 @@ void NetworkAgent::set_printer_agent(std::shared_ptr<IPrinterAgent> printer_agen
 
     apply_printer_callbacks(m_printer_agent, m_printer_callbacks);
 }
-
-void* NetworkAgent::get_network_agent() { return BBLNetworkPlugin::instance().get_agent(); }
 
 void NetworkAgent::apply_printer_callbacks(const std::shared_ptr<IPrinterAgent>& printer_agent, const PrinterCallbacks& callbacks)
 {

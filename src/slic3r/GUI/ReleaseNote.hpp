@@ -48,20 +48,6 @@ wxDECLARE_EVENT(EVT_SECONDARY_CHECK_RETRY, wxCommandEvent);
 wxDECLARE_EVENT(EVT_SECONDARY_CHECK_DONE, wxCommandEvent);
 wxDECLARE_EVENT(EVT_SECONDARY_CHECK_RESUME, wxCommandEvent);
 
-class UpdatePluginDialog : public DPIDialog
-{
-public:
-    UpdatePluginDialog(wxWindow* parent = nullptr);
-    ~UpdatePluginDialog();
-
-    void on_dpi_changed(const wxRect& suggested_rect) override;
-    void update_info(std::string json_path);
-
-    Label* m_text_up_info{ nullptr };
-    Label* operation_tips{ nullptr };
-    wxScrolledWindow* m_vebview_release_note{ nullptr };
-};
-
 class SecondaryCheckDialog : public DPIFrame
 {
 private:

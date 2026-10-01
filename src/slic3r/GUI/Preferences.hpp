@@ -15,7 +15,6 @@
 #include "Widgets/TextInput.hpp"
 #include "Widgets/SpinInput.hpp"
 #include "Widgets/TabCtrl.hpp"
-#include "slic3r/Utils/bambu_networking.hpp"
 
 namespace Slic3r { namespace GUI {
 
@@ -80,8 +79,6 @@ public:
     ::CheckBox * m_skip_identical_frames_checkbox = {nullptr};
     ::TextInput *m_backup_interval_textinput = {nullptr};
     ::SpinInput *m_dim_previous_layers_brightness_input = {nullptr};
-    ::ComboBox * m_network_version_combo     = {nullptr};
-    std::vector<NetworkLibraryVersionInfo> m_available_versions;
 
     wxString m_developer_mode_def;
     wxString m_internal_developer_mode_def;
@@ -109,7 +106,6 @@ public:
     wxBoxSizer *create_item_backup(wxString title, wxString tooltip);
     wxBoxSizer *create_item_auto_reslice(wxString title, wxString checkbox_tooltip, wxString delay_tooltip);
     wxBoxSizer *create_item_bambu_cloud(wxString title, wxString tooltip);
-    wxBoxSizer *create_item_network_plugin_version(wxString title, wxString tooltip);
 #ifdef WIN32
     wxBoxSizer *create_item_link_association(wxString url_prefix, wxString website_name);
 #endif // WIN32

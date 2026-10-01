@@ -2,9 +2,6 @@
 #include "IPrinterAgent.hpp"
 #include "ICloudServiceAgent.hpp"
 #include "OrcaCloudServiceAgent.hpp"
-#include "BBLCloudServiceAgent.hpp"
-#include "BBLNetworkPlugin.hpp"
-#include "BBLPrinterAgent.hpp"
 #include "OrcaPrinterAgent.hpp"
 #include "QidiPrinterAgent.hpp"
 #include "SnapmakerPrinterAgent.hpp"
@@ -57,8 +54,6 @@ std::string plugin_printer_agent_full_ref(const PluginDescriptor& descriptor, co
 }
 
 // Helper to register a printer agent type with the standard factory pattern.
-// AgentTypes that take a log_dir constructor arg use the default; BBLPrinterAgent
-// (no log_dir) is registered separately.
 template<typename T> void register_agent()
 {
     auto info = T::get_agent_info_static();
@@ -178,38 +173,12 @@ void NetworkAgentFactory::register_all_agents()
                                             // CrealityPrintAgent extends Moonraker behaviour
                                             // for K-series boards with CFS support.
     register_agent<MoonrakerPrinterAgent>();
-
-    // Keep BBL as a built-in option. Python printer-agent plugins with the
-    // same AgentInfo ID are listed separately under the plugin registry key.
-    {
-        auto info = BBLPrinterAgent::get_agent_info_static();
-        register_printer_agent(info.id, info.name,
-                               [](std::shared_ptr<ICloudServiceAgent> cloud_agent,
-                                  const std::string& /*log_dir*/) -> std::shared_ptr<IPrinterAgent> {
-                                   auto agent = std::make_shared<BBLPrinterAgent>();
-                                   if (cloud_agent)
-                                       agent->set_cloud_agent(cloud_agent);
-                                   return agent;
-                               });
-    }
 }
 
 std::shared_ptr<ICloudServiceAgent> NetworkAgentFactory::create_cloud_agent(const std::string& provider, const std::string& log_dir)
 {
     if (provider == ORCA_CLOUD_PROVIDER) {
         return std::make_shared<OrcaCloudServiceAgent>(log_dir);
-    } else if (provider == BBL_CLOUD_PROVIDER) {
-        auto& plugin = BBLNetworkPlugin::instance();
-        if (!plugin.is_loaded()) {
-            return nullptr;
-        }
-        if (!plugin.has_agent()) {
-            plugin.create_agent(log_dir);
-        }
-        if (!plugin.has_agent()) {
-            return nullptr;
-        }
-        return std::make_shared<BBLCloudServiceAgent>();
     }
     return nullptr;
 }

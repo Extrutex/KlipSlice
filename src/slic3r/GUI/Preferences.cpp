@@ -22,8 +22,6 @@
 #include "Shortcuts.hpp"
 #include "slic3r/Utils/bambu_networking.hpp"
 #include "slic3r/Utils/NetworkAgent.hpp"
-#include "NetworkPluginDialog.hpp"
-#include "DownloadProgressDialog.hpp"
 
 #ifdef __WINDOWS__
 #ifdef _MSW_DARK_MODE
@@ -1099,13 +1097,6 @@ wxBoxSizer *PreferencesDialog::create_item_checkbox(wxString title, wxString too
             }
         }
 
-        if (param == "installed_networking") {
-            bool pbool = app_config->get_bool("installed_networking");
-            if (pbool) {
-                GUI::wxGetApp().CallAfter([] { GUI::wxGetApp().ShowDownNetPluginDlg(); });
-            }
-        }
-
 #endif // __WXMSW__
 
         if (param == "developer_mode") {
@@ -1263,126 +1254,6 @@ wxBoxSizer *PreferencesDialog::create_item_bambu_cloud(wxString title, wxString 
 
     return m_sizer;
 };
-
-wxBoxSizer *PreferencesDialog::create_item_network_plugin_version(wxString title, wxString tooltip)
-{
-    wxBoxSizer *m_sizer = create_item_label(title, tooltip);
-
-    m_network_version_combo = new ::ComboBox(m_parent, wxID_ANY, wxEmptyString, wxDefaultPosition, DESIGN_LARGE_COMBOBOX_SIZE, 0, nullptr, wxCB_READONLY);
-    m_network_version_combo->GetDropDown().SetUseContentWidth(true);
-    m_network_version_combo->SetToolTip(tooltip);
-
-    std::string current_version = app_config->get_network_plugin_version();
-    if (current_version.empty()) {
-        current_version = get_latest_network_version();
-    }
-    int current_selection = 0;
-
-    m_available_versions = get_all_available_versions();
-
-    for (size_t i = 0; i < m_available_versions.size(); i++) {
-        const auto& ver = m_available_versions[i];
-        m_network_version_combo->Append(network_version_label(ver));
-        if (current_version == ver.version) {
-            current_selection = i;
-        }
-    }
-
-    m_network_version_combo->SetSelection(current_selection);
-    m_sizer->Add(m_network_version_combo, 0, wxALIGN_CENTER);
-
-    m_network_version_combo->GetDropDown().Bind(wxEVT_COMBOBOX, [this](wxCommandEvent& e) {
-        e.Skip(); // order-independent flag read after this handler returns; every path just returns
-        int selection = e.GetSelection();
-        if (selection < 0 || selection >= (int) m_available_versions.size())
-            return;
-
-        const auto& selected_ver = m_available_versions[selection];
-        const std::string new_version = selected_ver.version;
-        std::string old_version = app_config->get_network_plugin_version();
-        if (old_version.empty())
-            old_version = get_latest_network_version();
-
-        // Move the combo back to the row for `version`, so the UI never shows a build other
-        // than the one actually configured/loaded (e.g. after a declined or refused switch).
-        auto reselect = [this](const std::string& version) {
-            for (size_t i = 0; i < m_available_versions.size(); ++i)
-                if (m_available_versions[i].version == version) {
-                    m_network_version_combo->SetSelection((int) i);
-                    break;
-                }
-        };
-
-        if (new_version == old_version)
-            return;
-
-        BOOST_LOG_TRIVIAL(info) << "Network plugin version selection changed from " << old_version << " to " << new_version;
-
-        if (!selected_ver.warning.empty()) {
-            MessageDialog warn_dlg(this, wxString::FromUTF8(selected_ver.warning), _L("Warning"), wxOK | wxCANCEL | wxICON_WARNING);
-            if (warn_dlg.ShowModal() != wxID_OK) {
-                reselect(old_version);
-                return;
-            }
-        }
-
-        // A build already present on disk loads directly with a hot reload - on any platform
-        // and across series (legacy <-> modern). Only claim success once the build that
-        // actually loaded is the one that was requested.
-        if (Slic3r::NetworkAgent::versioned_library_exists(new_version)) {
-            app_config->set_network_plugin_version(new_version);
-            app_config->save();
-            BOOST_LOG_TRIVIAL(info) << "Version " << new_version << " already exists on disk, triggering hot reload";
-            // Claim success only once the series that actually loaded is the one requested - the
-            // loaded plug-in reports its full build (02.08.01.53) while the requested identity is
-            // the series (02.08.01), so compare series, not the raw string.
-            if (wxGetApp().hot_reload_network_plugin() &&
-                network_plugin_series(Slic3r::NetworkAgent::get_version()) == network_plugin_series(new_version)) {
-                MessageDialog dlg(this, _L("Network plug-in switched successfully."), _L("Success"), wxOK | wxICON_INFORMATION);
-                dlg.ShowModal();
-            } else {
-                MessageDialog dlg(this, _L("Failed to load network plug-in. Please restart the application."), _L("Restart Required"), wxOK | wxICON_WARNING);
-                dlg.ShowModal();
-                reselect(app_config->get_network_plugin_version());
-            }
-            return;
-        }
-
-        // Not on disk: offer to download it. The endpoint is series-keyed and serves that series'
-        // newest build. (A same-series custom build is only ever listed when its file is on disk,
-        // so it takes the hot-reload branch above; the only not-on-disk selectable is a series or
-        // legacy entry that genuinely needs fetching.)
-        wxString msg = wxString::Format(
-            _L("You've selected network plug-in version %s.\n\nWould you like to download and install this version now?\n\nNote: The application may need to restart after installation."),
-            wxString::FromUTF8(new_version));
-        MessageDialog dlg(this, msg, _L("Download Network Plug-in"), wxYES_NO | wxICON_QUESTION);
-        if (dlg.ShowModal() == wxID_YES) {
-            app_config->set_network_plugin_version(new_version);
-            app_config->save();
-            DownloadProgressDialog progress_dlg(_L("Downloading Network Plug-in"));
-            progress_dlg.ShowModal();
-            reselect(app_config->get_network_plugin_version());
-        } else {
-            reselect(old_version);
-        }
-    });
-
-    auto reload_btn = new Button(m_parent, wxEmptyString, "refresh", 0, 16);
-    reload_btn->SetStyle(ButtonStyle::Regular, ButtonType::Icon);
-    reload_btn->SetToolTip(_L("Reload the network plug-in without restarting the application"));
-    reload_btn->Bind(wxEVT_BUTTON, [this](auto& e) {
-        if (wxGetApp().hot_reload_network_plugin()) {
-            MessageDialog dlg(this, _L("Network plug-in reloaded successfully."), _L("Reload"), wxOK | wxICON_INFORMATION);
-            dlg.ShowModal();
-        } else {
-            MessageDialog dlg(this, _L("Failed to reload network plug-in. Please restart the application."), _L("Reload Failed"), wxOK | wxICON_ERROR);
-            dlg.ShowModal();
-        }
-    });
-    m_sizer->Add(reload_btn, 0, wxALIGN_CENTER | wxLEFT, FromDIP(5));
-
-    return m_sizer;
-}
 
 #ifdef WIN32
 wxBoxSizer* PreferencesDialog::create_item_link_association( wxString url_prefix, wxString website_name)
@@ -2140,15 +2011,6 @@ void PreferencesDialog::create_items()
                                                       _L("Store authentication tokens in an encrypted file instead of the system keychain. (Requires restart)"),
                                                       SETTING_USE_ENCRYPTED_TOKEN_FILE);
     g_sizer->Add(item_token_storage);
-
-    //// ONLINE > Network plugin
-    g_sizer->Add(create_item_title(_L("Bambu network plug-in")), 1, wxEXPAND);
-
-    auto item_enable_plugin    = create_item_checkbox(_L("Enable Bambu network plug-in"), "", "installed_networking");
-    g_sizer->Add(item_enable_plugin);
-
-    auto item_plugin_version = create_item_network_plugin_version(_L("Network plug-in version"), _L("Select the network plug-in version to use"));
-    g_sizer->Add(item_plugin_version);
 
     g_sizer->AddSpacer(FromDIP(10));
     sizer_page->Add(g_sizer, 0, wxEXPAND);

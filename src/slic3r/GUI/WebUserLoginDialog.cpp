@@ -113,36 +113,7 @@ ZUserLogin::ZUserLogin(std::shared_ptr<ICloudServiceAgent> cloud_agent)
         return;
     }
 
-    const auto bblnetwork_enabled = wxGetApp().app_config->get_bool("installed_networking");
-    if (m_cloud_agent->get_id() == BBL_CLOUD_PROVIDER && !bblnetwork_enabled) {
-
-        SetBackgroundColour(*wxWHITE);
-
-        wxBoxSizer* m_sizer_main = new wxBoxSizer(wxVERTICAL);
-        auto m_line_top = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 1));
-        m_line_top->SetBackgroundColour(wxColour(166, 169, 170));
-        m_sizer_main->Add(m_line_top, 0, wxEXPAND, 0);
-
-        auto* m_message = new wxStaticText(this, wxID_ANY, _L("Bambu Network plug-in not detected."), wxDefaultPosition, wxDefaultSize, 0);
-        m_message->SetForegroundColour(*wxBLACK);
-        m_message->Wrap(FromDIP(360));
-
-        // ORCA standardized HyperLink
-        auto m_download_hyperlink = new HyperLink(this, _L("Click here to download it."));
-        m_download_hyperlink->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& event) {
-            this->Close();
-            wxGetApp().ShowDownNetPluginDlg();
-        });
-        m_sizer_main->Add(m_message, 0, wxALIGN_CENTER | wxALL, FromDIP(15));
-        m_sizer_main->Add(m_download_hyperlink, 0, wxALIGN_CENTER | wxALL, FromDIP(10));
-        m_sizer_main->Add(0, 0, 1, wxBOTTOM, 10);
-
-        SetSizer(m_sizer_main);
-        m_sizer_main->SetSizeHints(this);
-        Layout();
-        Fit();
-        CentreOnParent();
-    } else {
+    {
         // Get the login URL from the injected cloud service agent
         wxString strlang = wxGetApp().current_language_code_safe();
         strlang.Replace("_", "-");

@@ -12,35 +12,10 @@
 
 namespace Slic3r {
 
-// Forward declaration
-class BBLNetworkPlugin;
-
 // The NetworkAgent class
 class NetworkAgent
 {
 public:
-    // Static utility methods - delegate to BBLNetworkPlugin
-    static std::string get_libpath_in_current_directory(std::string library_name);
-    static std::string get_versioned_library_path(const std::string& version);
-    static bool versioned_library_exists(const std::string& version);
-    static bool legacy_library_exists();
-    static void remove_legacy_library();
-    static std::vector<std::string> scan_plugin_versions();
-    static int initialize_network_module(bool using_backup = false, const std::string& version = "");
-    static int unload_network_module();
-    static bool is_network_module_loaded();
-#if defined(_MSC_VER) || defined(_WIN32)
-    static HMODULE get_bambu_source_entry();
-#else
-    static void* get_bambu_source_entry();
-#endif
-    static std::string get_version();
-    static void* get_network_function(const char* name);
-
-    static NetworkLibraryLoadError get_load_error();
-    static void clear_load_error();
-    static void set_load_error(const std::string& message, const std::string& technical_details, const std::string& attempted_path);
-
     // Sub-agent composition constructor (uses injected sub-agents)
     NetworkAgent(std::shared_ptr<ICloudServiceAgent> cloud_agent,
                  std::shared_ptr<IPrinterAgent> printer_agent);
@@ -55,9 +30,6 @@ public:
     void add_cloud_agent(const std::string& provider, std::shared_ptr<ICloudServiceAgent> agent);
     void set_printer_agent(std::shared_ptr<IPrinterAgent> printer_agent);
     int set_queue_on_main_fn(QueueOnMainFn fn, const std::string& provider = ORCA_CLOUD_PROVIDER);
-
-    // Get underlying agent handle from BBLNetworkPlugin
-    void* get_network_agent();
 
     // Cloud agent methods
     // These methods will be forwarded to all cloud agents
@@ -191,7 +163,7 @@ private:
     // Sub-agent composition
     // We support dynamic switching of printer agents (e.g. for different printer types), but the cloud agent is fixed at construction since
     // it's tied to the user's cloud account OrcaCloudServiceAgent is designed to be the primary cloud agent, but we support the possibility
-    // of adding third-party cloud agents (e.g. BBLCloudServiceAgent) and delegating calls to them as needed
+    // of adding third-party cloud agents and delegating calls to them as needed
     std::map<std::string, std::shared_ptr<ICloudServiceAgent>> m_cloud_agents;
     std::shared_ptr<IPrinterAgent> m_printer_agent;
     std::string m_printer_agent_id;
