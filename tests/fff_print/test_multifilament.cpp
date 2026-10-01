@@ -2,6 +2,7 @@
 
 #include "libslic3r/GCode/GCodeProcessor.hpp"
 #include "libslic3r/GCodeReader.hpp"
+#include <boost/algorithm/string/predicate.hpp>
 
 #include "test_helpers.hpp"
 #include "test_utils.hpp"
@@ -68,18 +69,42 @@ static std::vector<double> wait_park_xs(const std::string& gcode)
 // Estimated print time at each 1-based line of an exported G-code file, from a second
 // GCodeProcessor pass over it. MoveVertex::time is the duration of one move and gcode_id is the
 // line it came from (already rebased past the M73 insertions), so the running sum before the first
-// move of a line is the elapsed time at that line. The file carries its own config footer, so
-// process_file configures the processor -- including the shared s_IsBBLPrinter static that other
-// tests in this binary mutate -- from the settings the export itself used.
-static std::vector<double> elapsed_time_by_line(const std::string& gcode)
+// move of a line is the elapsed time at that line.
+//
+// The pass is configured from the export's own config footer -- including the shared
+// s_IsBBLPrinter static that other tests in this binary mutate -- but with `flavor` forced, and it
+// is fed the way GCode::do_export feeds the slicing-time processor (apply_config, then
+// process_buffer). It cannot go through process_file: that loads the footer through
+// handle_legacy(), which maps every stored flavor to "klipper", so a slice pinned to another
+// flavor would be re-estimated under Klipper's junction model and its "lead" would no longer
+// measure what the slice's own "time:" did.
+static std::vector<double> elapsed_time_by_line(const std::string& gcode, GCodeFlavor flavor)
 {
-    ScopedTemporaryFile temp_gcode(".gcode");
+    DynamicPrintConfig footer;
+    footer.apply(FullPrintConfig::defaults());
     {
-        std::ofstream os(temp_gcode.string());
-        os << gcode;
+        ScopedTemporaryFile temp_gcode(".gcode");
+        {
+            std::ofstream os(temp_gcode.string());
+            REQUIRE(os.good());
+            os << gcode;
+            REQUIRE(os.good());
+        }
+        footer.load_from_gcode_file(temp_gcode.string(), ForwardCompatibilitySubstitutionRule::EnableSilent);
     }
+    footer.set_key_value("gcode_flavor", new ConfigOptionEnum<GCodeFlavor>(flavor));
+    PrintConfig print_config;
+    print_config.apply(footer, true);
+
+    const auto* printer_model = footer.opt<ConfigOptionString>("printer_model");
+    GCodeProcessor::s_IsBBLPrinter = printer_model != nullptr && boost::starts_with(printer_model->value, "Bambu Lab");
+
     GCodeProcessor processor;
-    processor.process_file(temp_gcode.string());
+    processor.reset();
+    processor.initialize_result_moves();
+    processor.apply_config(print_config);
+    processor.process_buffer(gcode);
+    processor.finalize(false);
 
     constexpr size_t    NORMAL  = size_t(PrintEstimatedStatistics::ETimeMode::Normal);
     const size_t        n_lines = size_t(std::count(gcode.begin(), gcode.end(), '\n')) + 2;
@@ -105,7 +130,8 @@ static std::vector<double> elapsed_time_by_line(const std::string& gcode)
 // the active tool (the first-layer-to-other-layers bump) or one inside a block, the distance to the
 // next Tn is a layer time or a handful of moves and says nothing about preheat_time. Everything
 // else is dropped, so the trace does not move when travel, tower geometry or line numbering do.
-static std::vector<std::string> temperature_trace(const std::string& gcode)
+// `flavor` is the one `gcode` was sliced with; the lead is estimated under it.
+static std::vector<std::string> temperature_trace(const std::string& gcode, GCodeFlavor flavor)
 {
     std::vector<std::string> lines;
     std::istringstream       stream(gcode);
@@ -115,7 +141,7 @@ static std::vector<std::string> temperature_trace(const std::string& gcode)
             line.pop_back();
         lines.emplace_back(std::move(line));
     }
-    const std::vector<double> elapsed = elapsed_time_by_line(gcode);
+    const std::vector<double> elapsed = elapsed_time_by_line(gcode, flavor);
 
     const auto is_tool = [](const std::string& l) { return l.size() >= 2 && l[0] == 'T' && std::isdigit((unsigned char) l[1]); };
     const auto is_temp = [](const std::string& l) { return l.rfind("M104", 0) == 0 || l.rfind("M109", 0) == 0; };
@@ -641,7 +667,9 @@ TEST_CASE("Toolchange temperature commands are unchanged when the wipe tower wai
         // Object-level, so the used-filament count that gates the prime tower is derived from it.
         { { { "extruder", 1 } }, { { "extruder", 2 } } });
 
-    const std::vector<std::string> trace = temperature_trace(gcode);
+    // The lead is re-estimated under the flavor the slice ran with, not the footer's (see
+    // elapsed_time_by_line).
+    const std::vector<std::string> trace = temperature_trace(gcode, config.opt_enum<GCodeFlavor>("gcode_flavor"));
     REQUIRE(trace.size() > 1);
     CHECK(gcode.find("_WAIT_FOR_TEMP_ON_WIPE_TOWER") == std::string::npos);
 
