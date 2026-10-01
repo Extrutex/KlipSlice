@@ -118,17 +118,14 @@ GuideFrame::GuideFrame(GUI_App *pGUI, long style)
     SetBackgroundColour(*wxWHITE);
     // INI
     m_SectionName = "firstguide";
-    PrivacyUse    = false;
-    StealthMode   = false;
-    InstallNetplugin = false;
 
     m_MainPtr = pGUI;
 
     // set the frame icon
     wxBoxSizer *topsizer = new wxBoxSizer(wxVERTICAL);
 
-    wxString TargetUrl = SetStartPage(BBL_WELCOME, false);
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(",  set start page to welcome ");
+    wxString TargetUrl = SetStartPage(BBL_MODELS, false);
+    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(",  set start page to printer selection");
 
     // Create the webview
     m_browser = WebView::CreateWebView(this, TargetUrl);
@@ -185,7 +182,7 @@ GuideFrame::GuideFrame(GUI_App *pGUI, long style)
     // Bind(wxEVT_CLOSE_WINDOW, &GuideFrame::OnClose, this);
 
     // UI
-    SetStartPage(BBL_REGION);
+    SetStartPage(BBL_MODELS);
 
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(",  finished");
     wxGetApp().UpdateDlgDarkUI(this);
@@ -219,16 +216,11 @@ wxString GuideFrame::SetStartPage(GuidePage startpage, bool load)
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(" enter, load=%1%, start_page=%2%")%load%int(startpage);
     //wxLogMessage("GUIDE: webpage_1  %s", (boost::filesystem::path(resources_dir()) / "web\\guide\\1\\index.html").make_preferred().string().c_str() );
     const wxString guide_url = file_url_from_path(boost::filesystem::path(resources_dir()) / "web/guide/0/index.html");
-    wxString TargetUrl = guide_url + "?target=1";
+    wxString TargetUrl = guide_url + "?target=21";
     //wxLogMessage("GUIDE: webpage_2  %s", TargetUrl.mb_str());
 
-    if (startpage == BBL_WELCOME){
-        SetTitle(_L("Setup Wizard"));
-        TargetUrl = guide_url + "?target=1";
-    } else if (startpage == BBL_REGION) {
-        SetTitle(_L("Setup Wizard"));
-        TargetUrl = guide_url + "?target=11";
-    } else if (startpage == BBL_MODELS) {
+    // The setup wizard starts directly at printer selection (21) -> filaments (22) -> finish.
+    if (startpage == BBL_WELCOME || startpage == BBL_MODELS) {
         SetTitle(_L("Setup Wizard"));
         TargetUrl = guide_url + "?target=21";
     } else if (startpage == BBL_FILAMENTS) {
@@ -441,25 +433,7 @@ void GuideFrame::OnScriptMessage(wxWebViewEvent &evt)
         if (strCmd == "close_page") {
             this->EndModal(wxID_CANCEL);
         }
-        if (strCmd == "user_clause") {
-            wxString strAction = j["data"]["action"];
-
-            if (strAction == "refuse") {
-                // CloseTheApp
-                this->EndModal(wxID_OK);
-
-                m_MainPtr->mainframe->Close(); // Refuse Clause, App quit immediately
-            }
-        } else if (strCmd == "user_private_choice") {
-            wxString strAction = j["data"]["action"];
-
-            if (strAction == "agree") {
-                PrivacyUse = true;
-            } else {
-                PrivacyUse = false;
-            }
-        }
-        else if (strCmd == "request_userguide_profile") {
+        if (strCmd == "request_userguide_profile") {
             json m_Res = json::object();
             m_Res["command"] = "response_userguide_profile";
             m_Res["sequence_id"] = "10001";
@@ -637,26 +611,7 @@ void GuideFrame::OnScriptMessage(wxWebViewEvent &evt)
         }
         else if (strCmd == "user_guide_finish") {
             SaveProfile();
-
-            std::string oldregion = m_ProfileJson["region"];
-            if (m_Region != oldregion) {
-                AppConfig* config = GUI::wxGetApp().app_config;
-                std::string country_code = config->get_country_code();
-                NetworkAgent* agent = wxGetApp().getAgent();
-                if (agent) {
-                    agent->set_country_code(country_code);
-                    if (wxGetApp().is_user_login()) {
-                        BOOST_LOG_TRIVIAL(info) << "logout: user_logout on user_guide_finish";
-                        // agent->user_logout();
-                        wxGetApp().request_user_logout();
-                    }
-                }
-            }
-
             this->EndModal(wxID_OK);
-
-            if (InstallNetplugin)
-                GUI::wxGetApp().CallAfter([] { GUI::wxGetApp().ShowDownNetPluginDlg(); });
         }
         else if (strCmd == "user_guide_create_printer") {
             this->EndModal(wxID_CANCEL);
@@ -666,29 +621,6 @@ void GuideFrame::OnScriptMessage(wxWebViewEvent &evt)
         else if (strCmd == "user_guide_cancel") {
             this->EndModal(wxID_CANCEL);
             this->Close();
-        } else if (strCmd == "save_region") {
-            m_Region = j["region"];
-        }
-        else if (strCmd == "network_plugin_install") {
-            std::string sAction = j["data"]["action"];
-
-            if (sAction == "yes") {
-                if (!network_plugin_ready)
-                    InstallNetplugin = true;
-                else //already ready
-                    InstallNetplugin = false;
-            }
-            else
-                InstallNetplugin = false;
-        }
-        else if (strCmd == "save_stealth_mode") {
-            wxString strAction = j["data"]["action"];
-
-            if (strAction == "yes") {
-                StealthMode = true;
-            } else {
-                StealthMode = false;
-            }
         }
     } catch (std::exception &e) {
         // wxMessageBox(e.what(), "json Exception", MB_OK);
@@ -787,15 +719,8 @@ bool GuideFrame::IsFirstUse()
 
 int GuideFrame::SaveProfile()
 {
-    // SoftFever: don't collect info
-    //privacy
-    // if (PrivacyUse == true) {
-    //     m_MainPtr->app_config->set(std::string(m_SectionName.mb_str()), "privacyuse", "1");
-    // } else
-    //     m_MainPtr->app_config->set(std::string(m_SectionName.mb_str()), "privacyuse", "0");
-
-    m_MainPtr->app_config->set("region", m_Region);
-    m_MainPtr->app_config->set_bool("stealth_mode", StealthMode);
+    // Region and stealth mode are no longer asked in the wizard; their existing
+    // app_config values (Preferences) are left untouched.
 
     //finish
     m_MainPtr->app_config->set(std::string(m_SectionName.mb_str()), "finish", "1");
@@ -1633,17 +1558,6 @@ int GuideFrame::SaveProfileData()
             if (enabled_filaments.find(filament_name) != enabled_filaments.end())
                 m_ProfileJson["filament"][filament_name]["selected"] = 1;
         }
-
-        //----region
-        m_Region = wxGetApp().app_config->get("region");
-        m_ProfileJson["region"] = m_Region;
-
-        m_ProfileJson["network_plugin_install"] = wxGetApp().app_config->get("app","installed_networking");
-        m_ProfileJson["network_plugin_compability"] = wxGetApp().is_compatibility_version() ? "1" : "0";
-        network_plugin_ready = wxGetApp().is_compatibility_version();
-
-        StealthMode = wxGetApp().app_config->get_bool("app","stealth_mode");
-        m_ProfileJson["stealth_mode"] = StealthMode;
     }
     catch (std::exception &e) {
         BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ", error: "<< e.what() <<std::endl;
@@ -1911,31 +1825,6 @@ bool GuideFrame::LoadFile(std::string jPath, std::string &sContent)
     }
 
     return true;
-}
-
-int GuideFrame::DownloadPlugin()
-{
-    return wxGetApp().download_plugin(
-        "plugins", "network_plugin.zip",
-        [this](int status, int percent, bool& cancel) {
-            return ShowPluginStatus(status, percent, cancel);
-        }
-    , nullptr);
-}
-
-int GuideFrame::InstallPlugin()
-{
-    return wxGetApp().install_plugin("plugins", "network_plugin.zip",
-        [this](int status, int percent, bool &cancel) {
-            return ShowPluginStatus(status, percent, cancel);
-        }
-    );
-}
-
-int GuideFrame::ShowPluginStatus(int status, int percent, bool& cancel)
-{
-    //TODO
-    return 0;
 }
 
 
