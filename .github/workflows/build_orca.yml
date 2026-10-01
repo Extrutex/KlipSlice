@@ -660,7 +660,8 @@ jobs:
         # the aarch64 leg so the sweep also exercises the arm build; x86_64 on
         # SELF_HOSTED, which skips arm64.
       - name: Upload profile validator (for slice check)
-        if: ${{ runner.os == 'Linux' && (vars.SELF_HOSTED && inputs.arch != 'aarch64' || !vars.SELF_HOSTED && inputs.arch == 'aarch64') }}
+        # The slice check runs on x86_64 (build_all.yml), so upload from that leg.
+        if: ${{ runner.os == 'Linux' && inputs.arch != 'aarch64' }}
         uses: actions/upload-artifact@v7
         with:
           name: ${{ github.sha }}-profile-validator-linux-${{ inputs.arch == 'aarch64' && 'aarch64' || 'x86_64' }}
