@@ -6,6 +6,8 @@ KLIPSLICE is an open-source 3D printing slicer built exclusively for printers th
 run real [Klipper](https://www.klipper3d.org/). It is a hard fork of OrcaSlicer with
 every path that does not lead to a Klipper machine removed.
 
+**Documentation:** <https://extrutex.github.io/KlipSlice-Wiki/> (English and German)
+
 > KLIPSLICE is an independent community project and is not affiliated with or
 > endorsed by the Klipper project.
 
