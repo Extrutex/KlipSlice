@@ -133,6 +133,7 @@
 #include "Notebook.hpp"
 #include "Widgets/Label.hpp"
 #include "Widgets/ProgressDialog.hpp"
+#include "Widgets/ThemeTokens.hpp"
 
 //BBS: DailyTip and UserGuide Dialog
 #include "WebGuideDialog.hpp"
@@ -2044,10 +2045,18 @@ bool GUI_App::on_init_inner()
 #ifdef _MSW_DARK_MODE
 
 #ifndef __WINDOWS__
-    wxSystemAppearance app = wxSystemSettings::GetAppearance();
-    GUI::wxGetApp().app_config->set("dark_color_mode", app.IsDark() ? "1" : "0");
-    GUI::wxGetApp().app_config->save();
-#endif // __APPLE__
+    // The colour mode is the app's own preference; force the native controls to match it
+    // instead of following the system appearance. Earlier builds copied the system
+    // appearance into "dark_color_mode" on every start, so a stored value that the user
+    // never chose in Preferences is replaced by the default (dark).
+    if (app_config->get("dark_color_mode_user_set") != "1") {
+        app_config->set("dark_color_mode", "1");
+        app_config->save();
+    }
+    apply_app_appearance();
+    Update_dark_mode_flag();
+    init_label_colours();
+#endif // __WINDOWS__
 
 
     bool init_dark_color_mode = dark_mode();
@@ -2774,13 +2783,8 @@ void GUI_App::select_machine(const std::string& agent_id)
 bool GUI_App::dark_mode()
 {
 #ifdef SUPPORT_DARK_MODE
-#if __APPLE__
-    // The check for dark mode returns false positive on 10.12 and 10.13,
-    // which allowed setting dark menu bar and dock area, which is
-    // is detected as dark mode. We must run on at least 10.14 where the
-    // proper dark mode was first introduced.
-    return wxPlatformInfo::Get().CheckOSVersion(10, 14) && mac_dark_mode();
-#else
+    // The colour mode is an application preference ("dark_color_mode", dark by default for
+    // new installs, see AppConfig), not the system appearance.
     // When the user has explicitly chosen a mode, honour it directly.
     // Falling through to check_dark_mode() for an explicit "0" would query
     // wxSystemSettings::GetAppearance().IsDark(), which is contaminated by
@@ -2789,6 +2793,13 @@ bool GUI_App::dark_mode()
     const auto &val = wxGetApp().app_config->get("dark_color_mode");
     if (val == "1") return true;
     if (val == "0") return false;
+#if __APPLE__
+    // The check for dark mode returns false positive on 10.12 and 10.13,
+    // which allowed setting dark menu bar and dock area, which is
+    // is detected as dark mode. We must run on at least 10.14 where the
+    // proper dark mode was first introduced.
+    return wxPlatformInfo::Get().CheckOSVersion(10, 14) && mac_dark_mode();
+#else
     return check_dark_mode();
 #endif
 #else
@@ -2797,33 +2808,35 @@ bool GUI_App::dark_mode()
 #endif
 }
 
+// Label colours follow docs/design/BRAND.md §6.3: a value that matches the system preset
+// is secondary ink, a modified value is strong ink (the "modified" state is not a colour).
 const wxColour GUI_App::get_label_default_clr_system()
 {
-    return dark_mode() ? wxColour(115, 220, 103) : wxColour(26, 132, 57);
+    return dark_mode() ? wxColour(Theme::ALU_200) : wxColour("#363636");
 }
 
 const wxColour GUI_App::get_label_default_clr_modified()
 {
-    return dark_mode() ? wxColour(253, 111, 40) : wxColour(252, 77, 1);
+    return dark_mode() ? wxColour(Theme::ALU_50) : wxColour(Theme::CARBON_950);
 }
 
 void GUI_App::init_label_colours()
 {
     bool is_dark_mode = dark_mode();
-    m_color_label_modified = is_dark_mode ? wxColour("#F1754E") : wxColour("#F1754E");
-    m_color_label_sys      = is_dark_mode ? wxColour("#B2B3B5") : wxColour("#363636");
+    m_color_label_modified = is_dark_mode ? wxColour(Theme::ALU_50) : wxColour(Theme::CARBON_950);
+    m_color_label_sys      = is_dark_mode ? wxColour(Theme::ALU_200) : wxColour("#363636");
 
 #if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
-    m_color_label_default           = is_dark_mode ? wxColour(250, 250, 250) : m_color_label_sys; // wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
-    m_color_highlight_label_default = is_dark_mode ? wxColour(230, 230, 230): wxSystemSettings::GetColour(/*wxSYS_COLOUR_HIGHLIGHTTEXT*/wxSYS_COLOUR_WINDOWTEXT);
-    m_color_highlight_default       = is_dark_mode ? wxColour("#36363B") : wxColour("#F1F1F1"); // ORCA row highlighting
-    m_color_hovered_btn_label       = is_dark_mode ? wxColour(255, 255, 254) : wxColour(0,0,0);
-    m_color_default_btn_label       = is_dark_mode ? wxColour(255, 255, 254): wxColour(0,0,0);
-    m_color_selected_btn_bg         = is_dark_mode ? wxColour(84, 84, 91)   : wxColour(206, 206, 206);
+    m_color_label_default           = is_dark_mode ? wxColour(Theme::ALU_100) : m_color_label_sys; // wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
+    m_color_highlight_label_default = is_dark_mode ? wxColour(Theme::ALU_50) : wxSystemSettings::GetColour(/*wxSYS_COLOUR_HIGHLIGHTTEXT*/wxSYS_COLOUR_WINDOWTEXT);
+    m_color_highlight_default       = is_dark_mode ? wxColour(Theme::CARBON_700) : wxColour("#F1F1F1"); // row highlighting
+    m_color_hovered_btn_label       = is_dark_mode ? wxColour(Theme::ALU_50) : wxColour(0,0,0);
+    m_color_default_btn_label       = is_dark_mode ? wxColour(Theme::ALU_100) : wxColour(0,0,0);
+    m_color_selected_btn_bg         = is_dark_mode ? wxColour(Theme::CARBON_700) : wxColour(206, 206, 206);
 #else
     m_color_label_default = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
 #endif
-    m_color_window_default          = is_dark_mode ? wxColour(43, 43, 43)   : wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
+    m_color_window_default          = is_dark_mode ? wxColour(Theme::CARBON_850) : wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
     StateColor::SetDarkMode(is_dark_mode);
 }
 
@@ -2917,7 +2930,7 @@ void GUI_App::UpdateDarkUI(wxWindow* window, bool highlited/* = false*/, bool ju
         auto orig_col = window->GetBackgroundColour();
         auto bg_col = StateColor::darkModeColorFor(orig_col);
         // there are cases where the background color of an item is bright, specifically:
-        // * the background color of a button: #009688  -- 73
+        // * the background color of a button: the accent (aluminium in dark mode)
         if (bg_col != orig_col) {
             window->SetBackgroundColour(bg_col);
         }
@@ -2984,6 +2997,13 @@ static void update_dark_children_ui(wxWindow* window, bool just_buttons_update =
 void GUI_App::UpdateDarkUIWin(wxWindow* win)
 {
     update_dark_children_ui(win);
+}
+
+void GUI_App::apply_app_appearance()
+{
+#ifndef __WINDOWS__
+    SetAppearance(dark_mode() ? wxApp::Appearance::Dark : wxApp::Appearance::Light);
+#endif
 }
 
 void GUI_App::Update_dark_mode_flag()

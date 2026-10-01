@@ -3167,7 +3167,12 @@ void PresetBundle::update_selections(AppConfig &config)
     if (!f_colors.empty()) {
         boost::algorithm::split(filament_colors, f_colors, boost::algorithm::is_any_of(","));
     }
-    filament_colors.resize(filament_presets.size(), "#26A69A");
+    // Default slot colour: neutral aluminium (alu-300). The former default was the upstream
+    // teal accent; such untouched entries are migrated to the neutral default.
+    for (std::string &c : filament_colors)
+        if (boost::iequals(c, "#26A69A"))
+            c = "#8B99A4";
+    filament_colors.resize(filament_presets.size(), "#8B99A4");
     project_config.option<ConfigOptionStrings>("filament_colour")->values = filament_colors;
 
     std::vector<std::string> multi_filament_colors;
@@ -3330,7 +3335,12 @@ void PresetBundle::load_selections(AppConfig &config, const PresetPreferences& p
     if (!f_colors.empty()) {
         boost::algorithm::split(filament_colors, f_colors, boost::algorithm::is_any_of(","));
     }
-    filament_colors.resize(filament_presets.size(), "#26A69A");
+    // Default slot colour: neutral aluminium (alu-300). The former default was the upstream
+    // teal accent; such untouched entries are migrated to the neutral default.
+    for (std::string &c : filament_colors)
+        if (boost::iequals(c, "#26A69A"))
+            c = "#8B99A4";
+    filament_colors.resize(filament_presets.size(), "#8B99A4");
     project_config.option<ConfigOptionStrings>("filament_colour")->values = filament_colors;
 
     std::vector<std::string> multi_filament_colors;

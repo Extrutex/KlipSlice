@@ -184,7 +184,7 @@ private:
         dc.SetBackground(wxBrush(GetParent() ? GetParent()->GetBackgroundColour() : *wxWHITE));
         dc.Clear();
  
-        wxColour textCol = StateColor::darkModeColorFor(m_hovered ? "#26A69A" : "#363636");
+        wxColour textCol = StateColor::darkModeColorFor(m_hovered ? "#2E3840" : "#363636");
  
         dc.SetTextForeground(textCol);
         dc.SetFont(m_font);
@@ -884,8 +884,15 @@ wxBoxSizer* PreferencesDialog::create_item_darkmode(wxString title,wxString tool
     //// save config
     checkbox->Bind(wxEVT_TOGGLEBUTTON, [this, checkbox, param](wxCommandEvent& e) {
         app_config->set(param, checkbox->GetValue() ? "1" : "0");
+        app_config->set("dark_color_mode_user_set", "1");
         app_config->save();
         wxGetApp().Update_dark_mode_flag();
+#ifndef __WINDOWS__
+        // Native controls follow the app colour mode; custom widgets pick it up through
+        // StateColor, the rest of the window on the next start.
+        wxGetApp().init_label_colours();
+        wxGetApp().apply_app_appearance();
+#endif
 
         //dark mode
 #ifdef _MSW_DARK_MODE
@@ -1395,10 +1402,8 @@ void PreferencesDialog::create_items()
     auto item_default_page     = create_item_combobox(_L("Default page"), _L("Set the page opened on startup."), "default_page", DefaultPage);
     g_sizer->Add(item_default_page);
 
-#ifdef _WIN32
     auto item_darkmode         = create_item_darkmode(_L("Enable dark Mode"), "", "dark_color_mode");
     g_sizer->Add(item_darkmode);
-#endif
 
     auto item_single_instance  = create_item_checkbox(_L("Allow only one KLIPSLICE instance"),
     #if __APPLE__

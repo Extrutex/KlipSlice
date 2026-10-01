@@ -397,7 +397,7 @@ void AppConfig::set_defaults()
 
 #ifdef SUPPORT_DARK_MODE
     if (get("dark_color_mode").empty())
-        set("dark_color_mode", "0");
+        set("dark_color_mode", "1"); // dark is the native theme; light stays available in Preferences
 #endif
 
 //#ifdef SUPPORT_SYS_MENU

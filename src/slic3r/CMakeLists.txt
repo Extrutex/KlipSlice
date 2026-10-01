@@ -567,6 +567,7 @@ set(SLIC3R_GUI_SOURCES
     GUI/Widgets/SpinInput.hpp
     GUI/Widgets/StateColor.cpp
     GUI/Widgets/StateColor.hpp
+    GUI/Widgets/ThemeTokens.hpp
     GUI/Widgets/StateHandler.cpp
     GUI/Widgets/StateHandler.hpp
     GUI/Widgets/StaticBox.cpp
