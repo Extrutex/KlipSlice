@@ -1038,32 +1038,6 @@ bool CalibUtils::calib_generic_auto_pa_cali(const std::vector<CalibInfo> &calib_
     if (!process_and_store_3mf(&model, full_config, params, error_message))
         return false;
 
-    try {
-        json js;
-        if (params.mode == CalibMode::Calib_PA_Line)
-            js["cali_type"] = "cali_pa_line";
-        else if (params.mode == CalibMode::Calib_PA_Pattern)
-            js["cali_type"] = "cali_pa_pattern";
-        else if (params.mode == CalibMode::Calib_Auto_PA_Line)
-            js["cali_type"] = "cali_auto_pa_line";
-
-        const ConfigOptionFloats *nozzle_diameter_config = printer_config.option<ConfigOptionFloats>("nozzle_diameter");
-        assert(nozzle_diameter_config->values.size() > 0);
-        float nozzle_diameter = nozzle_diameter_config->values[0];
-
-        js["nozzle_diameter"] = nozzle_diameter;
-        std::string filament_ids;
-        for (const auto& calib_info : calib_infos) {
-            filament_ids += calib_info.filament_prest->filament_id;
-            filament_ids += " ";
-        }
-        js["filament_id"]     = filament_ids;
-        js["printer_type"]    = obj_->printer_type;
-        NetworkAgent* agent   = GUI::wxGetApp().getAgent();
-        if (agent)
-            agent->track_event("cali", js.dump());
-    } catch (...) {}
-
     send_to_print(calib_infos, error_message);
     return true;
 }

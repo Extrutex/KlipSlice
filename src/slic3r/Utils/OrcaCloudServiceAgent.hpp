@@ -251,17 +251,6 @@ public:
     int get_my_token(std::string ticket, unsigned int* http_code, std::string* http_body) override;
 
     // ========================================================================
-    // ICloudServiceAgent Interface Implementation - Analytics & Tracking
-    // ========================================================================
-    int track_enable(bool enable) override;
-    int track_remove_files() override;
-    int track_event(std::string evt_key, std::string content) override;
-    int track_header(std::string header) override;
-    int track_update_property(std::string name, std::string value, std::string type = "string") override;
-    int track_get_property(std::string name, std::string& value, std::string type = "string") override;
-    bool get_track_enable() override;
-
-    // ========================================================================
     // ICloudServiceAgent Interface Implementation - Ratings & Reviews
     // ========================================================================
     int put_model_mall_rating(int design_id, int score, std::string content, std::vector<std::string> images, unsigned int& http_code, std::string& http_error) override;
@@ -424,7 +413,6 @@ private:
 
     // Member variables - connection state
     bool is_connected{false};
-    bool enable_track{false};
     bool multi_machine_enabled{false};
 
     // Sync state

@@ -2598,7 +2598,7 @@ int OrcaCloudServiceAgent::set_queue_on_main_fn(QueueOnMainFn fn)
 }
 
 // ============================================================================
-// Stub Implementations (Cloud Services, Model Mall, Analytics, Ratings)
+// Stub Implementations (Cloud Services, Model Mall, Ratings)
 // ============================================================================
 
 int OrcaCloudServiceAgent::get_my_message(int type, int after, int limit, unsigned int* http_code, std::string* http_body)
@@ -2771,50 +2771,6 @@ int OrcaCloudServiceAgent::get_my_token(std::string ticket, unsigned int* http_c
     if (http_body)
         *http_body = "";
     return -1;
-}
-
-int OrcaCloudServiceAgent::track_enable(bool enable)
-{
-    std::lock_guard<std::recursive_mutex> lock(state_mutex);
-    enable_track = enable;
-    return BAMBU_NETWORK_SUCCESS;
-}
-
-int OrcaCloudServiceAgent::track_remove_files()
-{
-    BOOST_LOG_TRIVIAL(debug) << "OrcaCloudServiceAgent: track_remove_files (stub)";
-    return BAMBU_NETWORK_SUCCESS;
-}
-
-int OrcaCloudServiceAgent::track_event(std::string evt_key, std::string content)
-{
-    BOOST_LOG_TRIVIAL(debug) << "OrcaCloudServiceAgent: track_event (stub) - " << evt_key;
-    return BAMBU_NETWORK_SUCCESS;
-}
-
-int OrcaCloudServiceAgent::track_header(std::string header)
-{
-    BOOST_LOG_TRIVIAL(debug) << "OrcaCloudServiceAgent: track_header (stub)";
-    return BAMBU_NETWORK_SUCCESS;
-}
-
-int OrcaCloudServiceAgent::track_update_property(std::string name, std::string value, std::string type)
-{
-    BOOST_LOG_TRIVIAL(debug) << "OrcaCloudServiceAgent: track_update_property (stub) - " << name;
-    return BAMBU_NETWORK_SUCCESS;
-}
-
-int OrcaCloudServiceAgent::track_get_property(std::string name, std::string& value, std::string type)
-{
-    BOOST_LOG_TRIVIAL(debug) << "OrcaCloudServiceAgent: track_get_property (stub) - " << name;
-    value = "";
-    return BAMBU_NETWORK_SUCCESS;
-}
-
-bool OrcaCloudServiceAgent::get_track_enable()
-{
-    std::lock_guard<std::recursive_mutex> lock(state_mutex);
-    return enable_track;
 }
 
 int OrcaCloudServiceAgent::put_model_mall_rating(

@@ -3639,13 +3639,6 @@ void SelectMachineDialog::on_send_print()
         wxQueueEvent(this, evt);
      });
 
-    // update ota version
-    NetworkAgent* agent = wxGetApp().getAgent();
-    if (agent) {
-        std::string dev_ota_str = "dev_ota_ver:" + obj_->get_dev_id();
-        agent->track_update_property(dev_ota_str, obj_->get_ota_version());
-    }
-
     replace_job(*m_worker, m_print_job);
     BOOST_LOG_TRIVIAL(info) << "print_job: start print job";
 }

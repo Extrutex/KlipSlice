@@ -2666,8 +2666,6 @@ bool GUI_App::on_init_network()
         std::string country_code = app_config->get_country_code();
         m_agent->set_country_code(country_code);
         m_agent->start();
-        // Orca: disable Bambu telemetry up-front (before any login) so it never starts.
-        check_track_enable();
     }
 
     return true;
@@ -4415,15 +4413,6 @@ void GUI_App::on_user_login_handle(wxCommandEvent &evt)
 }
 
 
-void GUI_App::check_track_enable()
-{
-    // Orca: telemetry only exists on the BBL cloud agent; always disable it.
-    if (m_agent) {
-        m_agent->track_enable(false);
-        m_agent->track_remove_files();
-    }
-}
-
 void GUI_App::on_user_login(wxCommandEvent &evt)
 {
     if (!m_agent) { return; }
@@ -4433,7 +4422,6 @@ void GUI_App::on_user_login(wxCommandEvent &evt)
 
     // check privacy before handle
     check_privacy_version(online_login, provider);
-    check_track_enable();
 }
 
 bool GUI_App::is_studio_active()

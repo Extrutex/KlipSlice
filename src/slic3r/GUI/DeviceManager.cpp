@@ -3044,13 +3044,6 @@ int MachineObject::parse_json(std::string tunnel, std::string payload, bool key_
                             ver_info.firmware_flag= (*it)["flag"].get<int>();
 
                         store_version_info(ver_info);
-                        if (ver_info.name == "ota") {
-                            NetworkAgent* agent = GUI::wxGetApp().getAgent();
-                            if (agent) {
-                                std::string dev_ota_str = "dev_ota_ver:" + this->get_dev_id();
-                                agent->track_update_property(dev_ota_str, ver_info.sw_ver);
-                            }
-                        }
                     }
 
                     parse_version_func();

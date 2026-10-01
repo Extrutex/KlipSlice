@@ -25,7 +25,6 @@ namespace Slic3r {
  * - Settings synchronization (presets upload/download)
  * - Cloud user services (messages, tasks, firmware)
  * - Model mall and publishing
- * - Analytics and telemetry
  * - Ratings and reviews
  *
  * Implementations:
@@ -369,44 +368,6 @@ public:
      * passing tokens directly in the URL.
      */
     virtual int get_my_token(std::string ticket, unsigned int* http_code, std::string* http_body) = 0;
-
-    // ========================================================================
-    // Analytics & Tracking
-    // ========================================================================
-    /**
-     * Enable/disable telemetry.
-     */
-    virtual int track_enable(bool enable) = 0;
-
-    /**
-     * Delete telemetry files.
-     */
-    virtual int track_remove_files() = 0;
-
-    /**
-     * Report a custom analytics event.
-     */
-    virtual int track_event(std::string evt_key, std::string content) = 0;
-
-    /**
-     * Set telemetry headers.
-     */
-    virtual int track_header(std::string header) = 0;
-
-    /**
-     * Update a tracked user property.
-     */
-    virtual int track_update_property(std::string name, std::string value, std::string type = "string") = 0;
-
-    /**
-     * Read a tracked user property.
-     */
-    virtual int track_get_property(std::string name, std::string& value, std::string type = "string") = 0;
-
-    /**
-     * Check if tracking is enabled.
-     */
-    virtual bool get_track_enable() = 0;
 
     // ========================================================================
     // Ratings & Reviews

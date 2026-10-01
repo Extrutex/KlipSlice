@@ -89,18 +89,10 @@ public:
     int get_model_mall_detail_url(std::string* url, std::string id, const std::string& provider = ORCA_CLOUD_PROVIDER);
     int get_my_profile(std::string token, unsigned int* http_code, std::string* http_body, const std::string& provider = ORCA_CLOUD_PROVIDER);
     int get_my_token(std::string ticket, unsigned int* http_code, std::string* http_body, const std::string& provider = ORCA_CLOUD_PROVIDER);
-    // Orca: telemetry only exists on the BBL cloud agent (Orca cloud has no track events).
-    int track_enable(bool enable);
-    int track_remove_files();
-    int track_event(std::string evt_key, std::string content, const std::string& provider = ORCA_CLOUD_PROVIDER);
-    int track_header(std::string header, const std::string& provider = ORCA_CLOUD_PROVIDER);
-    int track_update_property(std::string name, std::string value, std::string type = "string", const std::string& provider = ORCA_CLOUD_PROVIDER);
-    int track_get_property(std::string name, std::string& value, std::string type = "string", const std::string& provider = ORCA_CLOUD_PROVIDER);
     int put_model_mall_rating(int design_id, int score, std::string content, std::vector<std::string> images, unsigned int &http_code, std::string &http_error, const std::string& provider = ORCA_CLOUD_PROVIDER);
     int get_oss_config(std::string &config, std::string country_code, unsigned int &http_code, std::string &http_error, const std::string& provider = ORCA_CLOUD_PROVIDER);
     int put_rating_picture_oss(std::string &config, std::string &pic_oss_path, std::string model_id, int profile_id, unsigned int &http_code, std::string &http_error, const std::string& provider = ORCA_CLOUD_PROVIDER);
     int get_model_mall_rating_result(int job_id, std::string &rating_result, unsigned int &http_code, std::string &http_error, const std::string& provider = ORCA_CLOUD_PROVIDER);
-    bool get_track_enable() { return enable_track; }
     int get_mw_user_preference(std::function<void(std::string)> callback, const std::string& provider = ORCA_CLOUD_PROVIDER);
     int get_mw_user_4ulist(int seed, int limit, std::function<void(std::string)> callback, const std::string& provider = ORCA_CLOUD_PROVIDER);
 
@@ -158,7 +150,6 @@ private:
     void apply_printer_callbacks(const std::shared_ptr<IPrinterAgent>& printer_agent,
                                  const PrinterCallbacks& callbacks);
     PrinterCallbacks m_printer_callbacks;
-    bool enable_track = false;
 
     // Sub-agent composition
     // We support dynamic switching of printer agents (e.g. for different printer types), but the cloud agent is fixed at construction since

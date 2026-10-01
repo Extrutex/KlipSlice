@@ -523,56 +523,6 @@ int NetworkAgent::get_my_token(std::string ticket, unsigned int* http_code, std:
     return -1;
 }
 
-int NetworkAgent::track_enable(bool enable)
-{
-    // Orca cloud has no telemetry; the only cloud agent that tracks events is BBL.
-    this->enable_track = enable;
-    const auto cloud_agent = get_cloud_agent(BBL_CLOUD_PROVIDER);
-    if (cloud_agent)
-        return cloud_agent->track_enable(enable);
-    return 0;
-}
-
-int NetworkAgent::track_remove_files()
-{
-    const auto cloud_agent = get_cloud_agent(BBL_CLOUD_PROVIDER);
-    if (cloud_agent)
-        return cloud_agent->track_remove_files();
-    return 0;
-}
-
-int NetworkAgent::track_event(std::string evt_key, std::string content, const std::string& provider)
-{
-    const auto cloud_agent = get_cloud_agent(provider);
-    if (cloud_agent)
-        return cloud_agent->track_event(std::move(evt_key), std::move(content));
-    return -1;
-}
-
-int NetworkAgent::track_header(std::string header, const std::string& provider)
-{
-    const auto cloud_agent = get_cloud_agent(provider);
-    if (cloud_agent)
-        return cloud_agent->track_header(std::move(header));
-    return -1;
-}
-
-int NetworkAgent::track_update_property(std::string name, std::string value, std::string type, const std::string& provider)
-{
-    const auto cloud_agent = get_cloud_agent(provider);
-    if (cloud_agent)
-        return cloud_agent->track_update_property(std::move(name), std::move(value), std::move(type));
-    return -1;
-}
-
-int NetworkAgent::track_get_property(std::string name, std::string& value, std::string type, const std::string& provider)
-{
-    const auto cloud_agent = get_cloud_agent(provider);
-    if (cloud_agent)
-        return cloud_agent->track_get_property(std::move(name), value, std::move(type));
-    return -1;
-}
-
 int NetworkAgent::put_model_mall_rating(int                      design_id,
                                         int                      score,
                                         std::string              content,
