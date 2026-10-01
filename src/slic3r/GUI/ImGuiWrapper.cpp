@@ -1058,13 +1058,15 @@ bool ImGuiWrapper::bbl_checkbox(const wxString &label, bool &value)
     bool b_value = value;
     if (b_value) {
         ImGui::PushStyleColor(ImGuiCol_FrameBg, ImGuiWrapper::accent(1.00f));
-        ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImGuiWrapper::accent(1.00f));
+        ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImGuiWrapper::accent_hover(1.00f));
         ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImGuiWrapper::accent(1.00f));
+        // Check mark in ink-on-accent: white on the aluminium fill would vanish in dark mode.
+        ImGui::PushStyleColor(ImGuiCol_CheckMark, ImGuiWrapper::on_accent());
     }
     auto label_utf8 = into_u8(label);
     result          = ImGui::BBLCheckbox(label_utf8.c_str(), &value);
 
-    if (b_value) { ImGui::PopStyleColor(3);}
+    if (b_value) { ImGui::PopStyleColor(4);}
     return result;
 }
 
@@ -1074,11 +1076,12 @@ bool ImGuiWrapper::bbl_radio_button(const char *label, bool active)
     bool b_value = active;
     if (b_value) {
         ImGui::PushStyleColor(ImGuiCol_FrameBg, ImGuiWrapper::accent(1.00f));
-        ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImGuiWrapper::accent(1.00f));
+        ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImGuiWrapper::accent_hover(1.00f));
         ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImGuiWrapper::accent(1.00f));
+        ImGui::PushStyleColor(ImGuiCol_CheckMark, ImGuiWrapper::on_accent());
     }
     result = ImGui::BBLRadioButton(label,active);
-    if (b_value) { ImGui::PopStyleColor(3); }
+    if (b_value) { ImGui::PopStyleColor(4); }
     return result;
 }
 
@@ -2637,7 +2640,7 @@ void ImGuiWrapper::push_toolbar_style(const float scale)
         ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(84 / 255.0f, 84 / 255.0f, 90 / 255.0f, 1.00f));         // 9
         ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImVec4(62 / 255.0f, 62 / 255.0f, 69 / 255.0f, 1.00f));          // 10
         ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(238 / 255.0f, 238 / 255.0f, 238 / 255.0f, 0.00f));             // 11
-        ImGui::PushStyleColor(ImGuiCol_TextSelectedBg, ImVec4(43 / 255.0f, 64 / 255.0f, 54 / 255.0f, 1.00f));         // 12
+        ImGui::PushStyleColor(ImGuiCol_TextSelectedBg, ImVec4(0x2E / 255.0f, 0x38 / 255.0f, 0x40 / 255.0f, 1.00f));         // 12
         ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(1.00f, 1.00f, 1.00f, 1.00f));                                // 13
         ImGui::PushStyleColor(ImGuiCol_ScrollbarGrab, ImVec4(0.42f, 0.42f, 0.42f, 1.00f));                            // 14
         ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabHovered, ImVec4(0.93f, 0.93f, 0.93f, 1.00f));                     // 15
@@ -2725,7 +2728,7 @@ void ImGuiWrapper::push_common_window_style(const float scale) {
         ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImVec4(62 / 255.0f, 62 / 255.0f, 69 / 255.0f, 1.00f));     // 10
         ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(238 / 255.0f, 238 / 255.0f, 238 / 255.0f, 0.00f));        // 11
         ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(1.00f, 1.00f, 1.00f, 1.00f));                           // 12
-        ImGui::PushStyleColor(ImGuiCol_TextSelectedBg, ImVec4(43 / 255.0f, 64 / 255.0f, 54 / 255.0f, 1.00f));    // 13
+        ImGui::PushStyleColor(ImGuiCol_TextSelectedBg, ImVec4(0x2E / 255.0f, 0x38 / 255.0f, 0x40 / 255.0f, 1.00f));    // 13
         ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImGuiWrapper::accent(1.00f));                       // 14
     }
     else {
