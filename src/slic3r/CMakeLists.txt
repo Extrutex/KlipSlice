@@ -333,8 +333,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/MarkdownTip.hpp
     GUI/MeshUtils.cpp
     GUI/MeshUtils.hpp
-    GUI/ModelMall.cpp
-    GUI/ModelMall.hpp
     GUI/MonitorBasePanel.cpp
     GUI/BBLStatusBarPrint.hpp
     GUI/BBLStatusBarPrint.cpp

@@ -89,46 +89,6 @@ body
 	color:#818183;
 }
 
-/*---Staff PIck----*/
-#HotModel_Swiper
-{
-	
-}
-
-.HotModel_NameText
-{
-	height: 32px;
-}
-
-.HotModelPiece
-{
-	border: 1px solid #4C4C55;
-	box-shadow: 0px 2px 12px rgba(0, 0, 0, 0.04);
-	background-color: #4C4C55;
-}
-
-#HotModel_RIGHT_Title
-{
-	color: #818183;
-}
-
-.swiper
-{
-    --swiper-navigation-color: #EFEFF0;/* 单独设置按钮颜色 */
-}
-
-.swiper-button-prev
-{
-	background: rgba(54, 54, 60, 0.88);
-    border: 1px solid rgba(129, 129, 131, 0.64);
-}
-
-.swiper-button-next
-{
-	background: rgba(54, 54, 60, 0.88);
-    border: 1px solid rgba(129, 129, 131, 0.64);
-}
-
 /*--- Account rows and account menu ---*/
 :root
 {

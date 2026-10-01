@@ -90,7 +90,6 @@ class NotificationManager;
 class Downloader;
 struct GUI_InitParams;
 class ParamsDialog;
-class ModelMallDialog;
 class PresetBundleDialog;
 class ZUserLogin;
 class NetworkErrorDialog;
@@ -436,8 +435,6 @@ public:
     const wxColour  get_label_default_clr_modified();
     void            init_label_colours();
     void            update_label_colours_from_appconfig();
-    void            update_publish_status();
-    bool            has_model_mall();
     void            update_label_colours();
     // update color mode for window
     void            UpdateDarkUI(wxWindow *window, bool highlited = false, bool just_font = false);
@@ -516,7 +513,6 @@ public:
     int             request_user_unbind(std::string dev_id, const std::string& provider = ORCA_CLOUD_PROVIDER);
     std::string     handle_web_request(std::string cmd);
     void            handle_script_message(std::string msg, const std::string& provider = ORCA_CLOUD_PROVIDER);
-    void            request_model_download(wxString url);
     void            download_project(std::string project_id);
     void            request_project_download(std::string project_id);
     void            request_open_project(std::string project_id);
@@ -677,25 +673,15 @@ public:
     Downloader*          downloader();
 
 
-    std::string         m_mall_model_download_url;
-    std::string         m_mall_model_download_name;
-    ModelMallDialog*    m_mall_publish_dialog{ nullptr };
 
     NetworkErrorDialog* m_server_error_dialog { nullptr };
 
-    void            set_download_model_url(std::string url) {m_mall_model_download_url = url;}
-    void            set_download_model_name(std::string name) {m_mall_model_download_name = name;}
-    std::string     get_download_model_url() {return m_mall_model_download_url;}
-    std::string     get_download_model_name() {return m_mall_model_download_name;}
 
 #if defined(__WINDOWS__)
     bool            is_running_on_arm64() { return m_is_arm64; }
 #endif
 
     void            load_url(wxString url);
-    void            open_mall_page_dialog();
-    void            open_publish_page_dialog();
-    void            remove_mall_system_dialog();
     void            run_script(wxString js);
     bool            is_adding_script_handler() { return m_adding_script_handler; }
     void            set_adding_script_handler(bool status) { m_adding_script_handler = status; }
@@ -773,7 +759,6 @@ public:
     void            start_download(std::string url);
 
     std::string     get_http_url(std::string country_code, std::string path = {});
-    std::string     get_model_http_url(std::string country_code);
     void            check_config_updates_from_updater() { check_updates(false); }
 
     // Client version reported in the web views' user agent.

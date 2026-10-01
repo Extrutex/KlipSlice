@@ -314,7 +314,6 @@ void CalibrationCaliPage::update_subtask(MachineObject* obj)
     }
     else if (obj->is_in_printing() || obj->print_status == "FINISH") {
         if (obj->is_in_prepare() || obj->print_status == "SLICING") {
-            m_printing_panel->get_market_scoring_button()->Hide();
             m_printing_panel->enable_abort_button(false);
             m_printing_panel->enable_pause_resume_button(false, "pause_disable");
             wxString prepare_text;
@@ -367,25 +366,9 @@ void CalibrationCaliPage::update_subtask(MachineObject* obj)
 
                 m_printing_panel->enable_abort_button(false);
                 m_printing_panel->enable_pause_resume_button(false, "resume_disable");
-
-                bool is_market_task = obj->get_modeltask() && obj->get_modeltask()->design_id > 0;
-                if (is_market_task) {
-                    m_printing_panel->get_market_scoring_button()->Show();
-                    BOOST_LOG_TRIVIAL(info) << "SHOW_SCORE_BTU: design_id [" << obj->get_modeltask()->design_id << "] print_finish [" << m_print_finish << "]";
-                    if (!m_print_finish && IsShownOnScreen()) {
-                        m_print_finish = true;
-                    }
-                }
-                else {
-                    m_printing_panel->get_market_scoring_button()->Hide();
-                }
             }
             else {
                 m_printing_panel->enable_abort_button(true);
-                m_printing_panel->get_market_scoring_button()->Hide();
-                if (m_print_finish) {
-                    m_print_finish = false;
-                }
             }
             // update printing stage
 
@@ -443,7 +426,6 @@ void CalibrationCaliPage::reset_printing_values()
     m_printing_panel->show_profile_info(false);
     m_printing_panel->update_stage_value(wxEmptyString, 0);
     m_printing_panel->update_progress_percent(NA_STR, wxEmptyString);
-    m_printing_panel->get_market_scoring_button()->Hide();
     m_printing_panel->update_left_time(NA_STR);
     m_printing_panel->update_layers_num(true, wxString::Format(_L("Layer: %s"), NA_STR));
     update_basic_print_data(false);

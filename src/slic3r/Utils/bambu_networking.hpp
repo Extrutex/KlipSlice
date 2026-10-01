@@ -385,15 +385,6 @@ struct AmsSyncParams {
     std::vector<AmsSyncItem> items;
 };
 
-struct PublishParams {
-    std::string     project_name;
-    std::string     project_3mf_file;
-    std::string     preset_name;
-    std::string     project_model_id;
-    std::string     design_id;
-    std::string     config_filename;
-};
-
 struct CertificateInformation {
     std::string     issuer;
     std::string     sub_name;

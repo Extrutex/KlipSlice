@@ -38,7 +38,6 @@ public:
 protected:
     float get_selected_calibration_nozzle_dia(MachineObject* obj);
 
-    bool                m_print_finish {false};
     bool                m_is_between_start_and_running { false };
     wxBoxSizer*         m_top_sizer;
     CaliPageStepGuide*  m_step_panel { nullptr };

@@ -96,20 +96,6 @@ enum ExtruderState {
     EMPTY_UNLOAD
 };
 
-struct ScoreData
-{
-    int                                            rating_id;
-    int                                            design_id;
-    std::string                                    model_id;
-    int                                            profile_id;
-    int                                            star_count;
-    bool                                           success_printed;
-    wxString                                       comment_text;
-    std::vector<std::string>                       image_url_paths;
-    std::set<wxString>                             need_upload_images;
-    std::vector<std::pair<wxString, std::string>>  local_to_url_image;
-};
-
 typedef std::function<void(BBLModelTask* subtask)> OnGetSubTaskFn;
 
 class ExtruderImage : public wxWindow
@@ -197,79 +183,6 @@ private:
     time_t m_last_ctrl_time = 0;
 };
 
-class ScoreDialog : public GUI::DPIDialog
-{
-public:
-    ScoreDialog(wxWindow *parent, int design_id, std::string model_id, int profile_id, int rating_id, bool success_printed, int star_count = 0);
-    ScoreDialog(wxWindow *parent, ScoreData *score_data);
-    ~ScoreDialog();
-
-    int       get_rating_id() { return m_rating_id; }
-    ScoreData get_score_data();
-    void      set_comment(std::string comment);
-    void      set_cloud_bitmap(std::vector<std::string> cloud_bitmaps);
-
-protected:
-    enum StatusCode {
-        UPLOAD_PROGRESS = 0,
-        UPLOAD_EXIST_ISSUE,
-        UPLOAD_IMG_FAILED,
-        CODE_NUMBER
-    };
-
-    std::shared_ptr<int>     m_tocken;
-    const int                m_photo_nums = 16;
-    int                      m_rating_id;
-    int                      m_design_id;
-    std::string              m_model_id;
-    int                      m_profile_id;
-    int                      m_star_count;
-    bool                     m_success_printed;
-    std::vector<std::string> m_image_url_paths;
-    StatusCode               m_upload_status_code;
-
-    struct ImageMsg
-    {
-        wxString          local_image_url; //local image path
-        std::string       img_url_paths; // oss url path
-        vector<wxPanel *> image_broad;
-        bool              is_selected;
-        bool              is_uploaded; // load
-        wxBoxSizer *      image_tb_broad = nullptr;
-    };
-
-    std::vector<ScalableButton *>                  m_score_star;
-    wxTextCtrl *                                   m_comment_text  = nullptr;
-    Button *                                       m_button_ok     = nullptr;
-    Button *                                       m_button_cancel = nullptr;
-    Label *                                        m_add_photo     = nullptr;
-    Label *                                        m_delete_photo  = nullptr;
-    wxGridSizer *                                  m_image_sizer   = nullptr;
-    wxStaticText *                                 warning_text    = nullptr;
-    std::unordered_map<wxStaticBitmap *, ImageMsg> m_image;
-    std::unordered_set<wxStaticBitmap *>           m_selected_image_list;
-
-    void init();
-    void update_static_bitmap(wxStaticBitmap *static_bitmap, wxImage image);
-    void create_comment_text(const wxString &comment = "");
-    void load_photo(const std::vector<std::pair<wxString, std::string>> &filePaths);
-    void on_dpi_changed(const wxRect &suggested_rect) override;
-    void OnBitmapClicked(wxMouseEvent &event);
-
-    wxBoxSizer * create_broad_sizer(wxStaticBitmap *bitmap, ImageMsg &cur_image_msg);
-    wxBoxSizer * get_score_sizer();
-    wxBoxSizer * get_star_sizer();
-    wxBoxSizer * get_comment_text_sizer();
-    wxBoxSizer * get_photo_btn_sizer();
-    wxBoxSizer * get_button_sizer();
-    wxBoxSizer * get_main_sizer(const std::vector<std::pair<wxString, std::string>> &images = std::vector<std::pair<wxString, std::string>>(), const wxString &comment = "");
-
-    std::set<std::pair<wxStaticBitmap *, wxString>>        add_need_upload_imgs();
-    std::pair<wxStaticBitmap *, ImageMsg>                  create_local_thumbnail(wxString &local_path);
-    std::pair<wxStaticBitmap *, ImageMsg>                  create_oss_thumbnail(std::string &oss_path);
-
-};
-
 class PrintingTaskPanel : public wxPanel
 {
 public:
@@ -303,26 +216,15 @@ private:
     // Orca: show print end time
     wxStaticText * m_staticText_progress_end;
     wxStaticText*   m_staticText_layers;
-    wxStaticText *  m_has_rated_prompt;
-    wxStaticText *  m_request_failed_info;
     wxStaticBitmap* m_bitmap_thumbnail;
     int             m_plate_index { -1 };
     wxStaticBitmap* m_bitmap_static_use_time;
     wxStaticBitmap* m_bitmap_static_use_weight;
     ScalableButton* m_button_pause_resume;
     ScalableButton* m_button_abort;
-    Button*         m_button_market_scoring;
     Button*         m_button_clean;
-    Button *                      m_button_market_retry;
-    wxPanel *                     m_score_subtask_info;
-    wxPanel *                     m_score_staticline;
-    wxPanel *                     m_request_failed_panel;
     wxPanel                      *m_printing_stage_panel;
 
-    // score page
-    int                           m_star_count;
-    std::vector<ScalableButton *> m_score_star;
-    bool                          m_star_count_dirty = false;
 
     ProgressBar*    m_gauge_progress;
     Label* m_error_text;
@@ -353,23 +255,12 @@ public:
     void set_thumbnail_img(const wxBitmap& bmp, const std::string& bmp_name);
     void set_brightness_value(int value) { m_brightness_value = value; }
     void set_plate_index(int plate_idx = -1);
-    void market_scoring_show();
-    void market_scoring_hide();
 
 public:
     ScalableButton* get_abort_button() {return m_button_abort;};
     ScalableButton* get_pause_resume_button() {return m_button_pause_resume;};
-    Button* get_market_scoring_button() {return m_button_market_scoring;};
-    Button * get_market_retry_buttom() { return m_button_market_retry; };
     Button* get_clean_button() {return m_button_clean;};
     wxStaticBitmap* get_bitmap_thumbnail() {return m_bitmap_thumbnail;};
-    wxPanel *  get_request_failed_panel() { return m_request_failed_panel; }
-    int get_star_count() { return m_star_count; }
-    void set_star_count(int star_count);
-    std::vector<ScalableButton *> &get_score_star() { return m_score_star; }
-    bool get_star_count_dirty() { return m_star_count_dirty; }
-    void set_star_count_dirty(bool dirty) { m_star_count_dirty = dirty; }
-    void                           set_has_reted_text(bool has_rated);
     void paint(wxPaintEvent&);
 };
 
@@ -611,7 +502,6 @@ private:
 protected:
     std::shared_ptr<SliceInfoPopup> m_slice_info_popup;
     std::shared_ptr<ImageTransientPopup> m_image_popup;
-    std::set<int> rated_model_id;
     AMSSetting *m_ams_setting_dlg{nullptr};
     PrinterPartsDialog*  print_parts_dlg { nullptr };
     PrintOptionsDialog*  print_options_dlg { nullptr };
@@ -630,9 +520,7 @@ protected:
     int          m_last_recording = -1;
     int          m_last_timelapse = -1;
     int          m_last_extrusion = -1;
-    int          m_model_mall_request_count = 0;
     bool         m_is_load_with_temp = false;
-    json         m_rating_result;
 
     wxWebRequest web_request;
     bool bed_temp_input    = false;
@@ -647,7 +535,6 @@ protected:
     std::map<std::string, std::string> m_print_connect_types;
     std::vector<Button *>       m_buttons;
     int last_status;
-    ScoreData *m_score_data = nullptr;
     wxBitmap* calib_bitmap = nullptr;
     CalibMode m_calib_mode;
     CalibrationMethod m_calib_method;
@@ -659,8 +546,6 @@ protected:
     void show_task_list_info(bool show = true);
     void update_tasklist_info();
 
-    void on_market_scoring(wxCommandEvent &event);
-    void on_market_retry(wxCommandEvent &event);
     void on_subtask_pause_resume(wxCommandEvent &event);
     void on_subtask_abort(wxCommandEvent &event);
     void on_print_error_clean(wxCommandEvent &event);

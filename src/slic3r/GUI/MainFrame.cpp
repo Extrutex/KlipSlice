@@ -651,7 +651,6 @@ DPIFrame(NULL, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, BORDERLESS_FRAME_
         this->shutdown();
         // propagate event
 
-        wxGetApp().remove_mall_system_dialog();
         event.Skip();
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< ": mainframe finished process close_widow event";
     });
@@ -1279,12 +1278,6 @@ void MainFrame::update_filament_tab_ui()
 void MainFrame::update_title()
 {
     return;
-}
-
-void MainFrame::show_publish_button(bool show)
-{
-    // m_publish_btn->Show(show);
-    // Layout();
 }
 
 void MainFrame::update_title_colour_after_set_title()
@@ -2755,36 +2748,6 @@ wxMenu* MainFrame::generate_help_menu()
 }
 
 
-static void add_common_publish_menu_items(wxMenu* publish_menu, MainFrame* mainFrame)
-{
-#ifndef __WINDOWS__
-    append_menu_item(publish_menu, wxID_ANY, _L("Upload Models"), _L("Upload Models"),
-        [](wxCommandEvent&) {
-            if (!wxGetApp().getAgent()) {
-                BOOST_LOG_TRIVIAL(info) << "publish: no agent";
-                return;
-            }
-
-            json j;
-            NetworkAgent* agent = GUI::wxGetApp().getAgent();
-
-            //if (GUI::wxGetApp().plater()->model().objects.empty()) return;
-            wxGetApp().open_publish_page_dialog();
-        });
-
-    append_menu_item(publish_menu, wxID_ANY, _L("Download Models"), _L("Download Models"),
-        [](wxCommandEvent&) {
-            if (!wxGetApp().getAgent()) {
-                BOOST_LOG_TRIVIAL(info) << "publish: no agent";
-                return;
-}
-
-            //if (GUI::wxGetApp().plater()->model().objects.empty()) return;
-            wxGetApp().open_mall_page_dialog();
-        });
-#endif
-}
-
 void MainFrame::add_common_view_menu_items(wxMenu* view_menu, std::function<bool(void)> can_change_view)
 {
     append_shortcut_item(view_menu, Shortcut::ViewDefault, true, _L("Default View"), _L("Default View"), [this](wxCommandEvent&) {
@@ -3178,14 +3141,6 @@ void MainFrame::init_menubar_as_editor()
 
     // BBS
 
-    //publish menu
-
-    /*if (m_plater) {
-        publishMenu = new wxMenu();
-        add_common_publish_menu_items(publishMenu, this);
-        publishMenu->AppendSeparator();
-    }*/
-
     // View menu
     wxMenu* viewMenu = nullptr;
     if (m_plater) {
@@ -3491,8 +3446,6 @@ void MainFrame::init_menubar_as_editor()
         m_menubar->Append(editMenu, wxString::Format("&%s", _L_CONTEXT("Edit", "Menu")));
     if (viewMenu)
         m_menubar->Append(viewMenu, wxString::Format("&%s", _L("View")));
-    /*if (publishMenu)
-        m_menubar->Append(publishMenu, wxString::Format("&%s", _L("3D Models")));*/
 
     // SoftFever calibrations
     auto calib_menu = new wxMenu();

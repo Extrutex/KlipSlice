@@ -24,8 +24,6 @@ namespace Slic3r {
  * - Server connectivity and subscription management
  * - Settings synchronization (presets upload/download)
  * - Cloud user services (messages, tasks, firmware)
- * - Model mall and publishing
- * - Ratings and reviews
  *
  * Implementations:
  * - OrcaCloudServiceAgent: Native implementation for Orca Cloud (includes OAuth PKCE)
@@ -319,7 +317,7 @@ public:
     virtual int modify_printer_name(std::string dev_id, std::string dev_name) = 0;
 
     // ========================================================================
-    // Model Mall & Publishing
+    // Camera, Tasks & Profile
     // ========================================================================
     /**
      * Request live camera streaming URL.
@@ -327,37 +325,12 @@ public:
     virtual int get_camera_url(std::string dev_id, std::function<void(std::string)> callback) = 0;
 
     /**
-     * Fetch staff-picked designs from model mall.
-     */
-    virtual int get_design_staffpick(int offset, int limit, std::function<void(std::string)> callback) = 0;
-
-    /**
-     * Run multi-stage publishing workflow.
-     */
-    virtual int start_publish(PublishParams params, OnUpdateStatusFn update_fn, WasCancelledFn cancel_fn, std::string* out) = 0;
-
-    /**
-     * Get model publish URL.
-     */
-    virtual int get_model_publish_url(std::string* url) = 0;
-
-    /**
-     * Fetch publishing subtask information.
+     * Fetch print subtask information.
      */
     virtual int get_subtask(BBLModelTask* task, OnGetSubTaskFn getsub_fn) = 0;
 
     /**
-     * Get model mall home URL.
-     */
-    virtual int get_model_mall_home_url(std::string* url) = 0;
-
-    /**
-     * Build model detail page URL.
-     */
-    virtual int get_model_mall_detail_url(std::string* url, std::string id) = 0;
-
-    /**
-     * Retrieve user's model mall profile.
+     * Retrieve the user profile.
      */
     virtual int get_my_profile(std::string token, unsigned int* http_code, std::string* http_body) = 0;
 
@@ -370,41 +343,8 @@ public:
     virtual int get_my_token(std::string ticket, unsigned int* http_code, std::string* http_body) = 0;
 
     // ========================================================================
-    // Ratings & Reviews
-    // ========================================================================
-    /**
-     * Submit a review for a marketplace design.
-     */
-    virtual int put_model_mall_rating(int design_id, int score, std::string content, std::vector<std::string> images, unsigned int& http_code, std::string& http_error) = 0;
-
-    /**
-     * Get OSS configuration for image uploads.
-     */
-    virtual int get_oss_config(std::string& config, std::string country_code, unsigned int& http_code, std::string& http_error) = 0;
-
-    /**
-     * Upload rating images to OSS.
-     */
-    virtual int put_rating_picture_oss(std::string& config, std::string& pic_oss_path, std::string model_id, int profile_id, unsigned int& http_code, std::string& http_error) = 0;
-
-    /**
-     * Poll for rating result.
-     */
-    virtual int get_model_mall_rating_result(int job_id, std::string& rating_result, unsigned int& http_code, std::string& http_error) = 0;
-
-    // ========================================================================
     // Extra Features
     // ========================================================================
-    /**
-     * Fetch MakerWorld user preferences.
-     */
-    virtual int get_mw_user_preference(std::function<void(std::string)> callback) = 0;
-
-    /**
-     * Retrieve MakerWorld "For You" list.
-     */
-    virtual int get_mw_user_4ulist(int seed, int limit, std::function<void(std::string)> callback) = 0;
-
     /**
      * Return the version of the cloud service implementation.
      */

@@ -81,20 +81,9 @@ public:
     int query_bind_status(std::vector<std::string> query_list, unsigned int* http_code, std::string* http_body, const std::string& provider = ORCA_CLOUD_PROVIDER);
     int modify_printer_name(std::string dev_id, std::string dev_name, const std::string& provider = ORCA_CLOUD_PROVIDER);
     int get_camera_url(std::string dev_id, std::function<void(std::string)> callback, const std::string& provider = ORCA_CLOUD_PROVIDER);
-    int get_design_staffpick(int offset, int limit, std::function<void(std::string)> callback, const std::string& provider = ORCA_CLOUD_PROVIDER);
-    int start_publish(PublishParams params, OnUpdateStatusFn update_fn, WasCancelledFn cancel_fn, std::string* out, const std::string& provider = ORCA_CLOUD_PROVIDER);
-    int get_model_publish_url(std::string* url, const std::string& provider = ORCA_CLOUD_PROVIDER);
     int get_subtask(BBLModelTask* task, OnGetSubTaskFn getsub_fn, const std::string& provider = ORCA_CLOUD_PROVIDER);
-    int get_model_mall_home_url(std::string* url, const std::string& provider = ORCA_CLOUD_PROVIDER);
-    int get_model_mall_detail_url(std::string* url, std::string id, const std::string& provider = ORCA_CLOUD_PROVIDER);
     int get_my_profile(std::string token, unsigned int* http_code, std::string* http_body, const std::string& provider = ORCA_CLOUD_PROVIDER);
     int get_my_token(std::string ticket, unsigned int* http_code, std::string* http_body, const std::string& provider = ORCA_CLOUD_PROVIDER);
-    int put_model_mall_rating(int design_id, int score, std::string content, std::vector<std::string> images, unsigned int &http_code, std::string &http_error, const std::string& provider = ORCA_CLOUD_PROVIDER);
-    int get_oss_config(std::string &config, std::string country_code, unsigned int &http_code, std::string &http_error, const std::string& provider = ORCA_CLOUD_PROVIDER);
-    int put_rating_picture_oss(std::string &config, std::string &pic_oss_path, std::string model_id, int profile_id, unsigned int &http_code, std::string &http_error, const std::string& provider = ORCA_CLOUD_PROVIDER);
-    int get_model_mall_rating_result(int job_id, std::string &rating_result, unsigned int &http_code, std::string &http_error, const std::string& provider = ORCA_CLOUD_PROVIDER);
-    int get_mw_user_preference(std::function<void(std::string)> callback, const std::string& provider = ORCA_CLOUD_PROVIDER);
-    int get_mw_user_4ulist(int seed, int limit, std::function<void(std::string)> callback, const std::string& provider = ORCA_CLOUD_PROVIDER);
 
     // Printer agent methods
     int set_on_ssdp_msg_fn(OnMsgArrivedFn fn);

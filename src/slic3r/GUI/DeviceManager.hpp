@@ -99,7 +99,6 @@ class DeviceManager;
 class DevStatus;    // Orca: adopt DeviceCore split
 class DevStorage;
 class DevUpgrade;   // Orca: adopt DeviceCore split
-struct DevPrintTaskRatingInfo;
 
 // Returns true when filament_id (e.g. "GFA11", "GFU00") is on the stringing-prone list for the
 // given nozzle diameter (mm), bucketed per nozzle size to mirror the printer firmware.
@@ -714,7 +713,6 @@ public:
     std::string  last_subtask_id_;
     BBLSliceInfo* slice_info {nullptr};
     boost::thread* get_slice_info_thread { nullptr };
-    boost::thread* get_model_task_thread { nullptr };
 
     // Per-filament-index AMS slot mapping reported by the printer in print.mapping. Up to
     // 32 entries, each value packs (ams_id << 8) | slot_id; 0xFFFF means unused.
@@ -726,7 +724,6 @@ public:
 
     /* key: sequence id, value: callback */
 
-    bool is_makeworld_subtask();
 
     /* device type */
     DeviceMode  m_device_mode{ DEVICE_MODE_FDM };
@@ -737,9 +734,6 @@ public:
     int gcode_file_prepare_percent = 0;
     BBLSubTask* subtask_;
     BBLModelTask *model_task { nullptr };
-    DevPrintTaskRatingInfo*  rating_info { nullptr };
-    int           request_model_result             = 0;
-    bool          get_model_mall_result_need_retry = false;
 
     std::string obj_subtask_id;     // subtask_id == 0 for sdcard
     std::string subtask_name;
@@ -926,7 +920,6 @@ public:
     BBLModelTask* get_modeltask();
     void set_modeltask(BBLModelTask* task);
 
-    void update_model_task();
 
     void free_slice_info();
     void update_slice_info(std::string project_id, std::string profile_id, std::string subtask_id, int plate_idx);

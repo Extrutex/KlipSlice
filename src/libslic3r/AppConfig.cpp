@@ -594,10 +594,6 @@ void AppConfig::set_defaults()
         set("recent_models", "0");
     }
 
-    // if (get("staff_pick_switch").empty()) {
-    //     set_bool("staff_pick_switch", false);
-    // }
-
     if (get("sync_system_preset").empty()) {
         set_bool("sync_system_preset", true);
     }

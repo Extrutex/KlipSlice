@@ -445,43 +445,6 @@ void WebViewPanel::SendRecentList(int images)
     RunScript(wxString::Format("window.postMessage(%s)", oss.str()));
 }
 
-void WebViewPanel::SendDesignStaffpick(bool on)
-{
-    // if (on) {
-    //     get_design_staffpick(0, 60, [this](std::string body) {
-    //         if (body.empty() || body.front() != '{') {
-    //             BOOST_LOG_TRIVIAL(warning) << "get_design_staffpick failed " + body;
-    //             return;
-    //         }
-    //         CallAfter([this, body] {
-    //             auto body2 = from_u8(body);
-    //             body2.insert(1, "\"command\": \"modelmall_model_advise_get\", ");
-    //             RunScript(wxString::Format("window.postMessage(%s)", body2));
-    //         });
-    //     });
-    // } else {
-    //     std::string body2 = "{\"total\":0, \"hits\":[]}";
-    //     body2.insert(1, "\"command\": \"modelmall_model_advise_get\", ");
-    //     RunScript(wxString::Format("window.postMessage(%s)", body2));
-    // }
-}
-
-void WebViewPanel::OpenModelDetail(std::string id, NetworkAgent *agent)
-{
-    std::string url;
-    if ((agent ? agent->get_model_mall_detail_url(&url, id) : get_model_mall_detail_url(&url, id)) == 0) 
-    {
-        if (url.find("?") != std::string::npos) 
-        { 
-            url += "&from=orcaslicer";
-        } else {
-            url += "?from=orcaslicer";
-        }
-        
-        wxLaunchDefaultBrowser(url); 
-    }
-}
-
 void WebViewPanel::SendLoginInfo()
 {
     if (wxGetApp().getAgent()) {
@@ -514,32 +477,6 @@ void WebViewPanel::SendCloudProvidersInfo()
 
     wxString strJS = wxString::Format("window.postMessage(%s)", j.dump());
     RunScript(strJS);
-}
-
-void WebViewPanel::get_design_staffpick(int offset, int limit, std::function<void(std::string)> callback)
-{
-    // auto host = wxGetApp().get_http_url(wxGetApp().app_config->get_country_code(), "v1/design-service/design/staffpick");
-    // std::string url = (boost::format("%1%/?offset=%2%&limit=%3%") % host % offset % limit).str();
-
-    // Http http = Http::get(url);
-    // http.header("accept", "application/json")
-    //     .header("Content-Type", "application/json")
-    //     .on_complete([this, callback](std::string body, unsigned status) { callback(body); })
-    //     .on_error([this, callback](std::string body, std::string error, unsigned status) {
-    //         callback(body);
-    //     })
-    //     .perform();
-}
-
-int WebViewPanel::get_model_mall_detail_url(std::string *url, std::string id)
-{
-    // https://makerhub-qa.bambu-lab.com/en/models/2077
-    std::string h = wxGetApp().get_model_http_url(wxGetApp().app_config->get_country_code());
-    auto l = wxGetApp().current_language_code_safe();
-    if (auto n = l.find('_'); n != std::string::npos)
-        l = l.substr(0, n);
-    *url = (boost::format("%1%%2%/models/%3%") % h % l % id).str();
-    return 0;
 }
 
 void WebViewPanel::update_mode()

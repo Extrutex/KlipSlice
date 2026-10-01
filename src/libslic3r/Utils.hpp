@@ -280,10 +280,6 @@ inline bool is_printables_link(const std::string& url) {
     const std::regex url_regex("(http|https)://printables.com", std::regex_constants::icase);
     return std::regex_match(url, url_regex);
 }
-inline bool is_makerworld_link(const std::string& url) {
-    const std::regex url_regex("(http|https)://makerworld.com", std::regex_constants::icase);
-    return std::regex_match(url, url_regex);
-}
 inline bool is_thingiverse_link(const std::string& url) {
     const std::regex url_regex("(http|https)://www.thingiverse.com", std::regex_constants::icase);
     return std::regex_match(url, url_regex);

@@ -187,28 +187,6 @@ static wxImage fail_image;
 #define AXIS_MIN_SIZE (wxSize(FromDIP(258), FromDIP(258)))
 #define EXTRUDER_IMAGE_SIZE (wxSize(FromDIP(48), FromDIP(76)))
 
-static void market_model_scoring_page(int design_id)
-{
-    std::string url;
-    std::string country_code   = GUI::wxGetApp().app_config->get_country_code();
-    std::string model_http_url = GUI::wxGetApp().get_model_http_url(country_code);
-    if (GUI::wxGetApp().getAgent()->get_model_mall_detail_url(&url, std::to_string(design_id)) == 0) {
-        std::string user_id = GUI::wxGetApp().getAgent()->get_user_id();
-        boost::algorithm::replace_first(url, "models", "u/" + user_id + "/rating");
-        // Prevent user_id from containing design_id
-        size_t      sign_in = url.find("/rating");
-        std::string sub_url = url.substr(0, sign_in + 7);
-        url.erase(0, sign_in + 7);
-        boost::algorithm::replace_first(url, std::to_string(design_id), "");
-        url = sub_url + url;
-        try {
-            if (!url.empty()) { wxLaunchDefaultBrowser(url); }
-        } catch (...) {
-            return;
-        }
-    }
-}
-
 /*************************************************
 Description:Extruder
 **************************************************/
@@ -860,87 +838,6 @@ void PrintingTaskPanel::create_panel(wxWindow* parent)
     sizer->Add(m_panel_error_txt, 0, wxEXPAND | wxALL, 0);
     sizer->Add(0, FromDIP(12), 0);
 
-    m_score_staticline = new wxPanel(parent, wxID_ANY);
-    m_score_staticline->SetBackgroundColour(wxColour(238, 238, 238));
-    m_score_staticline->Layout();
-    m_score_staticline->Hide();
-    sizer->Add(0, 0, 0, wxTOP, FromDIP(15));
-    sizer->Add(m_score_staticline, 0, wxEXPAND | wxALL, FromDIP(10));
-    m_request_failed_panel    = new wxPanel(parent, wxID_ANY);
-    m_request_failed_panel->SetBackgroundColour(*wxWHITE);
-    wxBoxSizer *static_request_failed_panel_sizer = new wxBoxSizer(wxHORIZONTAL);
-    m_request_failed_info = new wxStaticText(m_request_failed_panel, wxID_ANY, _L("You have completed printing the mall model, \nbut synchronizing rating information has failed."), wxDefaultPosition, wxDefaultSize, 0);
-    m_request_failed_info->Wrap(-1);
-    m_request_failed_info->SetForegroundColour(*wxRED);
-    m_request_failed_info->SetFont(::Label::Body_10);
-    static_request_failed_panel_sizer->Add(m_request_failed_info, 0, wxEXPAND | wxALL, FromDIP(10));
-
-    m_button_market_retry = new Button(m_request_failed_panel, _L("Retry"));
-    m_button_market_retry->SetStyle(ButtonStyle::Confirm, ButtonType::Window);
-
-    static_request_failed_panel_sizer->Add(0, 0, 1, wxEXPAND, 0);
-    static_request_failed_panel_sizer->Add(m_button_market_retry, 0, wxEXPAND | wxALL, FromDIP(10));
-    m_request_failed_panel->SetSizer(static_request_failed_panel_sizer);
-    m_request_failed_panel->Hide();
-    sizer->Add(m_request_failed_panel, 0, wxEXPAND | wxALL, FromDIP(10));
-
-
-    m_score_subtask_info = new wxPanel(parent, wxID_ANY);
-    m_score_subtask_info->SetBackgroundColour(*wxWHITE);
-
-    wxBoxSizer *  static_score_sizer = new wxBoxSizer(wxVERTICAL);
-    wxStaticText *static_score_text  = new wxStaticText(m_score_subtask_info, wxID_ANY, _L("How do you like this printing file?"), wxDefaultPosition, wxDefaultSize, 0);
-    static_score_text->Wrap(-1);
-    static_score_sizer->Add(static_score_text, 1, wxEXPAND | wxALL, FromDIP(10));
-    m_has_rated_prompt = new wxStaticText(m_score_subtask_info, wxID_ANY, _L("(The model has already been rated. Your rating will overwrite the previous rating.)"), wxDefaultPosition, wxDefaultSize, 0);
-    m_has_rated_prompt->Wrap(-1);
-    m_has_rated_prompt->SetForegroundColour(*wxBLACK);
-    m_has_rated_prompt->SetFont(::Label::Body_10);
-    m_has_rated_prompt->Hide();
-
-    m_star_count                        = 0;
-    wxBoxSizer *static_score_star_sizer = new wxBoxSizer(wxHORIZONTAL);
-    m_score_star.resize(5);
-    for (int i = 0; i < m_score_star.size(); ++i) {
-        m_score_star[i] = new ScalableButton(m_score_subtask_info, wxID_ANY, "score_star_dark", wxEmptyString, wxSize(FromDIP(26), FromDIP(26)), wxDefaultPosition,
-                                             wxBU_EXACTFIT | wxNO_BORDER, true, 26);
-        m_score_star[i]->SetMinSize(wxSize(FromDIP(26), FromDIP(26)));
-        m_score_star[i]->SetMaxSize(wxSize(FromDIP(26), FromDIP(26)));
-        m_score_star[i]->Bind(wxEVT_LEFT_DOWN, [this, i](auto &e) {
-            for (int j = 0; j < m_score_star.size(); ++j) {
-                ScalableBitmap light_star = ScalableBitmap(nullptr, "score_star_light", 26);
-                m_score_star[j]->SetBitmap(light_star.bmp());
-                if (m_score_star[j] == m_score_star[i]) {
-                    m_star_count = j + 1;
-                    break;
-                }
-            }
-            for (int k = m_star_count; k < m_score_star.size(); ++k) {
-                ScalableBitmap dark_star = ScalableBitmap(nullptr, "score_star_dark", 26);
-                m_score_star[k]->SetBitmap(dark_star.bmp());
-            }
-            m_star_count_dirty = true;
-            m_button_market_scoring->Enable(true);
-        });
-        static_score_star_sizer->Add(m_score_star[i], 1, wxEXPAND | wxLEFT, FromDIP(5));
-    }
-
-    m_button_market_scoring = new Button(m_score_subtask_info, _L("Rate"));
-    m_button_market_scoring->SetStyle(ButtonStyle::Confirm, ButtonType::Window);
-    m_button_market_scoring->Enable(false);
-
-    static_score_star_sizer->Add(0, 0, 1, wxEXPAND, 0);
-    static_score_star_sizer->Add(m_button_market_scoring, 0, wxEXPAND | wxRIGHT, FromDIP(10));
-    static_score_sizer->Add(static_score_star_sizer, 0, wxEXPAND, FromDIP(10));
-    static_score_sizer->Add(m_has_rated_prompt, 1, wxEXPAND | wxALL, FromDIP(10));
-
-    m_score_subtask_info->SetSizer(static_score_sizer);
-    m_score_subtask_info->Layout();
-    m_score_subtask_info->Hide();
-
-    sizer->Add(m_score_subtask_info, 0, wxEXPAND | wxALL, 0);
-    sizer->Add(0, FromDIP(12), 0);
-
     if (m_type == CALIBRATION) {
         m_panel_printing_title->Hide();
         m_bitmap_thumbnail->Hide();
@@ -975,17 +872,6 @@ void PrintingTaskPanel::paint(wxPaintEvent&)
         wxString plate_id_str = wxString::Format("%d", m_plate_index);
         dc.DrawText(plate_id_str, wxPoint(4, 4));
     }
-}
-
-void PrintingTaskPanel::set_has_reted_text(bool has_rated)
-{
-    if (has_rated) {
-        m_has_rated_prompt->Show();
-    } else {
-        m_has_rated_prompt->Hide();
-    }
-    Layout();
-    Fit();
 }
 
 void PrintingTaskPanel::msw_rescale()
@@ -1216,35 +1102,6 @@ void PrintingTaskPanel::set_thumbnail_img(const wxBitmap& bmp, const std::string
 void PrintingTaskPanel::set_plate_index(int plate_idx)
 {
     m_plate_index = plate_idx;
-}
-
-void PrintingTaskPanel::market_scoring_show()
-{
-    m_score_staticline->Show();
-    m_score_subtask_info->Show();
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " show market scoring page";
-}
-
-void PrintingTaskPanel::market_scoring_hide()
-{
-    m_score_staticline->Hide();
-    m_score_subtask_info->Hide();
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " hide market scoring page";
-}
-
-void PrintingTaskPanel::set_star_count(int star_count)
-{
-    m_star_count = star_count;
-
-    for (int i = 0; i < m_score_star.size(); ++i) {
-        if (i < star_count) {
-            ScalableBitmap light_star = ScalableBitmap(nullptr, "score_star_light", 26);
-            m_score_star[i]->SetBitmap(light_star.bmp());
-        } else {
-            ScalableBitmap dark_star = ScalableBitmap(nullptr, "score_star_dark", 26);
-            m_score_star[i]->SetBitmap(dark_star.bmp());
-        }
-    }
 }
 
 StatusBasePanel::StatusBasePanel(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style, const wxString &name)
@@ -2306,8 +2163,6 @@ void StatusPanel::wire_controls()
     m_buttons.push_back(m_bpButton_e_down_10);
 
     obj = nullptr;
-    m_score_data         = new ScoreData;
-    m_score_data->rating_id = -1;
     /* set default values */
     m_switch_lamp->SetValue(false);
     /*m_switch_printing_fan->SetValue(false);
@@ -2348,8 +2203,6 @@ void StatusPanel::wire_controls()
     m_project_task_panel->get_bitmap_thumbnail()->Connect(wxEVT_LEFT_DOWN, wxMouseEventHandler(StatusPanel::refresh_thumbnail_webrequest), NULL, this);
     m_project_task_panel->get_pause_resume_button()->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_subtask_pause_resume), NULL, this);
     m_project_task_panel->get_abort_button()->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_subtask_abort), NULL, this);
-    m_project_task_panel->get_market_scoring_button()->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_market_scoring), NULL, this);
-    m_project_task_panel->get_market_retry_buttom()->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_market_retry), NULL, this);
     m_project_task_panel->get_clean_button()->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_print_error_clean), NULL, this);
 
     m_setting_button->Connect(wxEVT_LEFT_DOWN, wxMouseEventHandler(StatusPanel::on_camera_enter), NULL, this);
@@ -2407,8 +2260,6 @@ StatusPanel::~StatusPanel()
         m_project_task_panel->get_bitmap_thumbnail()->Disconnect(wxEVT_LEFT_DOWN, wxMouseEventHandler(StatusPanel::refresh_thumbnail_webrequest), NULL, this);
         m_project_task_panel->get_pause_resume_button()->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_subtask_pause_resume), NULL, this);
         m_project_task_panel->get_abort_button()->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_subtask_abort), NULL, this);
-        m_project_task_panel->get_market_scoring_button()->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_market_scoring), NULL, this);
-        m_project_task_panel->get_market_retry_buttom()->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_market_retry), NULL, this);
         m_project_task_panel->get_clean_button()->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_print_error_clean), NULL, this);
 
         m_setting_button->Disconnect(wxEVT_LEFT_DOWN, wxMouseEventHandler(StatusPanel::on_camera_enter), NULL, this);
@@ -2448,10 +2299,6 @@ StatusPanel::~StatusPanel()
 
     if (ctrl_e_hint_dlg != nullptr)
         delete ctrl_e_hint_dlg;
-
-    if (m_score_data != nullptr) {
-        delete m_score_data;
-    }
 }
 
 void StatusPanel::init_scaled_buttons()
@@ -2471,70 +2318,6 @@ void StatusPanel::init_scaled_buttons()
     m_bpButton_e_10->SetCornerRadius(FromDIP(12));
     m_bpButton_e_down_10->SetMinSize(wxSize(FromDIP(40), FromDIP(40)));
     m_bpButton_e_down_10->SetCornerRadius(FromDIP(12));
-}
-
-void StatusPanel::on_market_scoring(wxCommandEvent &event) {
-    if (obj && obj->is_makeworld_subtask() && obj->rating_info && obj->rating_info->request_successful) { // model is mall model and has rating_id
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": on_market_scoring" ;
-        if (m_score_data && m_score_data->rating_id == obj->rating_info->rating_id) { // current score data for model is same as mall model
-            if (m_score_data->star_count != m_project_task_panel->get_star_count()) m_score_data->star_count = m_project_task_panel->get_star_count();
-            ScoreDialog m_score_dlg(this, m_score_data);
-            int ret = m_score_dlg.ShowModal();
-            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": old data";
-
-            if (ret == wxID_OK) {
-                BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": old data is upload";
-                m_score_data->rating_id = -1;
-                m_project_task_panel->set_star_count_dirty(false);
-                if (obj) obj->get_model_mall_result_need_retry = true;
-                return;
-            }
-            if (m_score_data != nullptr) {
-                delete m_score_data;
-                m_score_data = nullptr;
-            }
-            m_score_data = new ScoreData(m_score_dlg.get_score_data()); // when user do not submit score, store the data for next opening the score dialog
-            m_project_task_panel->set_star_count(m_score_data->star_count);
-        } else {
-            int star_count      = m_project_task_panel->get_star_count_dirty() ? m_project_task_panel->get_star_count() : obj->rating_info->start_count;
-            bool        success_print = obj->rating_info->success_printed;
-            ScoreDialog m_score_dlg(this, obj->get_modeltask()->design_id, obj->get_modeltask()->model_id, obj->get_modeltask()->profile_id, obj->rating_info->rating_id,
-                                    success_print, star_count);
-            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": new data";
-
-            std::string comment = obj->rating_info->content;
-            if (!comment.empty()) { m_score_dlg.set_comment(comment); }
-
-            std::vector<std::string> images_json_array;
-            images_json_array = obj->rating_info->image_url_paths;
-            if (!images_json_array.empty()) m_score_dlg.set_cloud_bitmap(images_json_array);
-
-            int ret = m_score_dlg.ShowModal();
-
-            if (ret == wxID_OK) {
-                BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": new data is upload";
-                m_score_data->rating_id = -1;
-                m_project_task_panel->set_star_count_dirty(false);
-                if (obj) obj->get_model_mall_result_need_retry = true;
-                return;
-            }
-            if (m_score_data != nullptr) {
-                delete m_score_data;
-                m_score_data = nullptr;
-            }
-            m_score_data = new ScoreData(m_score_dlg.get_score_data());
-            m_project_task_panel->set_star_count(m_score_data->star_count);
-        }
-    }
-}
-
-void StatusPanel::on_market_retry(wxCommandEvent &event)
-{
-    if (obj) {
-    obj->get_model_mall_result_need_retry = true;
-    } else {
-        BOOST_LOG_TRIVIAL(info)<< __FUNCTION__ << "retury failed";
-    }
 }
 
 void StatusPanel::on_subtask_pause_resume(wxCommandEvent &event)
@@ -2649,7 +2432,6 @@ bool StatusPanel::is_task_changed(MachineObject* obj)
         last_profile_id = obj->profile_id_;
         last_task_id = obj->task_id_;
         request_model_info_flag = false;
-        m_project_task_panel->set_star_count_dirty(false);
         return true;
     }
     return false;
@@ -3526,8 +3308,6 @@ void StatusPanel::update_subtask(MachineObject *obj)
         reset_printing_values();
     } else if (obj->is_in_printing() || obj->print_status == "FINISH") {
         if (obj->is_in_prepare() || obj->print_status == "SLICING") {
-            m_project_task_panel->market_scoring_hide();
-            m_project_task_panel->get_request_failed_panel()->Hide();
             m_project_task_panel->enable_abort_button(false);
             m_project_task_panel->enable_pause_resume_button(false, "pause_disable");
             wxString prepare_text;
@@ -3583,48 +3363,10 @@ void StatusPanel::update_subtask(MachineObject *obj)
             }
 
             if (obj->is_printing_finished()) {
-                obj->update_model_task();
                 m_project_task_panel->enable_abort_button(false);
                 m_project_task_panel->enable_pause_resume_button(false, "resume_disable");
-                // is makeworld subtask
-                if (wxGetApp().has_model_mall() && obj->is_makeworld_subtask()) {
-                    // has model mall rating result
-                    if (obj && obj->rating_info && obj->rating_info->request_successful) {
-                        m_project_task_panel->get_request_failed_panel()->Hide();
-                        BOOST_LOG_TRIVIAL(info) << "model mall result request successful";
-                        // has start count
-                        if (!m_project_task_panel->get_star_count_dirty()) {
-                            if (obj->rating_info->start_count > 0) {
-                                m_project_task_panel->set_star_count(obj->rating_info->start_count);
-                                m_project_task_panel->set_star_count_dirty(true);
-                                BOOST_LOG_TRIVIAL(info) << "Initialize scores";
-                                m_project_task_panel->get_market_scoring_button()->Enable(true);
-                                m_project_task_panel->set_has_reted_text(true);
-                            } else {
-                                m_project_task_panel->set_star_count(0);
-                                m_project_task_panel->set_star_count_dirty(false);
-                                m_project_task_panel->get_market_scoring_button()->Enable(false);
-                                m_project_task_panel->set_has_reted_text(false);
-                            }
-                        }
-                        m_project_task_panel->market_scoring_show();
-                    } else if (obj && obj->rating_info && !obj->rating_info->request_successful) {
-                        BOOST_LOG_TRIVIAL(info) << "model mall result request failed";
-                        if (403 != obj->rating_info->http_code) {
-                            BOOST_LOG_TRIVIAL(info) << "Request need retry";
-                            m_project_task_panel->get_market_retry_buttom()->Enable(!obj->get_model_mall_result_need_retry);
-                            m_project_task_panel->get_request_failed_panel()->Show();
-                        } else {
-                            BOOST_LOG_TRIVIAL(info) << "Request rejected";
-                        }
-                    }
-                } else {
-                    m_project_task_panel->market_scoring_hide();
-                }
-            } else { // model printing is not finished, hide scoring page
+            } else {
                 m_project_task_panel->enable_abort_button(true);
-                m_project_task_panel->market_scoring_hide();
-                m_project_task_panel->get_request_failed_panel()->Hide();
             }
         }
 
@@ -3726,8 +3468,6 @@ void StatusPanel::reset_printing_values()
     //obj->get_curr_stage()
     m_project_task_panel->update_progress_percent(NA_STR, wxEmptyString);
 
-    m_project_task_panel->market_scoring_hide();
-    m_project_task_panel->get_request_failed_panel()->Hide();
     update_basic_print_data(false);
     m_project_task_panel->update_left_time(NA_STR);
     m_project_task_panel->update_layers_num(true, wxString::Format(_L("Layer: %s"), NA_STR));
@@ -5139,646 +4879,6 @@ void StatusPanel::update_filament_loading_panel(MachineObject* obj)
     m_fila_change_abort->Show(ams_loading_state &&
         (obj->is_support_fila_change_abort || DevPrinterConfigUtil::support_ams_fila_change_abort(obj->printer_type)));
     show_filament_load_group(ams_loading_state);
-}
-
-ScoreDialog::ScoreDialog(wxWindow *parent, int design_id, std::string model_id, int profile_id, int rating_id, bool success_printed, int star_count)
-    : DPIDialog(parent, wxID_ANY, _L("Rate the Print Profile"), wxDefaultPosition, wxDefaultSize, wxCAPTION | wxCLOSE_BOX | wxRESIZE_BORDER)
-    , m_design_id(design_id)
-    , m_model_id(model_id)
-    , m_profile_id(profile_id)
-    , m_star_count(star_count)
-    , m_rating_id(rating_id)
-    , m_success_printed(success_printed)
-    , m_upload_status_code(StatusCode::CODE_NUMBER)
-{
-    m_tocken.reset(new int(0));
-
-    wxBoxSizer *m_main_sizer = get_main_sizer();
-
-    this->SetSizer(m_main_sizer);
-    Fit();
-    Layout();
-    wxGetApp().UpdateDlgDarkUI(this);
-}
-
-ScoreDialog::ScoreDialog(wxWindow *parent, ScoreData *score_data)
-    : DPIDialog(parent, wxID_ANY, _L("Rate the Print Profile"), wxDefaultPosition, wxDefaultSize, wxCAPTION | wxCLOSE_BOX | wxRESIZE_BORDER)
-    , m_design_id(score_data->design_id)
-    , m_rating_id(score_data->rating_id)
-    , m_model_id(score_data->model_id)
-    , m_profile_id(score_data->profile_id)
-    , m_star_count(score_data->star_count)
-    , m_success_printed(score_data->success_printed)
-    , m_upload_status_code(StatusCode::CODE_NUMBER)
-{
-    m_tocken.reset(new int(0));
-
-    wxBoxSizer *m_main_sizer = get_main_sizer(score_data->local_to_url_image, score_data->comment_text);
-
-    m_image_url_paths        = score_data->image_url_paths;
-
-
-    this->SetSizer(m_main_sizer);
-    Fit();
-    Layout();
-    wxGetApp().UpdateDlgDarkUI(this);
-
-}
-
-ScoreDialog::~ScoreDialog() {}
-
-void ScoreDialog::on_dpi_changed(const wxRect &suggested_rect) {}
-
-void ScoreDialog::OnBitmapClicked(wxMouseEvent &event)
-{
-    wxStaticBitmap *clickedBitmap = dynamic_cast<wxStaticBitmap *>(event.GetEventObject());
-    if (m_image.find(clickedBitmap) != m_image.end()) {
-        if (!m_image[clickedBitmap].is_selected) {
-            for (auto panel : m_image[clickedBitmap].image_broad) {
-                panel->Show();
-            }
-            m_image[clickedBitmap].is_selected = true;
-            m_selected_image_list.insert(clickedBitmap);
-        } else {
-            for (auto panel : m_image[clickedBitmap].image_broad) {
-                panel->Hide();
-            }
-            m_image[clickedBitmap].is_selected = false;
-            m_selected_image_list.erase(clickedBitmap);
-            m_selected_image_list.erase(clickedBitmap);
-        }
-    }
-    if (m_selected_image_list.empty())
-        m_delete_photo->Hide();
-    else
-        m_delete_photo->Show();
-    Fit();
-    Layout();
-
-}
-
- std::set <std::pair<wxStaticBitmap * ,wxString>> ScoreDialog::add_need_upload_imgs()
-{
-    std::set<std::pair<wxStaticBitmap *, wxString>> need_upload_images;
-    for (auto bitmap : m_image) {
-        if (!bitmap.second.is_uploaded) {
-            wxString &local_image_path = bitmap.second.local_image_url;
-            if (!local_image_path.empty()) { need_upload_images.insert(std::make_pair(bitmap.first, local_image_path)); }
-        }
-    }
-    return need_upload_images;
-}
-
-
-
-std::pair<wxStaticBitmap *, ScoreDialog::ImageMsg> ScoreDialog::create_local_thumbnail(wxString &local_path)
-{
-    std::pair<wxStaticBitmap *, ImageMsg> bitmap_to_image_msg;
-    if (local_path.empty()) return bitmap_to_image_msg;
-
-    ImageMsg cur_image_msg;
-    cur_image_msg.local_image_url = local_path;
-    cur_image_msg.img_url_paths   = "";
-    cur_image_msg.is_uploaded     = false;
-
-    wxStaticBitmap *imageCtrl = new wxStaticBitmap(this, wxID_ANY, wxBitmap(wxImage(local_path, wxBITMAP_TYPE_ANY).Rescale(FromDIP(80), FromDIP(60))), wxDefaultPosition,
-                                                   wxDefaultSize, 0);
-    imageCtrl->Bind(wxEVT_LEFT_DOWN, &ScoreDialog::OnBitmapClicked, this);
-
-    m_image_sizer->Add(create_broad_sizer(imageCtrl, cur_image_msg), 0, wxALL, 5);
-
-    bitmap_to_image_msg.first = imageCtrl;
-    bitmap_to_image_msg.second = cur_image_msg;
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": local picture is download";
-    return bitmap_to_image_msg;
-}
-
-std::pair<wxStaticBitmap *, ScoreDialog::ImageMsg> ScoreDialog::create_oss_thumbnail(std::string &oss_path)
-{
-    std::pair<wxStaticBitmap *, ImageMsg> bitmap_to_image_msg;
-    if (oss_path.empty()) return bitmap_to_image_msg;
-
-    ImageMsg cur_image_msg;
-    cur_image_msg.local_image_url = "";
-    cur_image_msg.img_url_paths   = oss_path;
-    cur_image_msg.is_uploaded     = true;
-
-
-    wxImage         image(Slic3r::resources_dir() + "/images/oss_picture_loading.png", wxBITMAP_TYPE_ANY);
-    wxStaticBitmap *imageCtrl = new wxStaticBitmap(this, wxID_ANY, wxBitmap(image.Rescale(FromDIP(80), FromDIP(60))), wxDefaultPosition, wxDefaultSize, 0);
-    imageCtrl->Bind(wxEVT_LEFT_DOWN, &ScoreDialog::OnBitmapClicked, this);
-
-    Slic3r::Http http   = Slic3r::Http::get(oss_path);
-    std::string  suffix = oss_path.substr(oss_path.find_last_of(".") + 1);
-    http.header("accept", "image/" + suffix) //"image/" + suffix
-        .header("Accept-Encoding", "gzip")
-        .on_complete([this, imageCtrl, time = std::weak_ptr<int>(m_tocken)](std::string body, unsigned int status) {
-            if (time.expired()) return;
-            wxMemoryInputStream stream(body.data(), body.size());
-            wxImage             success_image;
-            if (success_image.LoadFile(stream, wxBITMAP_TYPE_ANY)) {
-                CallAfter([this, success_image, imageCtrl]() { update_static_bitmap(imageCtrl, success_image); });
-
-            } else {
-                CallAfter([this, imageCtrl]() { update_static_bitmap(imageCtrl, fail_image); });
-            }
-        })
-        .on_error([this, imageCtrl, &oss_path](std::string body, std::string error, unsigned status) {
-            BOOST_LOG_TRIVIAL(info) << "load oss picture failed, oss path: " << oss_path << " status:" << status << " error:" << error;
-            CallAfter([this, imageCtrl]() { update_static_bitmap(imageCtrl, fail_image); });
-        }).perform();
-
-    m_image_sizer->Add(create_broad_sizer(imageCtrl, cur_image_msg), 0, wxALL, 5);
-
-    bitmap_to_image_msg.first  = imageCtrl;
-    bitmap_to_image_msg.second = cur_image_msg;
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": oss picture is download";
-    return bitmap_to_image_msg;
-}
-
-void ScoreDialog::update_static_bitmap(wxStaticBitmap* static_bitmap, wxImage image)
-{
-    static_bitmap->SetBitmap(wxBitmap(image.Rescale(FromDIP(80), FromDIP(60))));
-    Layout();
-    Fit();
-    //Refresh();
-}
-
-wxBoxSizer *ScoreDialog::create_broad_sizer(wxStaticBitmap *bitmap, ImageMsg& cur_image_msg)
-{
-    // tb: top and bottom  lr: left and right
-    auto m_image_tb_broad = new wxBoxSizer(wxVERTICAL);
-    auto line_top         = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 1), wxTAB_TRAVERSAL);
-    line_top->SetBackgroundColour(wxColour(0xA6, 0xa9, 0xAA));
-    m_image_tb_broad->Add(line_top, 0, wxEXPAND, 0);
-    cur_image_msg.image_broad.push_back(line_top);
-    line_top->Hide();
-
-    auto m_image_lr_broad = new wxBoxSizer(wxHORIZONTAL);
-    auto line_left        = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(1, -1), wxTAB_TRAVERSAL);
-    line_left->SetBackgroundColour(wxColour(0xA6, 0xa9, 0xAA));
-    m_image_lr_broad->Add(line_left, 0, wxEXPAND, 0);
-    cur_image_msg.image_broad.push_back(line_left);
-    line_left->Hide();
-
-    m_image_lr_broad->Add(bitmap, 0, wxALL, 5);
-
-    auto line_right = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(1, -1), wxTAB_TRAVERSAL);
-    line_right->SetBackgroundColour(wxColour(0xA6, 0xa9, 0xAA));
-    m_image_lr_broad->Add(line_right, 0, wxEXPAND, 0);
-    m_image_tb_broad->Add(m_image_lr_broad, 0, wxEXPAND, 0);
-    cur_image_msg.image_broad.push_back(line_right);
-    line_right->Hide();
-
-    auto line_bottom = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 1), wxTAB_TRAVERSAL);
-    line_bottom->SetBackgroundColour(wxColour(0xA6, 0xa9, 0xAA));
-    m_image_tb_broad->Add(line_bottom, 0, wxEXPAND, 0);
-    cur_image_msg.image_broad.push_back(line_bottom);
-    line_bottom->Hide();
-
-    cur_image_msg.is_selected    = false;
-    cur_image_msg.image_tb_broad = m_image_tb_broad;
-
-    return m_image_tb_broad;
-}
-
-void ScoreDialog::init() {
-    SetBackgroundColour(*wxWHITE);
-    SetMinSize(wxSize(FromDIP(540), FromDIP(380)));
-
-    fail_image = wxImage(Slic3r::resources_dir() + "/images/oss_picture_load_failed.png", wxBITMAP_TYPE_ANY);
-}
-
-wxBoxSizer *ScoreDialog::get_score_sizer() {
-    wxBoxSizer    *score_sizer      = new wxBoxSizer(wxHORIZONTAL);
-    wxStaticText *static_score_text = new wxStaticText(this, wxID_ANY, _L("Rate"), wxDefaultPosition, wxDefaultSize, 0);
-    static_score_text->Wrap(-1);
-    score_sizer->Add(static_score_text, 1, wxEXPAND | wxLEFT, FromDIP(24));
-    score_sizer->Add(0, 0, 1, wxEXPAND, 0);
-    return score_sizer;
-}
-
-wxBoxSizer *ScoreDialog::get_star_sizer()
-{
-    wxBoxSizer *static_score_star_sizer = new wxBoxSizer(wxHORIZONTAL);
-    static_score_star_sizer->AddSpacer(FromDIP(20));
-    m_score_star.resize(5);
-    for (int i = 0; i < m_score_star.size(); ++i) {
-        if (!m_success_printed && m_star_count > 3) {
-            m_star_count = 3;
-            warning_text->Show();
-            Layout();
-            Fit();
-        }
-        if (i < m_star_count) {
-            m_score_star[i] = new ScalableButton(this, wxID_ANY, "score_star_light", wxEmptyString, wxSize(FromDIP(26), FromDIP(26)), wxDefaultPosition,
-                                                 wxBU_EXACTFIT | wxNO_BORDER, true, 26);
-        } else
-            m_score_star[i] = new ScalableButton(this, wxID_ANY, "score_star_dark", wxEmptyString, wxSize(FromDIP(26), FromDIP(26)), wxDefaultPosition,
-                                                 wxBU_EXACTFIT | wxNO_BORDER, true, 26);
-
-        m_score_star[i]->SetMinSize(wxSize(FromDIP(26), FromDIP(26)));
-        m_score_star[i]->SetMaxSize(wxSize(FromDIP(26), FromDIP(26)));
-        m_score_star[i]->Bind(wxEVT_LEFT_DOWN, [this, i](auto &e) {
-            if (!m_success_printed && i >= 3) {
-                warning_text->Show();
-                Layout();
-                Fit();
-                return;
-            } else {
-                warning_text->Hide();
-                Layout();
-                Fit();
-            }
-            for (int j = 0; j < m_score_star.size(); ++j) {
-                ScalableBitmap light_star = ScalableBitmap(nullptr, "score_star_light", 26);
-                m_score_star[j]->SetBitmap(light_star.bmp());
-                if (m_score_star[j] == m_score_star[i]) {
-                    m_star_count = j + 1;
-                    break;
-                }
-            }
-            for (int k = m_star_count; k < m_score_star.size(); ++k) {
-                ScalableBitmap dark_star = ScalableBitmap(nullptr, "score_star_dark", 26);
-                m_score_star[k]->SetBitmap(dark_star.bmp());
-            }
-        });
-        static_score_star_sizer->Add(m_score_star[i], 1, wxEXPAND | wxLEFT, FromDIP(5));
-    }
-
-    return static_score_star_sizer;
-}
-
-wxBoxSizer* ScoreDialog::get_comment_text_sizer() {
-    wxBoxSizer*    m_comment_sizer    = new wxBoxSizer(wxHORIZONTAL);
-    wxStaticText *static_comment_text = new wxStaticText(this, wxID_ANY, _L("Comment"), wxDefaultPosition, wxDefaultSize, 0);
-    static_comment_text->Wrap(-1);
-    m_comment_sizer->Add(static_comment_text, 1, wxEXPAND | wxLEFT, FromDIP(24));
-    m_comment_sizer->Add(0, 0, 1, wxEXPAND, 0);
-    return m_comment_sizer;
-}
-
-void ScoreDialog::create_comment_text(const wxString& comment) {
-    m_comment_text = new wxTextCtrl(this, wxID_ANY, "", wxDefaultPosition, wxSize(FromDIP(492), FromDIP(104)), wxTE_MULTILINE);
-    m_comment_text->SetBackgroundColour(wxColor(*wxWHITE));
-
-    if (!comment.empty()) {
-        m_comment_text->SetValue(comment);
-    }
-    m_comment_text->SetHint(_L("Rate this print"));
-    m_comment_text->SetBackgroundColour(*wxWHITE);
-    //m_comment_text->SetForegroundColour(wxColor("#BBBBBB"));
-    m_comment_text->SetMinSize(wxSize(FromDIP(492), FromDIP(104)));
-
-    m_comment_text->Bind(wxEVT_SET_FOCUS, [this](auto &event) {
-        if (wxGetApp().dark_mode()) {
-            m_comment_text->SetForegroundColour(wxColor(*wxWHITE));
-        } else
-            m_comment_text->SetForegroundColour(wxColor(*wxBLACK));
-        m_comment_text->Refresh();
-        event.Skip();
-    });
-}
-
-wxBoxSizer *ScoreDialog::get_photo_btn_sizer() {
-    wxBoxSizer *    m_photo_sizer    = new wxBoxSizer(wxHORIZONTAL);
-    ScalableBitmap little_photo  = wxGetApp().dark_mode() ? ScalableBitmap(this, "single_little_photo_dark", 20) : ScalableBitmap(this, "single_little_photo", 20);
-    wxStaticBitmap *little_photo_img   = new wxStaticBitmap(this, wxID_ANY, little_photo.bmp(), wxDefaultPosition, wxSize(FromDIP(20), FromDIP(20)), 0);
-    m_photo_sizer->Add(little_photo_img, 0, wxEXPAND | wxLEFT, FromDIP(24));
-    m_add_photo = new Label(this, _L("Add Photo"));
-    m_add_photo->SetBackgroundColour(*wxWHITE);
-    //m_add_photo->SetForegroundColour(wxColor("#898989"));
-    m_add_photo->SetSize(wxSize(-1, FromDIP(20)));
-    m_photo_sizer->Add(m_add_photo, 0, wxEXPAND | wxLEFT, FromDIP(12));
-
-    m_delete_photo = new Label(this, _L("Delete Photo"));
-    m_delete_photo->SetBackgroundColour(*wxWHITE);
-    //m_delete_photo->SetForegroundColour(wxColor("#898989"));
-    m_delete_photo->SetSize(wxSize(-1, FromDIP(20)));
-    m_photo_sizer->Add(m_delete_photo, 0, wxEXPAND | wxLEFT, FromDIP(12));
-    m_delete_photo->Hide();
-    m_photo_sizer->Add(0, 0, 1, wxEXPAND, 0);
-
-    m_add_photo->Bind(wxEVT_LEFT_DOWN, [this](auto &e) {
-        // add photo logic
-        wxFileDialog openFileDialog(this, _L("Select Images"), "", "", _L("Image files (*.png;*.jpg;*jpeg)|*.png;*.jpg;*.jpeg"), wxFD_OPEN | wxFD_FILE_MUST_EXIST | wxFD_MULTIPLE);
-
-        if (openFileDialog.ShowModal() == wxID_CANCEL) return;
-
-        wxArrayString filePaths;
-        openFileDialog.GetPaths(filePaths);
-        //wxArrayString filePaths_reduction;
-        std::vector<std::pair<wxString, std::string>> local_path;
-        for (int i = 0; i < filePaths.GetCount(); i++) { //It's ugly, but useful
-            bool is_repeat = false;
-            for (auto image : m_image) {
-                if (filePaths[i] == image.second.local_image_url) {
-                    is_repeat = true;
-                    continue;
-                }
-            }
-            if (!is_repeat) {
-                local_path.push_back(std::make_pair(filePaths[i], ""));
-                if (local_path.size() + m_image.size() > m_photo_nums) {
-                    break;
-                }
-            }
-
-        }
-
-        load_photo(local_path);
-
-        m_image_sizer->Layout();
-        this->Fit();
-        this->Layout();
-    });
-
-        m_delete_photo->Bind(wxEVT_LEFT_DOWN, [this](auto &e) {
-            for (auto it = m_selected_image_list.begin(); it != m_selected_image_list.end();) {
-                auto bitmap = *it;
-                m_image_sizer->Detach(m_image[bitmap].image_tb_broad);
-                m_image[bitmap].image_tb_broad->DeleteWindows();
-
-                m_image.erase(bitmap);
-                it = m_selected_image_list.erase(it);
-            }
-            m_image_url_paths.clear();
-            for (const auto& bitmap : m_image) {
-                if (bitmap.second.is_uploaded) {
-                    if (!bitmap.second.img_url_paths.empty()) {
-                        m_image_url_paths.push_back(bitmap.second.img_url_paths);
-                    }
-                }
-            }
-            m_delete_photo->Hide();
-            Layout();
-            Fit();
-        });
-
-    return m_photo_sizer;
-}
-
-wxBoxSizer *ScoreDialog::get_button_sizer()
-{
-    wxBoxSizer *bSizer_button = new wxBoxSizer(wxHORIZONTAL);
-    bSizer_button->Add(0, 0, 1, wxEXPAND, 0);
-
-    m_button_ok = new Button(this, _L("Submit"));
-    m_button_ok->SetStyle(ButtonStyle::Confirm, ButtonType::Choice);
-    bSizer_button->Add(m_button_ok, 0, wxRIGHT, FromDIP(ButtonProps::ChoiceButtonGap()));
-
-    m_button_ok->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e) {
-        m_upload_status_code = StatusCode::UPLOAD_PROGRESS;
-
-        if (m_star_count == 0) {
-            MessageDialog dlg(this, _L("Please click on the star first."), wxString(SLIC3R_APP_FULL_NAME) + " - " + _L("Info"), wxOK);
-            dlg.ShowModal();
-            return;
-        }
-
-        std::set<std::pair<wxStaticBitmap *, wxString>> need_upload_images = add_need_upload_imgs();
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": get need upload picture count: " << need_upload_images.size();
-
-        std::string  comment = into_u8(m_comment_text->GetValue());
-        unsigned int http_code;
-        std::string  http_error;
-        wxString  error_info;
-
-        if (!need_upload_images.empty()) {
-            std::string config;
-            int         ret = wxGetApp().getAgent()->get_oss_config(config, wxGetApp().app_config->get_country_code(), http_code, http_error);
-            if (ret == -1) {
-                error_info += into_u8(_L("Get oss config failed.")) + "\n\thttp code: " + std::to_string(http_code) + "\n\thttp error: " + http_error;
-                BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": get oss config filed and http_error: " << http_error;
-                m_upload_status_code = StatusCode::UPLOAD_EXIST_ISSUE;
-            }
-            if (m_upload_status_code == StatusCode::UPLOAD_PROGRESS) {
-                int             need_upload_nums   = need_upload_images.size();
-                int             upload_nums        = 0;
-                int             upload_failed_nums = 0;
-                ProgressDialog *progress_dialog    = new ProgressDialog(_L("Upload Pictures"), _L("Number of images successfully uploaded") + ": " + std::to_string(upload_nums) + "/" + std::to_string(need_upload_nums), need_upload_nums, this);
-                for (std::set<std::pair<wxStaticBitmap *, wxString>>::iterator it = need_upload_images.begin(); it != need_upload_images.end();) {
-                    std::pair<wxStaticBitmap *, wxString> need_upload     = *it;
-                    std::string need_upload_uf8 = into_u8(need_upload.second);
-                    //Local path when incoming, cloud path when outgoing
-                    ret = wxGetApp().getAgent()->put_rating_picture_oss(config, need_upload_uf8, m_model_id, m_profile_id, http_code, http_error);
-                    std::unordered_map<wxStaticBitmap *, ImageMsg>::iterator iter;
-                    switch (ret) {
-                    case 0:
-                        upload_nums++;
-                        iter = m_image.find(need_upload.first);
-                        if (m_image.end() != iter) {
-                            iter->second.img_url_paths = need_upload_uf8;
-                            iter->second.is_uploaded   = true;
-                            m_image_url_paths.push_back(need_upload_uf8);
-                        }
-                        it++;
-                        progress_dialog->Update(upload_nums, _L("Number of images successfully uploaded") + ": " + std::to_string(upload_nums) + "/" + std::to_string(need_upload_nums));
-                        progress_dialog->Fit();
-                        BOOST_LOG_TRIVIAL(info) << "put_rating_picture_oss: model_id [" << m_model_id << "] profile_id [" << m_profile_id << "] http_code [" << http_code
-                                                << "] http_error [" << http_error << "] config [" << config << "]  image_path [" << need_upload.second << "]";
-                        break;
-                    case -1:
-                        error_info += need_upload.second + _L(" upload failed").ToUTF8().data() + "\n\thttp code:" + std::to_string(http_code) + "\n\thttp_error:" + http_error + "\n";
-                        m_upload_status_code = StatusCode::UPLOAD_IMG_FAILED;
-                        ++it;
-                        break;
-                    case BAMBU_NETWORK_ERR_PARSE_CONFIG_FAILED:
-                        error_info += need_upload.second + _L(" upload config prase failed\n").ToUTF8().data() + "\n";
-                        m_upload_status_code = StatusCode::UPLOAD_IMG_FAILED;
-                        ++it;
-                        break;
-                    case BAMBU_NETWORK_ERR_NO_CORRESPONDING_BUCKET:
-                        error_info += need_upload.second + _L(" No corresponding storage bucket\n").ToUTF8().data() + "\n";
-                        m_upload_status_code = StatusCode::UPLOAD_IMG_FAILED;
-                        ++it;
-                        break;
-                    case BAMBU_NETWORK_ERR_OPEN_FILE_FAILED:
-                        error_info += need_upload.second + _L(" cannot be opened\n").ToUTF8().data() + "\n";
-                        m_upload_status_code = StatusCode::UPLOAD_IMG_FAILED;
-                        ++it;
-                        break;
-                    }
-                }
-                progress_dialog->Hide();
-                if (progress_dialog) {
-                    delete progress_dialog;
-                    progress_dialog = nullptr;
-                }
-
-                if (m_upload_status_code == StatusCode::UPLOAD_IMG_FAILED) {
-                    std::string   upload_failed_images = into_u8(_L("The following issues occurred during the process of uploading images. Do you want to ignore them?\n\n"));
-                    MessageDialog dlg_info(this, upload_failed_images + error_info, wxString(_L("info")), wxOK | wxNO | wxCENTER);
-                    if (dlg_info.ShowModal() == wxID_OK) {
-                        m_upload_status_code = StatusCode::UPLOAD_PROGRESS;
-                    }
-                }
-            }
-        }
-
-        if (m_upload_status_code == StatusCode::UPLOAD_PROGRESS) {
-            int            ret = wxGetApp().getAgent()->put_model_mall_rating(m_rating_id, m_star_count, comment, m_image_url_paths, http_code, http_error);
-            MessageDialog *dlg_info;
-            switch (ret) {
-            case 0: EndModal(wxID_OK); break;
-            case BAMBU_NETWORK_ERR_GET_RATING_ID_FAILED:
-                dlg_info = new MessageDialog(this, _L("Synchronizing the printing results. Please retry a few seconds later."), wxString(_L("info")), wxOK | wxCENTER);
-                dlg_info->ShowModal();
-                delete dlg_info;
-                break;
-            default: // Upload failed and obtaining instance_id failed
-                if (ret == -1)
-                    error_info += _L("Upload failed\n").ToUTF8().data();
-                else
-                    error_info += _L("Obtaining instance_id failed\n").ToUTF8().data();
-                if (!error_info.empty()) { BOOST_LOG_TRIVIAL(info) << error_info; }
-
-                dlg_info = new MessageDialog(this,
-                                             _L("Your comment result cannot be uploaded due to the following reasons:\n\n  error code: ") +
-                                             std::to_string(http_code) + "\n  " + _L("error message: ") + http_error +
-                                             _L("\n\nWould you like to redirect to the webpage to give a rating?"),
-                                             wxString(_L("info")), wxOK | wxNO | wxCENTER);
-                BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": upload rating picture failed and http error" << http_error;
-                if (dlg_info->ShowModal() == wxID_OK) {
-                    market_model_scoring_page(m_design_id);
-                    EndModal(wxID_OK);
-                }
-                delete dlg_info;
-                break;
-            }
-        } else if (m_upload_status_code == StatusCode::UPLOAD_IMG_FAILED) {
-            MessageDialog *dlg_info = new MessageDialog(this,
-                                                        _L("Some of your images failed to upload. Would you like to redirect to the webpage to give a rating?"),
-                                                        wxString(_L("info")), wxOK | wxNO | wxCENTER);
-            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": upload rating picture failed or get oss config failed";
-            if (dlg_info->ShowModal() == wxID_OK) {
-                market_model_scoring_page(m_design_id);
-                EndModal(wxID_OK);
-            }
-            delete dlg_info;
-            if (!error_info.empty()) { BOOST_LOG_TRIVIAL(info) << error_info; }
-        }
-    });
-
-    m_button_cancel = new Button(this, _L("Cancel"));
-    m_button_cancel->SetStyle(ButtonStyle::Regular, ButtonType::Choice);
-    bSizer_button->Add(m_button_cancel, 0, wxRIGHT, FromDIP(ButtonProps::ChoiceButtonGap()));
-
-    m_button_cancel->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent &e) { EndModal(wxID_CANCEL); });
-
-    return bSizer_button;
-}
-
-void ScoreDialog::load_photo(const std::vector<std::pair<wxString, std::string>> &filePaths)
-{
-    for (size_t i = 0; i < filePaths.size(); ++i) {
-        if (m_image.size() < m_photo_nums) {
-            std::pair<wxString, std::string> local_to_url_path = filePaths[i];
-            wxString                         filePath          = local_to_url_path.first;
-
-            ImageMsg cur_image_msg;
-
-            if (filePath.empty()) {  // local img path is empty, oss url path is exist
-                std::string oss_url_path = local_to_url_path.second;
-                //to do: load oss image, create wxStaticBitmap
-
-                if (!oss_url_path.empty()) {
-                    m_image.insert(create_oss_thumbnail(oss_url_path));
-                }
-                continue;
-            } else {
-                m_image.insert(create_local_thumbnail(filePath));
-            }
-
-        } else {
-            MessageDialog *dlg_info_up_to_8 = new MessageDialog(this, _L("You can select up to 16 images."), wxString(_L("info")), wxOK | wxCENTER);
-            dlg_info_up_to_8->ShowModal();
-            break;
-        }
-
-    }
-}
-
-wxBoxSizer *ScoreDialog::get_main_sizer(const std::vector<std::pair<wxString, std::string>> &images, const wxString &comment)
-{
-    init();
-    wxBoxSizer *m_main_sizer = new wxBoxSizer(wxVERTICAL);
-    // top line
-    auto m_line_top = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(-1, 1), wxTAB_TRAVERSAL);
-    m_line_top->SetBackgroundColour(wxColour(0xA6, 0xa9, 0xAA));
-    m_main_sizer->Add(m_line_top, 0, wxEXPAND, 0);
-    m_main_sizer->Add(0, 0, 0, wxTOP, FromDIP(32));
-
-    warning_text = new wxStaticText(this, wxID_ANY, _L("At least one successful print record of this print profile is required \nto give a positive rating (4 or 5 stars)."));
-    warning_text->SetForegroundColour(*wxRED);
-    warning_text->SetFont(::Label::Body_13);
-
-    wxBoxSizer *score_sizer = get_score_sizer();
-    m_main_sizer->Add(score_sizer, 0, wxEXPAND, FromDIP(20));
-    m_main_sizer->Add(0, 0, 0, wxBOTTOM, FromDIP(8));
-
-    wxBoxSizer *static_score_star_sizer = get_star_sizer();
-    m_main_sizer->Add(static_score_star_sizer, 1, wxEXPAND | wxBOTTOM, FromDIP(20));
-
-    m_main_sizer->Add(warning_text, 0, wxEXPAND | wxLEFT, FromDIP(24));
-    m_main_sizer->Add(0, 0, 0, wxBOTTOM, FromDIP(8));
-    warning_text->Hide();
-
-    wxBoxSizer *m_comment_sizer = get_comment_text_sizer();
-    m_main_sizer->Add(m_comment_sizer, 0, wxEXPAND, FromDIP(20));
-    m_main_sizer->Add(0, 0, 0, wxBOTTOM, FromDIP(8));
-
-    create_comment_text(comment);
-    m_main_sizer->Add(m_comment_text, 0, wxLEFT, FromDIP(24));
-
-    wxBoxSizer *m_photo_sizer = get_photo_btn_sizer();
-    m_main_sizer->Add(m_photo_sizer, 0, wxEXPAND | wxTOP, FromDIP(8));
-
-    m_image_sizer = new wxGridSizer(5, FromDIP(5), FromDIP(5));
-    if (!images.empty()) {
-        load_photo(images);
-    }
-    m_main_sizer->Add(m_image_sizer, 0, wxEXPAND | wxLEFT, FromDIP(24));
-    m_main_sizer->Add(0, 0, 1, wxEXPAND, 0);
-
-    wxBoxSizer *bSizer_button = get_button_sizer();
-    m_main_sizer->Add(bSizer_button, 0, wxEXPAND | wxBOTTOM, FromDIP(24));
-
-    return m_main_sizer;
-}
-
-ScoreData ScoreDialog::get_score_data() {
-    ScoreData score_data;
-    score_data.rating_id          = m_rating_id;
-    score_data.design_id          = m_design_id;
-    score_data.model_id           = m_model_id;
-    score_data.profile_id         = m_profile_id;
-    score_data.star_count         = m_star_count;
-    score_data.success_printed    = m_success_printed;
-    score_data.comment_text       = m_comment_text->GetValue();
-    score_data.image_url_paths    = m_image_url_paths;
-    for (auto img : m_image) { score_data.local_to_url_image.push_back(std::make_pair(img.second.local_image_url, img.second.img_url_paths)); }
-
-    return score_data;
-}
-
-void ScoreDialog::set_comment(std::string comment)
-{
-    if (m_comment_text) {
-
-        m_comment_text->SetValue(wxString::FromUTF8(comment));
-    }
-}
-
-void ScoreDialog::set_cloud_bitmap(std::vector<std::string> cloud_bitmaps)
-{
-    m_image_url_paths = cloud_bitmaps;
-    for (std::string &url : cloud_bitmaps) {
-        if (std::string::npos == url.find(m_model_id)) continue;
-        m_image.insert(create_oss_thumbnail(url));
-    }
-    Layout();
-    Fit();
 }
 
 } // namespace GUI

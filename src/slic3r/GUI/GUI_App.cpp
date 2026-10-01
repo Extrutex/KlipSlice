@@ -139,7 +139,6 @@
 #include "WebGuideDialog.hpp"
 #include "CommonDialogs.hpp"
 #include "PrivacyUpdateDialog.hpp"
-#include "ModelMall.hpp"
 #include "HintNotification.hpp"
 
 #include "slic3r/Utils/NetworkAgentFactory.hpp"
@@ -1134,32 +1133,6 @@ std::string GUI_App::get_http_url(std::string country_code, std::string path)
     url += path.empty() ? "v1/iot-service/api/slicer/resource" : path;
     return url;
 }
-
-std::string GUI_App::get_model_http_url(std::string country_code)
-{
-    std::string url;
-    if (country_code == "US") {
-        url = "https://makerworld.com/";
-    }
-    else if (country_code == "CN") {
-        url = "https://makerworld.com/";
-    }
-    else if (country_code == "ENV_CN_DEV") {
-        url = "https://makerhub-dev.bambu-lab.com/";
-    }
-    else if (country_code == "ENV_CN_QA") {
-        url = "https://makerhub-qa.bambu-lab.com/";
-    }
-    else if (country_code == "ENV_CN_PRE") {
-        url = "https://makerhub-pre.bambu-lab.com/";
-    }
-    else {
-        url = "https://makerworld.com/";
-    }
-
-    return url;
-}
-
 
 void GUI_App::init_networking_callbacks()
 {
@@ -2591,7 +2564,6 @@ bool GUI_App::on_init_inner()
 #endif
             this->post_init();
 
-            update_publish_status();
         }
 
         if (m_post_initialized && app_config->dirty())
@@ -2939,21 +2911,6 @@ void GUI_App::update_label_colours_from_appconfig()
         if (str != "")
             m_color_label_modified = wxColour(str);
     }
-}
-
-void GUI_App::update_publish_status()
-{
-    // mainframe->show_publish_button(has_model_mall());
-    // if (app_config->get("staff_pick_switch") == "true") {
-    //     mainframe->m_webview->SendDesignStaffpick(has_model_mall());
-    // }
-}
-
-bool GUI_App::has_model_mall()
-{
-    if (auto cc = app_config->get_region(); cc == "CNH" || cc == "China" || cc == "")
-        return false;
-    return true;
 }
 
 void GUI_App::update_label_colours()
@@ -3395,7 +3352,6 @@ void GUI_App::recreate_GUI(const wxString &msg_name)
 //     });
 
 
-    update_publish_status();
 
     m_is_recreating_gui = false;
 
@@ -3446,7 +3402,6 @@ void GUI_App::ShowUserGuide() {
         res = GuideDlg.run();
 if (res) {
             load_current_presets();
-            update_publish_status();
             // BBS: remove SLA related message
         }
     } catch (std::exception &) {
@@ -3933,9 +3888,6 @@ std::string GUI_App::handle_web_request(std::string cmd)
                     request_user_logout(ORCA_CLOUD_PROVIDER);
                 });
             }
-            else if (command_str.compare("homepage_modeldepot") == 0) {
-                CallAfter([this] { open_mall_page_dialog(); });
-            }
             else if (command_str.compare("homepage_newproject") == 0) {
                 this->request_open_project("<new>");
             }
@@ -3949,22 +3901,6 @@ std::string GUI_App::handle_web_request(std::string cmd)
                     }
                 }
             }
-            // else if (command_str.compare("modelmall_model_advise_get") == 0) {
-            //     if (mainframe && this->app_config->get("staff_pick_switch") == "true") {
-            //         if (mainframe->m_webview) {
-            //             mainframe->m_webview->SendDesignStaffpick(has_model_mall());
-            //         }
-            //     }
-            // }
-            // else if (command_str.compare("modelmall_model_open") == 0) {
-            //     if (root.get_child_optional("data") != boost::none) {
-            //         pt::ptree data_node = root.get_child("data");
-            //         boost::optional<std::string> id = data_node.get_optional<std::string>("id");
-            //         if (id.has_value() && mainframe->m_webview) {
-            //             mainframe->m_webview->OpenModelDetail(id.value(), m_agent);
-            //         }
-            //     }
-            // }
             else if (command_str.compare("homepage_open_recentfile") == 0) {
                 if (root.get_child_optional("data") != boost::none) {
                     pt::ptree data_node = root.get_child("data");
@@ -4056,21 +3992,6 @@ std::string GUI_App::handle_web_request(std::string cmd)
                     wxLaunchDefaultBrowser(path.value());
                 }
             } 
-            else if (command_str.compare("homepage_makerlab_get") == 0) {
-                //if (mainframe->m_webview) { mainframe->m_webview->SendMakerlabList(); }
-            }
-            else if (command_str.compare("makerworld_model_open") == 0) 
-            {
-                if (root.get_child_optional("model") != boost::none) {
-                    pt::ptree                    data_node = root.get_child("model");
-                    boost::optional<std::string> path      = data_node.get_optional<std::string>("url");
-                    if (path.has_value()) 
-                    { 
-                        wxString realurl = from_u8(url_decode(path.value()));
-                        wxGetApp().request_model_download(realurl);
-                    }
-                }
-            }
         }
     }
     catch (...) {
@@ -4098,13 +4019,6 @@ void GUI_App::handle_script_message(std::string msg, const std::string& provider
     }
     catch (...) {
         ;
-    }
-}
-
-void GUI_App::request_model_download(wxString url)
-{
-    if (plater_) {
-        plater_->request_model_download(url);
     }
 }
 
@@ -7834,83 +7748,6 @@ void GUI_App::load_url(wxString url)
         return mainframe->load_url(url);
 }
 
-void GUI_App::open_mall_page_dialog()
-{
-    std::string host_url;
-    std::string model_url;
-    std::string link_url;
-
-    int result = -1;
-
-    //model api url
-    host_url = get_model_http_url(app_config->get_country_code());
-
-    //model url
-
-    wxString language_code = this->current_language_code().BeforeFirst('_');
-    model_url = language_code.ToStdString();
-
-    if (getAgent() && mainframe) {
-
-        //login already
-        if (getAgent()->is_user_login()) {
-            std::string ticket;
-            result = getAgent()->request_bind_ticket(&ticket);
-
-            if(result == 0){
-                link_url = host_url + "api/sign-in/ticket?to=" + host_url + url_encode(model_url) + "&ticket=" + ticket;
-            }
-        }
-    }
-
-    if (result < 0) {
-       link_url = host_url + model_url;
-    }
-
-    if (link_url.find("?") != std::string::npos) {
-        link_url += "&from=orcaslicer";
-    } else {
-        link_url += "?from=orcaslicer";
-    }
-
-    wxLaunchDefaultBrowser(link_url);
-}
-
-void GUI_App::open_publish_page_dialog()
-{
-    std::string host_url;
-    std::string model_url;
-    std::string link_url;
-
-    int result = -1;
-
-    //model api url
-    host_url = get_model_http_url(app_config->get_country_code());
-
-    //publish url
-    wxString language_code = this->current_language_code().BeforeFirst('_');
-    model_url += (language_code.ToStdString() + "/my/models/publish");
-
-    if (getAgent() && mainframe) {
-
-        //login already
-        if (getAgent()->is_user_login()) {
-            std::string ticket;
-            result = getAgent()->request_bind_ticket(&ticket);
-
-            if (result == 0) {
-                link_url = host_url + "api/sign-in/ticket?to=" + host_url + url_encode(model_url) + "&ticket=" + ticket;
-            }
-        }
-    }
-
-    if (result < 0) {
-        link_url = host_url + model_url;
-    }
-
-    wxLaunchDefaultBrowser(link_url);
-}
-
 char GUI_App::from_hex(char ch) {
     return isdigit(ch) ? ch - '0' : tolower(ch) - 'a' + 10;
 }
@@ -7921,14 +7758,6 @@ std::string GUI_App::url_decode(std::string value) {
 
 std::string GUI_App::url_encode(std::string value) {
     return Http::url_encode(value);
-}
-
-void GUI_App::remove_mall_system_dialog()
-{
-    if (m_mall_publish_dialog != nullptr) {
-        m_mall_publish_dialog->Destroy();
-        delete m_mall_publish_dialog;
-    }
 }
 
 void GUI_App::run_script(wxString js)
@@ -8074,7 +7903,6 @@ bool GUI_App::run_wizard(ConfigWizard::RunReason reason, ConfigWizard::StartPage
 
     if (res) {
         load_current_presets();
-        update_publish_status();
         // BBS: remove SLA related message
     }
 

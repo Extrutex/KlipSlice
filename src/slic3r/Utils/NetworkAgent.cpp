@@ -458,52 +458,11 @@ int NetworkAgent::get_camera_url(std::string dev_id, std::function<void(std::str
     return -1;
 }
 
-int NetworkAgent::get_design_staffpick(int offset, int limit, std::function<void(std::string)> callback, const std::string& provider)
-{
-    const auto cloud_agent = get_cloud_agent(provider);
-    if (cloud_agent)
-        return cloud_agent->get_design_staffpick(offset, limit, std::move(callback));
-    return -1;
-}
-
-int NetworkAgent::start_publish(
-    PublishParams params, OnUpdateStatusFn update_fn, WasCancelledFn cancel_fn, std::string* out, const std::string& provider)
-{
-    const auto cloud_agent = get_cloud_agent(provider);
-    if (cloud_agent)
-        return cloud_agent->start_publish(params, update_fn, cancel_fn, out);
-    return -1;
-}
-
-int NetworkAgent::get_model_publish_url(std::string* url, const std::string& provider)
-{
-    const auto cloud_agent = get_cloud_agent(provider);
-    if (cloud_agent)
-        return cloud_agent->get_model_publish_url(url);
-    return -1;
-}
-
 int NetworkAgent::get_subtask(BBLModelTask* task, OnGetSubTaskFn getsub_fn, const std::string& provider)
 {
     const auto cloud_agent = get_cloud_agent(provider);
     if (cloud_agent)
         return cloud_agent->get_subtask(task, getsub_fn);
-    return -1;
-}
-
-int NetworkAgent::get_model_mall_home_url(std::string* url, const std::string& provider)
-{
-    const auto cloud_agent = get_cloud_agent(provider);
-    if (cloud_agent)
-        return cloud_agent->get_model_mall_home_url(url);
-    return -1;
-}
-
-int NetworkAgent::get_model_mall_detail_url(std::string* url, std::string id, const std::string& provider)
-{
-    const auto cloud_agent = get_cloud_agent(provider);
-    if (cloud_agent)
-        return cloud_agent->get_model_mall_detail_url(url, std::move(id));
     return -1;
 }
 
@@ -520,68 +479,6 @@ int NetworkAgent::get_my_token(std::string ticket, unsigned int* http_code, std:
     const auto cloud_agent = get_cloud_agent(provider);
     if (cloud_agent)
         return cloud_agent->get_my_token(std::move(ticket), http_code, http_body);
-    return -1;
-}
-
-int NetworkAgent::put_model_mall_rating(int                      design_id,
-                                        int                      score,
-                                        std::string              content,
-                                        std::vector<std::string> images,
-                                        unsigned int&            http_code,
-                                        std::string&             http_error,
-                                        const std::string&       provider)
-{
-    const auto cloud_agent = get_cloud_agent(provider);
-    if (cloud_agent)
-        return cloud_agent->put_model_mall_rating(design_id, score, std::move(content), std::move(images), http_code, http_error);
-    return -1;
-}
-
-int NetworkAgent::get_oss_config(
-    std::string& config, std::string country_code, unsigned int& http_code, std::string& http_error, const std::string& provider)
-{
-    const auto cloud_agent = get_cloud_agent(provider);
-    if (cloud_agent)
-        return cloud_agent->get_oss_config(config, std::move(country_code), http_code, http_error);
-    return -1;
-}
-
-int NetworkAgent::put_rating_picture_oss(std::string&       config,
-                                         std::string&       pic_oss_path,
-                                         std::string        model_id,
-                                         int                profile_id,
-                                         unsigned int&      http_code,
-                                         std::string&       http_error,
-                                         const std::string& provider)
-{
-    const auto cloud_agent = get_cloud_agent(provider);
-    if (cloud_agent)
-        return cloud_agent->put_rating_picture_oss(config, pic_oss_path, std::move(model_id), profile_id, http_code, http_error);
-    return -1;
-}
-
-int NetworkAgent::get_model_mall_rating_result(
-    int job_id, std::string& rating_result, unsigned int& http_code, std::string& http_error, const std::string& provider)
-{
-    const auto cloud_agent = get_cloud_agent(provider);
-    if (cloud_agent)
-        return cloud_agent->get_model_mall_rating_result(job_id, rating_result, http_code, http_error);
-    return -1;
-}
-
-int NetworkAgent::get_mw_user_preference(std::function<void(std::string)> callback, const std::string& provider)
-{
-    const auto cloud_agent = get_cloud_agent(provider);
-    if (cloud_agent)
-        return cloud_agent->get_mw_user_preference(std::move(callback));
-    return -1;
-}
-
-int NetworkAgent::get_mw_user_4ulist(int seed, int limit, std::function<void(std::string)> callback, const std::string& provider)
-{
-    const auto cloud_agent = get_cloud_agent(provider);
-    if (cloud_agent)
-        return cloud_agent->get_mw_user_4ulist(seed, limit, std::move(callback));
     return -1;
 }
 

@@ -16051,13 +16051,6 @@ void Plater::download_project(const wxString& project_id)
     return;
 }
 
-void Plater::request_model_download(wxString url)
-{
-    wxCommandEvent* event = new wxCommandEvent(EVT_IMPORT_MODEL_ID);
-    event->SetString(url);
-    wxQueueEvent(this, event);
-}
-
 void Plater::request_download_project(std::string project_id)
 {
     wxCommandEvent* event = new wxCommandEvent(EVT_DOWNLOAD_PROJECT);
@@ -20197,7 +20190,6 @@ void Plater::publish_job_finished(wxCommandEvent &evt)
 {
     p->m_publish_dlg->EndModal(wxID_OK);
    // GUI::wxGetApp().load_url(evt.GetString());
-   //GUI::wxGetApp().open_publish_page_dialog(evt.GetString());
 }
 
 // Called when the Eject button is pressed.
