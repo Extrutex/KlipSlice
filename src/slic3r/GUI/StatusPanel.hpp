@@ -32,9 +32,12 @@
 #include "Widgets/AMSControl.hpp"
 #include "Widgets/FilamentLoad.hpp"
 #include "Widgets/FanControl.hpp"
-#include "HMS.hpp"
-#include "DeviceErrorDialog.hpp"
 #include "StagedBuild.hpp"
+// Formerly reached through the removed HMS header; dependent units still rely on them.
+#include "BitmapCache.hpp"
+#include "Widgets/StepCtrl.hpp"
+#include "slic3r/Utils/Http.hpp"
+#include "libslic3r/Thread.hpp"
 
 class StepIndicator;
 
@@ -640,7 +643,6 @@ protected:
     CalibrationDialog*   calibration_dlg {nullptr};
     AMSMaterialsSetting *m_filament_setting_dlg{nullptr};
 
-    DeviceErrorDialog* m_print_error_dlg = nullptr;
     SecondaryCheckDialog* abort_dlg = nullptr;
     SecondaryCheckDialog* con_load_dlg = nullptr;
     MessageDialog *       ctrl_e_hint_dlg             = nullptr;

@@ -987,7 +987,6 @@ void SendToPrinterDialog::on_ok(wxCommandEvent &event)
                 } else if (res == wxAPPLY) {
                     wxCommandEvent *evt = new wxCommandEvent(EVT_CLEAR_IPADDRESS);
                     wxQueueEvent(this, evt);
-                    wxGetApp().show_ip_address_enter_dialog();
                 }
             });
         });

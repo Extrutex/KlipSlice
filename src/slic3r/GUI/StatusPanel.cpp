@@ -13,7 +13,6 @@
 #include "MsgDialog.hpp"
 #include "slic3r/Utils/Http.hpp"
 #include "libslic3r/Thread.hpp"
-#include "DeviceErrorDialog.hpp"
 
 #include "RecenterDialog.hpp"
 #include "CalibUtils.hpp"
@@ -2944,12 +2943,8 @@ void StatusPanel::update_error_message()
     if (obj->print_error <= 0) {
         error_info_reset();
     } else if (obj->print_error != last_error) {
-        /* clear old dialog */
-        if (m_print_error_dlg) { delete m_print_error_dlg; }
-
-        /* show device error message*/
-        m_print_error_dlg = new DeviceErrorDialog(obj, this);
-        wxString error_msg = m_print_error_dlg->show_error_code(obj->print_error);
+        /* show device error code (no vendor error database) */
+        wxString error_msg = wxString::Format(_L("Printer error code: %s"), wxString::FromUTF8(obj->get_print_error_str()));
         BOOST_LOG_TRIVIAL(info) << "print error: device error code = "<< obj->print_error;
 
         /* show error message on task panel */

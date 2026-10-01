@@ -1,8 +1,8 @@
 // Match the include environment that libslic3r_gui TUs get from pchheader.hpp: Windows.h with
 // WIN32_LEAN_AND_MEAN/NOMINMAX must come first so rpcndr.h's `byte` is processed before <cstddef>
 // makes std::byte a competing candidate (otherwise the Windows COM headers pulled in via
-// DeviceManager.hpp error with an ambiguous `byte`). wx/timer.h must precede DeviceManager.hpp,
-// which includes DeviceErrorDialog.hpp (uses wxTimerEvent) before its own wx/timer.h include.
+// DeviceManager.hpp error with an ambiguous `byte`). wx/timer.h is included ahead of
+// DeviceManager.hpp to match the GUI translation units.
 #ifdef WIN32
     #ifndef WIN32_LEAN_AND_MEAN
         #define WIN32_LEAN_AND_MEAN

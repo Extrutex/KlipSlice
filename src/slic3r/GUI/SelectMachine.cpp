@@ -47,7 +47,6 @@
 #include "Plater.hpp"
 #include "Notebook.hpp"
 #include "BitmapCache.hpp"
-#include "BindDialog.hpp"
 
 namespace Slic3r { namespace GUI {
 
@@ -3692,7 +3691,6 @@ void SelectMachineDialog::on_send_print()
     m_print_job->on_check_ip_address_fail([this]() {
         wxCommandEvent* evt = new wxCommandEvent(EVT_CLEAR_IPADDRESS);
         wxQueueEvent(this, evt);
-        wxGetApp().show_ip_address_enter_dialog();
      });
 
     // update ota version

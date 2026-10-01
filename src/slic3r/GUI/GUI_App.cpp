@@ -4,9 +4,7 @@
 #include "libslic3r/Platform.hpp"
 #include "GUI_App.hpp"
 #include "Shortcuts.hpp"
-#include "BindDialog.hpp"
 #include "DeviceManager.hpp"
-#include "HMS.hpp"
 #include "PresetBundleDialog.hpp"
 #include "WebUserLoginDialog.hpp"
 #include "WebViewDialog.hpp"
@@ -144,7 +142,6 @@
 #include "WebDownPluginDlg.hpp"
 #include "WebGuideDialog.hpp"
 #include "CommonDialogs.hpp"
-#include "ReleaseNote.hpp" // InputIpAddressDialog
 #include "PrivacyUpdateDialog.hpp"
 #include "ModelMall.hpp"
 #include "HintNotification.hpp"
@@ -926,8 +923,6 @@ void GUI_App::post_init()
         plater_->get_notification_manager()->push_hint_notification(false);
     }
 #endif
-
-    hms_query = new HMSQuery();
 
     m_show_gcode_window = app_config->get_bool("show_gcode_window");
     if (m_networking_need_update) {
@@ -3275,7 +3270,6 @@ bool GUI_App::on_init_inner()
     Bind(EVT_CHECK_PRIVACY_VER, &GUI_App::on_check_privacy_update, this);
     Bind(EVT_CHECK_PRIVACY_SHOW, &GUI_App::show_check_privacy_dlg, this);
 
-    Bind(EVT_SHOW_IP_DIALOG, &GUI_App::show_ip_address_enter_dialog_handler, this);
 
 
 
@@ -4631,9 +4625,6 @@ void GUI_App::recreate_GUI(const wxString &msg_name)
 
     obj_list()->set_min_height();
     update_mode();
-
-    // clear previous hms query, so that the hms info can use different language
-    if (hms_query) hms_query->clear_hms_info();
 
     //BBS: trigger restore project logic here, and skip confirm
     plater_->trigger_restore_project(1);
@@ -8259,57 +8250,6 @@ void GUI_App::update_internal_development() {
         view->update_mode();
 }
 
-void GUI_App::show_ip_address_enter_dialog(wxString title)
-{
-    auto evt = new wxCommandEvent(EVT_SHOW_IP_DIALOG);
-    evt->SetString(title);
-    evt->SetInt(-1);
-    wxQueueEvent(this, evt);
-}
-
-bool GUI_App::show_modal_ip_address_enter_dialog(bool input_sn, wxString title)
-{
-    DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
-    if (!dev) return false;
-    if (!dev->get_selected_machine()) return false;
-    auto obj = dev->get_selected_machine();
-
-    InputIpAddressDialog dlg(nullptr);
-    dlg.m_need_input_sn = input_sn;
-    dlg.set_machine_obj(obj);
-    if (!title.empty()) dlg.update_title(title);
-
-    dlg.Bind(EVT_ENTER_IP_ADDRESS, [obj](wxCommandEvent& e) {
-        auto selection_data_arr = wxSplit(e.GetString().ToStdString(), '|');
-
-        if (selection_data_arr.size() == 2) {
-            auto ip_address = selection_data_arr[0];
-            auto access_code = selection_data_arr[1];
-
-            BOOST_LOG_TRIVIAL(info) << "User enter IP address is " << ip_address;
-            if (!ip_address.empty()) {
-                wxGetApp().app_config->set_str("ip_address", obj->get_dev_id(), ip_address.ToStdString());
-                wxGetApp().app_config->save();
-
-                obj->set_dev_ip(ip_address.ToStdString());
-                obj->set_access_code(access_code.ToStdString());
-            }
-        }
-    });
-
-    if (dlg.ShowModal() == wxID_YES) {
-        return true;
-    }
-    return false;
-}
-
-void  GUI_App::show_ip_address_enter_dialog_handler(wxCommandEvent& evt)
-{
-    wxString title = evt.GetString();
-    int mode = evt.GetInt();
-    show_modal_ip_address_enter_dialog(mode == -1?false:true, title);
-}
-
 void GUI_App::open_presetbundledialog(size_t open_on_tab, const std::string& highlight_option)
 {
     bool app_layout_changed = false;
@@ -9252,25 +9192,6 @@ std::string GUI_App::url_decode(std::string value) {
 std::string GUI_App::url_encode(std::string value) {
     return Http::url_encode(value);
 }
-
-void GUI_App::popup_ping_bind_dialog()
-{
-    if (m_ping_code_binding_dialog == nullptr) {
-        m_ping_code_binding_dialog = new PingCodeBindDialog();
-        m_ping_code_binding_dialog->ShowModal();
-        remove_ping_bind_dialog();
-    }
-}
-
-void GUI_App::remove_ping_bind_dialog()
-{
-    if (m_ping_code_binding_dialog != nullptr) {
-        m_ping_code_binding_dialog->Destroy();
-        delete m_mall_publish_dialog;
-        m_ping_code_binding_dialog = nullptr;
-    }
-}
-
 
 void GUI_App::remove_mall_system_dialog()
 {

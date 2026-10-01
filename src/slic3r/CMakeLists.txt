@@ -41,8 +41,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/BackgroundSlicingProcess.hpp
     GUI/PostProcessor.cpp
     GUI/PostProcessor.hpp
-    GUI/BBLStatusBarBind.cpp
-    GUI/BBLStatusBarBind.hpp
     GUI/BBLStatusBar.cpp
     GUI/BBLStatusBar.hpp
     GUI/BBLStatusBarSend.cpp
@@ -51,8 +49,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/BBLTopbar.hpp
     GUI/BedShapeDialog.cpp
     GUI/BedShapeDialog.hpp
-    GUI/BindDialog.cpp
-    GUI/BindDialog.hpp
     GUI/BitmapCache.cpp
     GUI/BitmapCache.hpp
     GUI/BitmapComboBox.cpp
@@ -266,10 +262,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/HintNotification.hpp
     GUI/ThermalPreconditioningDialog.cpp
     GUI/ThermalPreconditioningDialog.hpp
-    GUI/HMS.cpp
-    GUI/HMS.hpp
-    GUI/HMSPanel.cpp
-    GUI/HMSPanel.hpp
     GUI/HttpServer.cpp
     GUI/HttpServer.hpp
     GUI/I18N.cpp
@@ -298,16 +290,12 @@ set(SLIC3R_GUI_SOURCES
     GUI/ImGuiWrapper.hpp
     GUI/IMSlider.cpp
     GUI/IMSlider.hpp
-    GUI/DeviceErrorDialog.hpp
-    GUI/DeviceErrorDialog.cpp
     GUI/IMToolbar.cpp
     GUI/IMToolbar.hpp
     GUI/InstanceCheck.cpp
     GUI/InstanceCheck.hpp
     GUI/Jobs/ArrangeJob.cpp
     GUI/Jobs/ArrangeJob.hpp
-    GUI/Jobs/BindJob.cpp
-    GUI/Jobs/BindJob.hpp
     GUI/Jobs/BoostThreadWorker.cpp
     GUI/Jobs/BoostThreadWorker.hpp
     GUI/Jobs/BusyCursorJob.hpp
@@ -531,8 +519,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/UpdateDialogs.hpp
     GUI/NetworkPluginDialog.cpp
     GUI/NetworkPluginDialog.hpp
-    GUI/UpgradePanel.cpp
-    GUI/UpgradePanel.hpp
     GUI/UserManager.cpp
     GUI/UserManager.hpp
     GUI/UserNotification.cpp

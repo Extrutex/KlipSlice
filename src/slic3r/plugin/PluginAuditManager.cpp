@@ -11,8 +11,8 @@
 #include <cctype>
 #include <cstdlib>
 #include <future>
-#include <slic3r/GUI/BindDialog.hpp>
 #include <slic3r/GUI/GUI_App.hpp>
+#include <slic3r/GUI/I18N.hpp>
 #include <slic3r/plugin/PluginFsUtils.hpp>
 #include <slic3r/plugin/PluginManager.hpp>
 #include <unordered_map>

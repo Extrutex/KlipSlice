@@ -63,7 +63,6 @@ wxDECLARE_EVENT(EVT_DISSMISS_MACHINE_LIST, wxCommandEvent);
 wxDECLARE_EVENT(EVT_CONNECT_LAN_PRINT, wxCommandEvent);
 wxDECLARE_EVENT(EVT_EDIT_PRINT_NAME, wxCommandEvent);
 wxDECLARE_EVENT(EVT_UNBIND_MACHINE, wxCommandEvent);
-wxDECLARE_EVENT(EVT_BIND_MACHINE, wxCommandEvent);
 
 #define SELECT_MACHINE_POPUP_SIZE wxSize(FromDIP(216), FromDIP(364))
 #define SELECT_MACHINE_LIST_SIZE wxSize(FromDIP(212), FromDIP(360))
@@ -114,7 +113,6 @@ public:
 
     ~MachineObjectPanel();
 
-    void show_bind_dialog();
     void set_printer_state(PrinterState state);
     void show_printer_bind(bool show, PrinterBindState state);
     void show_edit_printer_name(bool show);
@@ -133,29 +131,6 @@ class MachinePanel
 public:
     wxString mIndex;
     MachineObjectPanel *mPanel;
-};
-
-class PinCodePanel : public wxPanel
-{
-public:
-    PinCodePanel(wxWindow* parent,
-        int type,
-        wxWindowID      winid = wxID_ANY,
-        const wxPoint& pos = wxDefaultPosition,
-        const wxSize& size = wxDefaultSize);
-    ~PinCodePanel() {};
-
-    ScalableBitmap       m_bitmap;
-    bool           m_hover{false};
-    int            m_type{0};
-
-    void OnPaint(wxPaintEvent& event);
-    void render(wxDC& dc);
-    void doRender(wxDC& dc);
-
-    void on_mouse_enter(wxMouseEvent& evt);
-    void on_mouse_leave(wxMouseEvent& evt);
-    void on_mouse_left_up(wxMouseEvent& evt);
 };
 
 class SelectMachinePopup : public PopupWindow
@@ -177,8 +152,6 @@ public:
 private:
     int                               m_my_devices_count{0};
     int                               m_other_devices_count{0};
-    PinCodePanel*                     m_panel_ping_code{nullptr};
-    PinCodePanel*                     m_panel_direct_connection{nullptr};
     wxWindow*                         m_placeholder_panel{nullptr};
     HyperLink*                        m_hyperlink{nullptr}; // ORCA
     wxBoxSizer *                      m_sizer_my_devices{nullptr};

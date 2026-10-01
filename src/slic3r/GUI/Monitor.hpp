@@ -44,8 +44,6 @@
 #include "slic3r/GUI/DeviceManager.hpp"
 #include "slic3r/GUI/MonitorBasePanel.h"
 #include "slic3r/GUI/StatusPanel.hpp"
-#include "slic3r/GUI/UpgradePanel.hpp"
-#include "slic3r/GUI/HMSPanel.hpp"
 #include "slic3r/GUI/AmsWidgets.hpp"
 #include "Widgets/SideTools.hpp"
 #include "SelectMachinePop.hpp"
@@ -78,8 +76,6 @@ private:
     wxSizer*        m_main_sizer{ nullptr };
 
     StatusPanel*        m_status_info_panel{ nullptr };
-    UpgradePanel*       m_upgrade_panel{ nullptr };
-    HMSPanel*           m_hms_panel{ nullptr };
 
 	/* side tools */
     SideTools*      m_side_tools{nullptr};
@@ -103,10 +99,7 @@ public:
 
     enum PrinterTab {
         PT_STATUS  = 0,
-        PT_UPDATE  = 1,
-        PT_HMS     = 2,
-        PT_DEBUG   = 3,
-        PT_MAX_NUM = 4
+        PT_MAX_NUM = 1
     };
 
 	void init_bitmap();
@@ -132,7 +125,6 @@ public:
     //void update_ams(MachineObject* obj);
     void update_all();
 
-    void update_hms_tag();
     bool Show(bool show);
 
     void show_status(int status);
@@ -146,8 +138,6 @@ public:
     void start_update() {update_flag = true;};
 
 
-    void jump_to_HMS();
-    void jump_to_Upgrade();
     void jump_to_Rack();
     void update_network_version_footer();
 };

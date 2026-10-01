@@ -85,9 +85,7 @@ class NotificationManager;
 class Downloader;
 struct GUI_InitParams;
 class ParamsDialog;
-class HMSQuery;
 class ModelMallDialog;
-class PingCodeBindDialog;
 class PresetBundleDialog;
 class ZUserLogin;
 class NetworkErrorDialog;
@@ -328,7 +326,6 @@ private:
     VersionInfo version_info;
     VersionInfo privacy_version_info;
     static std::string version_display;
-    HMSQuery    *hms_query { nullptr };
     FilamentColorCodeQuery* m_filament_color_code_query{ nullptr };
 
     boost::thread    m_sync_update_thread;
@@ -374,7 +371,6 @@ public:
     Slic3r::DeviceManager* getDeviceManager() { return m_device_manager; }
     bool                   is_blocking_printing(MachineObject *obj_ = nullptr);
     Slic3r::TaskManager*   getTaskManager() { return m_task_manager; }
-    HMSQuery* get_hms_query() { return hms_query; }
     NetworkAgent* getAgent() { return m_agent; }
 
     // Reconcile the live printer agent with the stored preset selection.
@@ -617,9 +613,6 @@ public:
     void            enable_developer_mode();
     void            update_mode();
     void            update_internal_development();
-    void            show_ip_address_enter_dialog(wxString title = wxEmptyString);
-    void            show_ip_address_enter_dialog_handler(wxCommandEvent &evt);
-    bool            show_modal_ip_address_enter_dialog(bool input_sn, wxString title = wxEmptyString);
 
     // BBS
     //void            add_config_menu(wxMenuBar *menu);
@@ -688,7 +681,6 @@ public:
     std::string         m_mall_model_download_url;
     std::string         m_mall_model_download_name;
     ModelMallDialog*    m_mall_publish_dialog{ nullptr };
-    PingCodeBindDialog* m_ping_code_binding_dialog{ nullptr };
 
     NetworkErrorDialog* m_server_error_dialog { nullptr };
 
@@ -713,8 +705,6 @@ public:
     std::string     url_encode(std::string value);
     std::string     url_decode(std::string value);
 
-    void            popup_ping_bind_dialog();
-    void            remove_ping_bind_dialog();
 
     // Parameters extracted from the command line to be passed to GUI after initialization.
     GUI_InitParams* init_params { nullptr };

@@ -4,8 +4,6 @@ list(APPEND SLIC3R_GUI_SOURCES
     GUI/DeviceTab/uiAmsHumidityPopup.cpp
     GUI/DeviceTab/uiAMSBestPositionPopup.hpp
     GUI/DeviceTab/uiAMSBestPositionPopup.cpp
-    GUI/DeviceTab/uiDeviceUpdateVersion.h
-    GUI/DeviceTab/uiDeviceUpdateVersion.cpp
     GUI/DeviceTab/wgtDeviceNozzleRack.h
     GUI/DeviceTab/wgtDeviceNozzleRack.cpp
     GUI/DeviceTab/wgtDeviceNozzleRackUpdate.h

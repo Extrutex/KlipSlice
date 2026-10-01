@@ -1,6 +1,5 @@
 #include "libslic3r/libslic3r.h"
 #include "DeviceManager.hpp"
-#include "HMS.hpp"
 #include "I18N.hpp"
 #include "libslic3r/Time.hpp"
 #include "libslic3r/Thread.hpp"
@@ -11,7 +10,6 @@
 
 #include "GUI_App.hpp"
 #include "MsgDialog.hpp"
-#include "DeviceErrorDialog.hpp"
 #include "Plater.hpp"
 #include "GUI_App.hpp"
 #include "ReleaseNote.hpp"
@@ -654,10 +652,6 @@ MachineObject::~MachineObject()
     }
 
     free_slice_info();
-
-    while (!m_command_error_code_dlgs.empty()) {
-        delete *m_command_error_code_dlgs.begin();/*element will auto remove from m_command_error_code_dlgs on deleted*/
-    }
 
     {
         delete m_lamp;
@@ -3321,10 +3315,7 @@ int MachineObject::parse_json(std::string tunnel, std::string payload, bool key_
                     {
                         if (jj["err_code"].is_number())
                         {
-                            /* proceed action*/
-                            json action_json = jj.contains("err_index") ? jj : json();
-
-                            add_command_error_code_dlg(jj["err_code"].get<int>(), action_json);
+                            report_command_error(jj["err_code"].get<int>());
                         }
                     }
                 }
@@ -4626,7 +4617,7 @@ int MachineObject::parse_json(std::string tunnel, std::string payload, bool key_
 
                         if (check_studio_cmd && j["upgrade"].contains("err_code")) {
                             if (j["upgrade"]["err_code"].is_number()) {
-                                add_command_error_code_dlg(j["upgrade"]["err_code"].get<int>());
+                                report_command_error(j["upgrade"]["err_code"].get<int>());
                             }
                         }
                     }
@@ -5909,25 +5900,10 @@ std::string MachineObject::get_error_code_str(int error_code)
     return print_error_str;
 }
 
-void MachineObject::add_command_error_code_dlg(int command_err, json action_json)
+void MachineObject::report_command_error(int command_err)
 {
-    if (command_err > 0 && !Slic3r::GUI::wxGetApp().get_hms_query()->is_internal_error(this, command_err))
-    {
-        GUI::wxGetApp().CallAfter([this, command_err, action_json, token = std::weak_ptr<int>(m_token)]
-        {
-            if (token.expired()) { return;}
-            GUI::DeviceErrorDialog* device_error_dialog = new GUI::DeviceErrorDialog(this, (wxWindow*)GUI::wxGetApp().mainframe);
-            device_error_dialog->Bind(wxEVT_DESTROY, [this, token = std::weak_ptr<int>(m_token)](auto& event)
-                {
-                    if (!token.expired()) { m_command_error_code_dlgs.erase((GUI::DeviceErrorDialog*)event.GetEventObject());}
-                    event.Skip();
-                });
-
-            if(!action_json.is_null()) device_error_dialog->set_action_json(action_json);
-            device_error_dialog->show_error_code(command_err);
-            m_command_error_code_dlgs.insert(device_error_dialog);
-        });
-    };
+    if (command_err > 0)
+        BOOST_LOG_TRIVIAL(warning) << "device command error: dev_id = " << get_dev_id() << ", error code = " << get_error_code_str(command_err);
 }
 
 bool MachineObject::is_multi_extruders() const

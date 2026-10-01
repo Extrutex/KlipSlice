@@ -28,7 +28,6 @@
 #include "Widgets/Label.hpp"
 #include "format.hpp"
 #include "Plater.hpp"
-#include "BindDialog.hpp"
 
 #include "DeviceCore/DevManager.h"
 
@@ -125,17 +124,6 @@ MonitorPanel::MonitorPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, 
     m_select_machine.Bind(EVT_FINISHED_UPDATE_MACHINE_LIST, [this](wxCommandEvent& e) {
         m_side_tools->start_interval();
         });
-
-    Bind(EVT_ALREADY_READ_HMS, [this](wxCommandEvent& e) {
-        auto key = e.GetString().ToStdString();
-        auto iter = m_hms_panel->temp_hms_list.find(key);
-        if (iter != m_hms_panel->temp_hms_list.end()) {
-            m_hms_panel->temp_hms_list[key].set_read();
-        }
-
-        update_hms_tag();
-        e.Skip();
-        });
 }
 
 MonitorPanel::~MonitorPanel()
@@ -187,13 +175,6 @@ void MonitorPanel::init_tabpanel()
     add_build_steps_of(*m_status_info_panel);
     m_tabpanel->AddPage(m_status_info_panel, _L("Status"), true);
     add_build_step([this] {
-        m_upgrade_panel = new UpgradePanel(m_tabpanel);
-        m_tabpanel->AddPage(m_upgrade_panel, _L_CONTEXT(L_CONTEXT("Update", "Firmware"), "Firmware"), false);
-    });
-    add_build_step([this] {
-        m_hms_panel = new HMSPanel(m_tabpanel);
-        m_tabpanel->AddPage(m_hms_panel, _L("Assistant(HMS)"), false);
-
         std::string network_ver = Slic3r::NetworkAgent::get_version();
         if (!network_ver.empty()) {
             m_tabpanel->SetFooterText(wxString::Format(_L("Network plug-in v%s"), network_ver));
@@ -232,7 +213,6 @@ wxWindow* MonitorPanel::create_side_tools()
 void MonitorPanel::on_sys_color_changed()
 {
     m_status_info_panel->on_sys_color_changed();
-    m_upgrade_panel->on_sys_color_changed();
 }
 
 void MonitorPanel::msw_rescale()
@@ -244,8 +224,6 @@ void MonitorPanel::msw_rescale()
     m_tabpanel->Rescale();
     //m_status_add_machine_panel->msw_rescale();
     m_status_info_panel->msw_rescale();
-    m_upgrade_panel->msw_rescale();
-    m_hms_panel->msw_rescale();
 
     Layout();
     Refresh();
@@ -271,10 +249,6 @@ void MonitorPanel::on_select_printer(wxCommandEvent& event)
 {
     Slic3r::DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
     if (!dev) return;
-
-    if ( dev->get_selected_machine() && (dev->get_selected_machine()->get_dev_id() != event.GetString().ToStdString()) && m_hms_panel) {
-        m_hms_panel->clear_hms_tag();
-    }
 
     if (!dev->set_selected_machine(event.GetString().ToStdString()))
         return;
@@ -340,8 +314,6 @@ void MonitorPanel::update_all()
 
     if (!obj) {
         show_status((int)MONITOR_NO_PRINTER);
-        m_hms_panel->clear_hms_tag();
-        m_tabpanel->GetBtnsListCtrl()->showNewTag(PT_HMS, false);
         if (m_status_info_panel->IsShown()) {
             m_status_info_panel->update(obj);
         }
@@ -375,34 +347,7 @@ void MonitorPanel::update_all()
             m_status_info_panel->obj = obj;
             m_status_info_panel->update(obj);
         }
-    } else if (current_page == m_upgrade_panel) {
-        m_upgrade_panel->update(obj);
     }
-
-    if (current_page == m_hms_panel || (obj->GetHMS()->GetHMSItems().size() != m_hms_panel->temp_hms_list.size())) {
-        m_hms_panel->update(obj);
-    }
-
-    update_hms_tag();
-}
-
-void MonitorPanel::update_hms_tag()
-{
-    for (auto hmsitem : m_hms_panel->temp_hms_list) {
-
-        if (!obj) { break;}
-
-        const wxString &msg = wxGetApp().get_hms_query()->query_hms_msg(obj->get_dev_id(), hmsitem.second.get_long_error_code());
-        if (msg.empty()){ continue;} /*STUDIO-10363 it's hidden message*/
-
-        if (!hmsitem.second.has_read()) {
-            //show HMS new tag
-            m_tabpanel->GetBtnsListCtrl()->showNewTag(PT_HMS, true);
-            return;
-        }
-    }
-
-    m_tabpanel->GetBtnsListCtrl()->showNewTag(PT_HMS, false);
 }
 
 bool MonitorPanel::Show(bool show)
@@ -460,8 +405,6 @@ void MonitorPanel::show_status(int status)
     // update panels
     if (m_side_tools) { m_side_tools->show_status(status); };
     m_status_info_panel->show_status(status);
-    m_hms_panel->show_status(status);
-    m_upgrade_panel->show_status(status);
 
     if ((status & (int)MonitorStatus::MONITOR_NO_PRINTER) != 0) {
         set_default();
@@ -489,35 +432,10 @@ std::string MonitorPanel::get_string_from_tab(PrinterTab tab)
     switch (tab) {
     case PT_STATUS :
         return "status";
-    case PT_UPDATE:
-        return "update";
-    case PT_HMS:
-        return "HMS";
-    case PT_DEBUG:
-        return "debug";
     default:
         return "";
     }
     return "";
-}
-
-void MonitorPanel::jump_to_HMS()
-{
-    if (!this->IsShown())
-        return;
-    auto page = m_tabpanel->GetCurrentPage();
-    if (page && page != m_hms_panel)
-        m_tabpanel->SetSelection(PT_HMS);
-}
-
-void MonitorPanel::jump_to_Upgrade()
-{
-    if (this->IsShown()) {
-        auto page = m_tabpanel->GetCurrentPage();
-        if (page && page != m_upgrade_panel) {
-            m_tabpanel->SetSelection(PT_UPDATE);
-        }
-    }
 }
 
 void MonitorPanel::jump_to_Rack()

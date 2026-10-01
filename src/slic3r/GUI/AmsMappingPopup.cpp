@@ -25,7 +25,6 @@
 #include <optional>
 #include "Plater.hpp"
 #include "BitmapCache.hpp"
-#include "BindDialog.hpp"
 #include "FilamentBitmapUtils.hpp"
 
 #include "DeviceCore/DevFilaSystem.h"

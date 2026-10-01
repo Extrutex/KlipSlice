@@ -23,7 +23,17 @@
 #include "DeviceCore/DevConfigUtil.h"
 #include "DeviceCore/DevFirmware.h"
 #include "DeviceCore/DevCalib.h" // Orca: adopt DeviceCore split (defines DevCalib, CalibStatus, ManualPaCaliMethod)
-#include "DeviceErrorDialog.hpp"
+
+// Formerly reached through the removed device error dialog header; GUI units still rely on them.
+#include <unordered_set>
+#include <atomic>
+#include <wx/statbmp.h>
+#include <wx/timer.h>
+#include <wx/webrequest.h>
+#include "GUI_Utils.hpp"
+#include "Widgets/StateColor.hpp"
+class Label;
+class Button;
 
 #include <wx/object.h>
 #include <wx/timer.h>
@@ -57,11 +67,6 @@
 
 using namespace nlohmann;
 namespace Slic3r {
-
-namespace GUI
-{
-class DeviceErrorDialog; // Previous definitions
-}
 
 class NetworkAgent;
 // Orca: ManualPaCaliMethod now provided by DeviceCore/DevCalib.h (enum class)
@@ -457,8 +462,7 @@ public:
     static std::string get_error_code_str(int error_code);
     std::string get_print_error_str() const { return MachineObject::get_error_code_str(this->print_error); }
 
-    std::unordered_set<GUI::DeviceErrorDialog*> m_command_error_code_dlgs;
-    void  add_command_error_code_dlg(int command_err, json action_json=json{});
+    void  report_command_error(int command_err);
 
     int     curr_layer = 0;
     int     total_layers = 0;

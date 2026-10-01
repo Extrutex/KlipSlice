@@ -121,7 +121,7 @@ void SendJob::process(Ctl &ctl)
     ctl.call_on_main_thread([this] { prepare(); }).wait();
     ctl.update_status(0, msg);
 
-    // In check mode (InputIpAddressDialog / lan-mode send) verify the connection with a dummy
+    // In check mode (lan-mode send) verify the connection with a dummy
     // "verify_job" upload and fire the caller's success/fail callback; when not continuing, stop
     // here. Cloud sends skip this.
     if (m_is_check_mode) {
