@@ -6,7 +6,6 @@
 #include "MonitorPage.hpp"
 #include "SliceInfoPanel.hpp"
 #include "GUI.hpp"
-#include "ThermalPreconditioningDialog.hpp"
 #include <wx/panel.h>
 #include <wx/bitmap.h>
 #include <wx/image.h>
@@ -15,12 +14,9 @@
 #include <wx/webrequest.h>
 #include <wx/webview.h>
 #include "AMSSetting.hpp"
-#include "Calibration.hpp"
 #include "CalibrationWizardPage.hpp"
 #include "PrintOptionsDialog.hpp"
-#include "SafetyOptionsDialog.hpp"
 #include "AMSMaterialsSetting.hpp"
-#include "ExtrusionCalibration.hpp"
 #include "ReleaseNote.hpp"
 #include "Widgets/SwitchButton.hpp"
 #include "Widgets/AxisCtrlButton.hpp"
@@ -51,7 +47,6 @@ namespace GUI {
 
 // Previous definitions
 class MessageDialog;
-class wgtDeviceNozzleRack;
 
 enum CameraRecordingStatus {
     RECORDING_NONE,
@@ -284,7 +279,6 @@ public:
 
 
 private:
-    MachineObject*  m_obj{nullptr};
     ScalableBitmap  m_thumbnail_placeholder;
     std::string     m_thumbnail_bmp_display_name;
     wxBitmap        m_thumbnail_bmp_display;
@@ -302,7 +296,6 @@ private:
     wxStaticText*   m_staticText_consumption_of_time;
     wxStaticText*   m_staticText_consumption_of_weight;
     wxStaticText*   m_printing_stage_value;
-    ScalableButton* m_question_button;
     wxStaticText*   m_staticText_profile_value;
     wxStaticText*   m_staticText_progress_percent;
     wxStaticText*   m_staticText_progress_percent_icon;
@@ -324,7 +317,6 @@ private:
     wxPanel *                     m_score_subtask_info;
     wxPanel *                     m_score_staticline;
     wxPanel *                     m_request_failed_panel;
-    wxPanel                      *m_printing_stage_underline;
     wxPanel                      *m_printing_stage_panel;
 
     // score page
@@ -351,10 +343,6 @@ public:
     void update_subtask_name(wxString name);
     void update_stage_value(wxString stage, int val);
     void update_stage_value_with_machine(wxString stage, int val, MachineObject* obj = nullptr);
-    void on_stage_clicked(wxMouseEvent& event);
-
-    // Public interface to update remaining time text in the thermal dialog
-    void update_thermal_remaining_time(MachineObject* obj);
     void update_progress_percent(wxString percent, wxString icon);
     void update_left_time(wxString time);
     void update_left_time(int mc_left_time);
@@ -522,15 +510,10 @@ protected:
     bool            m_show_ams_group{false};
     bool            m_show_filament_group{ false };
 
-    /* AMS control box <-> live nozzle-rack panel toggle (rack printers only) */
-    SwitchBoard*    m_ams_rack_switch{ nullptr };
-
     AMSControl*     m_ams_control;
     StaticBox*      m_ams_control_box;
     wxStaticBitmap *m_ams_extruder_img;
     wxStaticBitmap* m_bitmap_extruder_img;
-
-    wgtDeviceNozzleRack* m_panel_nozzle_rack{ nullptr };
 
     wxPanel *       m_panel_separator_right;
     wxPanel *       m_panel_separotor_bottom;
@@ -546,8 +529,6 @@ protected:
     wxStaticText*   m_calibration_text;
     Button*         m_parts_btn;
     Button*         m_options_btn;
-    Button*         m_safety_btn;
-    Button*         m_calibration_btn;
     StepIndicator*  m_calibration_flow;
 
     wxPanel *       m_machine_ctrl_panel;
@@ -618,11 +599,6 @@ public:
 	void           expand_filament_loading(wxMouseEvent &e);
     void           show_ams_group(bool show = true);
     void show_filament_load_group(bool show = true);
-
-    void jump_to_Rack();
-
-private:
-    void on_ams_rack_switch(wxCommandEvent& event);
 };
 
 
@@ -639,8 +615,6 @@ protected:
     AMSSetting *m_ams_setting_dlg{nullptr};
     PrinterPartsDialog*  print_parts_dlg { nullptr };
     PrintOptionsDialog*  print_options_dlg { nullptr };
-    SafetyOptionsDialog* safety_options_dlg { nullptr };
-    CalibrationDialog*   calibration_dlg {nullptr};
     AMSMaterialsSetting *m_filament_setting_dlg{nullptr};
 
     SecondaryCheckDialog* abort_dlg = nullptr;
@@ -648,8 +622,6 @@ protected:
     MessageDialog *       ctrl_e_hint_dlg             = nullptr;
 
     FanControlPopupNew* m_fan_control_popup{nullptr};
-
-    ExtrusionCalibration *m_extrusion_cali_dlg{nullptr};
 
     wxString     m_request_url;
     bool         m_start_loading_thumbnail = false;
@@ -727,7 +699,6 @@ protected:
     void on_ams_setting_click(SimpleEvent& event);
     void on_filament_edit(wxCommandEvent &event);
     void on_ext_spool_edit(wxCommandEvent &event);
-    void on_filament_extrusion_cali(wxCommandEvent &event);
     void on_ams_refresh_rfid(wxCommandEvent &event);
     void on_ams_selected(wxCommandEvent &event);
     void on_ams_guide(wxCommandEvent &event);
@@ -751,12 +722,6 @@ protected:
     void on_show_parts_options(wxCommandEvent& event);
     /* print options */
     void on_show_print_options(wxCommandEvent &event);
-    /* safety options */
-    void on_show_safety_options(wxCommandEvent &event);
-
-    /* calibration */
-    void on_start_calibration(wxCommandEvent &event);
-
 
     /* update apis */
     void update(MachineObject* obj);
@@ -770,12 +735,10 @@ protected:
     void update_temp_ctrl(MachineObject *obj);
     void update_misc_ctrl(MachineObject *obj);
     void update_ams(MachineObject* obj);
-    void update_rack(MachineObject* obj);
     void update_filament_loading_panel(MachineObject* obj);
 
     void update_extruder_status(MachineObject* obj);
     void update_ams_control_state(std::string ams_id, std::string slot_id);
-    void update_cali(MachineObject* obj);
     void update_calib_bitmap();
 
     void reset_printing_values();

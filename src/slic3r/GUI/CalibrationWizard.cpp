@@ -6,7 +6,6 @@
 #include "CalibrationWizardPage.hpp"
 #include "../../libslic3r/calib.hpp"
 #include "Tabbook.hpp"
-#include "CaliHistoryDialog.hpp"
 
 namespace Slic3r { namespace GUI {
 
@@ -557,9 +556,7 @@ void PressureAdvanceWizard::on_cali_action(wxCommandEvent& evt)
 {
     CaliPageActionType action = static_cast<CaliPageActionType>(evt.GetInt());
     if (action == CaliPageActionType::CALI_ACTION_MANAGE_RESULT) {
-        HistoryWindow history_dialog(this, m_calib_results_history, m_show_result_dialog);
-        history_dialog.on_device_connected(curr_obj);
-        history_dialog.ShowModal();
+        ;
     }
     else if (action == CaliPageActionType::CALI_ACTION_MANUAL_CALI) {
         preset_step->page->set_cali_filament_mode(CalibrationFilamentMode::CALI_MODEL_SINGLE);

@@ -338,10 +338,6 @@ SelectMachineDialog::SelectMachineDialog(Plater *plater)
     m_saveTimeText->SetForegroundColour(wxColour("#FF6F00"));
     m_saveTimeText->SetFont(::Label::Body_13);
     m_saveTimeText->Hide();
-    m_saveTimeText->Bind(wxEVT_LEFT_UP, &SelectMachineDialog::on_reselect_dialog_btn_clicked, this);
-    m_saveTimeText->Bind(wxEVT_ENTER_WINDOW, [this](wxMouseEvent&) { m_saveTimeText->SetCursor(wxCURSOR_HAND); });
-    m_saveTimeText->Bind(wxEVT_LEAVE_WINDOW, [this](wxMouseEvent&) { m_saveTimeText->SetCursor(wxCURSOR_DEFAULT); });
-    Bind(wxEVT_REFRESH_DATA, &SelectMachineDialog::update_best_pos_dialog, this);
 
     sizer_basic_right_info->Add(sizer_rename, 0, wxTOP, 0);
     sizer_basic_right_info->Add(0, 0, 0, wxTOP, FromDIP(5));
@@ -2146,7 +2142,7 @@ void SelectMachineDialog::refresh_save_time(MachineObject* obj)
     }
 
     if (save_time.has_value() && save_time.value() >= 1 && !is_all_at_suggest_pos) {
-        m_saveTimeText->SetLabel(wxString::Format(_L("Recommended filament arrangement saves %s->"), FormatTime(*save_time)));
+        m_saveTimeText->SetLabel(wxString::Format(_L("Recommended filament arrangement saves %s"), FormatTime(*save_time)));
         m_saveTimeText->Wrap(-1);
         m_saveTimeText->Show();
         m_basic_panel->Layout();
@@ -2154,56 +2150,6 @@ void SelectMachineDialog::refresh_save_time(MachineObject* obj)
     } else {
         m_saveTimeText->Hide();
     }
-}
-
-void SelectMachineDialog::on_reselect_dialog_btn_clicked(wxMouseEvent&)
-{
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__;
-    DeviceManager* dev = wxGetApp().getDeviceManager();
-    MachineObject* obj = dev ? dev->get_selected_machine() : nullptr;
-    if (!obj) return;
-    if (m_best_pos_dialog == nullptr)
-        m_best_pos_dialog = new ReselectMachineDialog(static_cast<wxWindow*>(this));
-
-    auto save_time = get_filament_change_gap_time(obj);
-    wxString text{};
-    if (save_time.has_value() && save_time.value() >= 1)
-        text = FormatTime(*save_time);
-
-    std::map<int, int> best_pos_map; // key: logic id, value: pos id
-    for (const auto& slot : m_ams_mapping_result) {
-        if (!is_at_suggested_pos(obj, slot.id)) {
-            auto pos = get_filament_suggest_pos(obj, slot.id);
-            if (pos.has_value())
-                best_pos_map[slot.id] = pos.value();
-        }
-    }
-    m_best_pos_dialog->UpdateInfo(obj, best_pos_map, m_ams_mapping_result, text);
-    m_best_pos_dialog->ShowModal();
-}
-
-void SelectMachineDialog::update_best_pos_dialog(wxCommandEvent& evt)
-{
-    if (!m_best_pos_dialog) return; // Orca: only relevant while the popup is open
-    DeviceManager* dev = wxGetApp().getDeviceManager();
-    MachineObject* obj_ = dev ? dev->get_selected_machine() : nullptr;
-    if (!obj_) return;
-    update_show_status(obj_);
-
-    auto save_time = get_filament_change_gap_time(obj_);
-    wxString text{};
-    if (save_time.has_value() && save_time.value() >= 1)
-        text = FormatTime(*save_time);
-
-    std::map<int, int> best_pos_map;
-    for (const auto& slot : m_ams_mapping_result) {
-        if (!is_at_suggested_pos(obj_, slot.id)) {
-            auto pos = get_filament_suggest_pos(obj_, slot.id);
-            if (pos.has_value())
-                best_pos_map[slot.id] = pos.value();
-        }
-    }
-    m_best_pos_dialog->UpdateInfo(obj_, best_pos_map, m_ams_mapping_result, text);
 }
 
 void SelectMachineDialog::show_status(PrintDialogStatus status, std::vector<wxString> params, wxString wiki_url)

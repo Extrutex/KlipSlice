@@ -438,20 +438,6 @@ std::string MonitorPanel::get_string_from_tab(PrinterTab tab)
     return "";
 }
 
-void MonitorPanel::jump_to_Rack()
-{
-    if (!this->IsShown()) {
-        return;
-    }
-
-    auto page = m_tabpanel->GetCurrentPage();
-    if (page && page != m_status_info_panel) {
-        m_tabpanel->SetSelection(PT_STATUS);
-    }
-
-    m_status_info_panel->jump_to_Rack();
-}
-
 void MonitorPanel::update_network_version_footer()
 {
     std::string binary_version = Slic3r::NetworkAgent::get_version();

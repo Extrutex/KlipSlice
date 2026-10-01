@@ -478,162 +478,6 @@ void ExtruderBadge::MarkRelatedItems(const NozzleOption& option)
     SetExtruderStatus(left_selected, right_selected);
 }
 
-HotEndTable::HotEndTable(wxWindow* parent) :  wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize,wxBORDER_NONE)
-{
-    Bind(wxEVT_PAINT, &HotEndTable::OnPaint, this);
-    auto main_sizer = new wxBoxSizer(wxVERTICAL);
-    auto label = new Label(this, _L("Induction Hotend Rack"));
-    label->SetBackgroundColour("#F8F8F8");
-
-    m_arow_nozzle_box = CreateNozzleBox({ 0,2,4 });
-    m_brow_nozzle_box = CreateNozzleBox({ 1,3,5 });
-    main_sizer->Add(label, 0, wxALIGN_CENTER_HORIZONTAL | wxTOP | wxBOTTOM, FromDIP(5));
-    main_sizer->Add(m_arow_nozzle_box, 0, wxLEFT | wxRIGHT, FromDIP(5));
-    main_sizer->Add(m_brow_nozzle_box, 0, wxLEFT | wxRIGHT, FromDIP(5));
-    SetBackgroundColour("#F8F8F8");
-
-    SetSizer(main_sizer);
-    Layout();
-    Fit();
-    wxGetApp().UpdateDarkUIWin(this);
-}
-
-void HotEndTable::UpdateRackInfo(std::weak_ptr<DevNozzleRack> rack)
-{
-    m_nozzle_rack = rack;
-    const auto& nozzle_rack = rack.lock();
-    if (nozzle_rack) {
-        UpdateNozzleItems(m_nozzle_items, nozzle_rack);
-    }
-}
-
-std::vector<int> HotEndTable::FilterHotEnds(const NozzleOption& option)
-{
-    auto rack = m_nozzle_rack.lock();
-    if (!rack)
-        return {};
-
-    std::vector<HotEndAttr> nozzles_to_search;
-
-    for (auto& item : option.extruder_nozzle_stats) {
-        for (auto& nozzle : item.second) {
-            HotEndAttr info;
-            info.diameter = option.diameter;
-            info.extruder_id = item.first;
-            info.volume_type = nozzle.first;
-            nozzles_to_search.emplace_back(info);
-        }
-    }
-
-    std::vector<int> filtered_nozzles;
-
-    for (auto& info : nozzles_to_search) {
-
-        float diameter = atof(info.diameter.c_str());
-        NozzleFlowType flow = DevNozzle::ToNozzleFlowType(info.volume_type);
-        int extruder_id = 1 - info.extruder_id; //physical
-
-        auto nozzles = rack->GetNozzleSystem()->CollectNozzles(extruder_id, flow, diameter);
-
-        for (auto& nozzle : nozzles) {
-            if (nozzle.IsOnRack())
-                filtered_nozzles.emplace_back(nozzle.GetNozzleId());
-        }
-    }
-
-    return filtered_nozzles;
-}
-
-void HotEndTable::MarkRelatedItems(const NozzleOption& option)
-{
-    const static StateColor bg_green(
-        std::pair<wxColour, int>(wxColour("#E5F0EE"), StateColor::Normal)
-    );
-
-    const static StateColor bd_green(
-        std::pair<wxColour, int>(wxColour("#009688"), StateColor::Normal)
-    );
-    auto filtered_nozzles = FilterHotEnds(option);
-    for (auto nozzle_id : filtered_nozzles) {
-        auto iter = m_nozzle_items.find(nozzle_id);
-        if (iter == m_nozzle_items.end())
-            continue;
-        auto& item = iter->second;
-        item->SetBackgroundColor(bg_green);
-        item->SetBorderColor(bd_green);
-        for (auto child : item->GetChildren()) {
-            child->SetBackgroundColour("#E5F0EE");
-        }
-    }
-    wxGetApp().UpdateDarkUIWin(this);
-}
-
-void HotEndTable::UnMarkRelatedItems(const NozzleOption& option)
-{
-    static const wxColour bg_color("#EEEEEE");
-    static const wxColour bd_color("#CECECE");
-    const static StateColor bg_green(
-        std::pair<wxColour, int>(bg_color, StateColor::Normal)
-    );
-
-    const static StateColor bd_green(
-        std::pair<wxColour, int>(bd_color, StateColor::Normal)
-    );
-    auto filtered_nozzles = FilterHotEnds(option);
-    for (auto nozzle_id : filtered_nozzles) {
-        auto iter = m_nozzle_items.find(nozzle_id);
-        if (iter == m_nozzle_items.end())
-            continue;
-        auto& item = iter->second;
-        item->SetBackgroundColor(bg_green);
-        item->SetBorderColor(bd_green);
-        for (auto child : item->GetChildren()) {
-            child->SetBackgroundColour(bg_color);
-        }
-    }
-    wxGetApp().UpdateDarkUIWin(this);
-}
-
-
-
-StaticBox* HotEndTable::CreateNozzleBox(const std::vector<int>& nozzle_indices)
-{
-    StaticBox* nozzle_box = new StaticBox(this);
-    nozzle_box->SetBackgroundColour("#F8F8F8");
-    nozzle_box->SetBorderColorNormal("#F8F8F8");
-    nozzle_box->SetCornerRadius(0);
-
-    wxSizer* h_sizer = new wxBoxSizer(wxHORIZONTAL);
-    for (auto idx : nozzle_indices) {
-        wgtDeviceNozzleRackNozzleItem* nozzle_item = new wgtDeviceNozzleRackNozzleItem(nozzle_box, idx);
-        nozzle_item->SetBackgroundColorNormal("#EEEEEE");
-        for (auto& child : nozzle_item->GetChildren())
-            child->SetBackgroundColour("#EEEEEE");
-        m_nozzle_items[idx] = nozzle_item;
-        h_sizer->Add(nozzle_item, 0, wxALL, FromDIP(8));
-    }
-
-    nozzle_box->SetSizer(h_sizer);
-
-    return nozzle_box;
-}
-
-void HotEndTable::UpdateNozzleItems(const std::unordered_map<int, wgtDeviceNozzleRackNozzleItem*>& nozzle_items, std::shared_ptr<DevNozzleRack> nozzle_rack)
-{
-    for (auto& item : nozzle_items)
-        item.second->UpdateInfo(nozzle_rack);
-}
-
-void HotEndTable::OnPaint(wxPaintEvent& evt)
-{
-    wxPaintDC dc(this);
-    wxSize size = GetClientSize();
-
-    dc.SetPen(wxPen(wxColour("#EEEEEE"), 2));
-    dc.SetBrush(*wxTRANSPARENT_BRUSH);
-    dc.DrawRoundedRectangle(0, 0, size.GetWidth()-2, size.GetHeight()-2, 5);
-}
-
 NozzleListTable::NozzleListTable(wxWindow* parent) : wxPanel(parent,wxID_ANY,wxDefaultPosition,wxDefaultSize ,wxNO_BORDER)
 {
     m_web_view = wxWebView::New(this, wxID_ANY, wxEmptyString, wxDefaultPosition,wxDefaultSize,wxString::FromAscii(wxWebViewBackendDefault),wxNO_BORDER);
@@ -795,10 +639,7 @@ MultiNozzleStatusTable::MultiNozzleStatusTable(wxWindow* parent): wxPanel(parent
 
     wxSizer* nozzle_area_sizer = new wxBoxSizer(wxHORIZONTAL);
 
-    m_table = new HotEndTable(this);
-
     nozzle_area_sizer->Add(m_badge, 0, wxLEFT | wxRIGHT, FromDIP(20));
-    nozzle_area_sizer->Add(m_table, 0, wxRIGHT, FromDIP(10));
 
     main_sizer->Add(nozzle_area_sizer);
     main_sizer->AddSpacer(FromDIP(5));
@@ -811,22 +652,16 @@ MultiNozzleStatusTable::MultiNozzleStatusTable(wxWindow* parent): wxPanel(parent
 
 void MultiNozzleStatusTable::MarkRelatedItems(const NozzleOption& option)
 {
-    m_table->MarkRelatedItems(option);
-
     m_badge->MarkRelatedItems(option);
 }
 
 void MultiNozzleStatusTable::UnMarkRelatedItems(const NozzleOption& option)
 {
-    m_table->UnMarkRelatedItems(option);
-
     m_badge->UnMarkRelatedItems(option);
 }
 
 void MultiNozzleStatusTable::UpdateRackInfo(std::weak_ptr<DevNozzleRack> rack)
 {
-    if (m_table)
-        m_table->UpdateRackInfo(rack);
     if (m_badge) {
         auto nozzle_rack = rack.lock();
         if (!nozzle_rack)

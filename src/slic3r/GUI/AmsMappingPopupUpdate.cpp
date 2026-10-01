@@ -34,9 +34,7 @@
 #include "DeviceCore/DevFilaSystem.h"
 #include "DeviceCore/DevFilaSwitch.h"
 #include "DeviceCore/DevMappingNozzle.h"
-#include "DeviceCore/DevNozzleRack.h" // Orca: full type for GetNozzleSystem()->GetNozzleRack()->IsSupported()
 
-#include "DeviceTab/wgtDeviceNozzleSelect.h"
 #include "DeviceTab/wgtMsgPanel.h"
 
 namespace Slic3r::GUI {
@@ -86,8 +84,6 @@ void AmsMapingPopup::update(MachineObject* obj,
     update_ams_tips(obj);
     update_mapping_items(obj, ams_mapping_result, use_dynamic_switch);
 
-    /*rack*/
-    update_rack_select(obj, use_dynamic_switch, print_type);
     update_flush_waste(obj);
 
     if (wxGetApp().dark_mode() && m_reset_btn->GetName() != "erase_dark") {
@@ -497,29 +493,6 @@ void AmsMapingPopup::update_ams_tips(MachineObject* obj)
         m_ams_tips_msg_panel->Layout();
         m_ams_tips_msg_panel->Fit();
         m_ams_tips_msg_panel->Show(m_ams_tips_msg_panel->GetMessageCount() > 0);
-    }
-}
-
-void AmsMapingPopup::update_rack_select(MachineObject* obj, bool use_dynamic_switch, std::optional<PrintFromType> print_from_type)
-{
-    // Orca: MachineObject has no GetNozzleRack() convenience; route through the nozzle system instead.
-    m_rack = obj ? obj->GetNozzleSystem()->GetNozzleRack() : nullptr;
-
-    bool show_rack_select_area = false;
-    if (!m_mapping_from_multi_machines && !m_use_in_sync_dialog &&
-        obj && obj->GetNozzleSystem()->GetNozzleRack()->IsSupported() &&
-        print_from_type.has_value() && print_from_type.value() == PrintFromType::FROM_NORMAL) {
-        const auto& nozzle_pos_vec = obj->get_nozzle_mapping_result()->GetMappedNozzlePosVecByFilaId(m_current_filament_id);
-        m_rack_nozzle_select->UpdatSelectedNozzles(obj->GetNozzleSystem()->GetNozzleRack(), nozzle_pos_vec, use_dynamic_switch, print_from_type);
-        show_rack_select_area = true;
-    }
-
-    if (show_rack_select_area != m_rack_nozzle_select->IsShown()) {
-        m_right_tip_text = show_rack_select_area ? _L("Select Filament && Hotends") : _L("Select Filament");
-        m_right_tips->SetLabel(m_right_tip_text);
-        m_rack_nozzle_select->Show(show_rack_select_area);
-        Layout();
-        Fit();
     }
 }
 

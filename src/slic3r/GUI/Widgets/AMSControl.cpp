@@ -5,7 +5,6 @@
 #include "../GUI_App.hpp"
 
 #include "slic3r/GUI/MsgDialog.hpp"
-#include "slic3r/GUI/DeviceTab/uiAmsHumidityPopup.h"
 
 #include "slic3r/GUI/DeviceCore/DevManager.h"
 #include "slic3r/GUI/DeviceCore/DevFilaSystem.h"
@@ -29,9 +28,7 @@ namespace Slic3r { namespace GUI {
 AMSControl::AMSControl(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size)
     : wxSimplebook(parent, wxID_ANY, pos, size)
     , m_Humidity_tip_popup(AmsHumidityTipPopup(this))
-    , m_percent_humidity_dry_popup(new uiAmsPercentHumidityDryPopup(this))
     , m_ams_introduce_popup(AmsIntroducePopup(this))
-    , m_ams_dry_ctr_win(new AMSDryCtrWin(this))
 {
     Slic3r::DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
     if (dev) {
@@ -253,38 +250,16 @@ AMSControl::AMSControl(wxWindow *parent, wxWindowID id, const wxPoint &pos, cons
 
     Bind(EVT_AMS_SHOW_HUMIDITY_TIPS, [this](wxCommandEvent& evt) {
         uiAmsHumidityInfo *info    = (uiAmsHumidityInfo *) evt.GetClientData();
+        // Every AMS type shows the generic humidity tip; the Bambu drying popups are gone.
         if (info)
         {
-            Slic3r::DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
-            MachineObject *obj = nullptr;
-            if (dev) {
-                obj = dev->get_selected_machine();
-            }
+            wxPoint img_pos = ClientToScreen(wxPoint(0, 0));
+            wxPoint popup_pos(img_pos.x - m_Humidity_tip_popup.GetSize().GetWidth() + FromDIP(150), img_pos.y - FromDIP(80));
+            m_Humidity_tip_popup.Position(popup_pos, wxSize(0, 0));
 
-            if (info->ams_type == AMSModel::GENERIC_AMS)
-            {
-                wxPoint img_pos = ClientToScreen(wxPoint(0, 0));
-                wxPoint popup_pos(img_pos.x - m_Humidity_tip_popup.GetSize().GetWidth() + FromDIP(150), img_pos.y - FromDIP(80));
-                m_Humidity_tip_popup.Position(popup_pos, wxSize(0, 0));
-
-                int humidity_value = info->humidity_display_idx;
-                if (humidity_value > 0 && humidity_value <= 5) { m_Humidity_tip_popup.set_humidity_level(humidity_value); }
-                m_Humidity_tip_popup.Popup();
-            } else if (obj && obj->is_support_remote_dry && (info->ams_type == AMSModel::N3F_AMS || info->ams_type == AMSModel::N3S_AMS)){
-                m_ams_dry_ctr_win->set_ams_id(info->ams_id);
-
-                wxPoint img_pos = ClientToScreen(wxPoint(0, 0));
-                wxPoint popup_pos(img_pos.x - m_ams_dry_ctr_win->GetSize().GetWidth() + FromDIP(150), img_pos.y - FromDIP(80));
-                m_ams_dry_ctr_win->Move(popup_pos);
-                m_ams_dry_ctr_win->ShowModal();
-            } else {
-                m_percent_humidity_dry_popup->UpdateInfo(info);
-
-                wxPoint img_pos = ClientToScreen(wxPoint(0, 0));
-                wxPoint popup_pos(img_pos.x - m_percent_humidity_dry_popup->GetSize().GetWidth() + FromDIP(150), img_pos.y - FromDIP(80));
-                m_percent_humidity_dry_popup->Move(popup_pos);
-                m_percent_humidity_dry_popup->ShowModal();
-            }
+            int humidity_value = info->humidity_display_idx;
+            if (humidity_value > 0 && humidity_value <= 5) { m_Humidity_tip_popup.set_humidity_level(humidity_value); }
+            m_Humidity_tip_popup.Popup();
         }
 
         delete info;
@@ -299,9 +274,6 @@ void AMSControl::on_retry()
 
 AMSControl::~AMSControl()
 {
-    if (m_ams_dry_ctr_win) {
-        delete m_ams_dry_ctr_win;
-    }
 }
 
 std::string AMSControl::GetCurentAms() {
@@ -515,14 +487,6 @@ void AMSControl::msw_rescale()
     }
     if (m_down_road){
         m_down_road->msw_rescale();
-    }
-
-    if (m_percent_humidity_dry_popup){
-        m_percent_humidity_dry_popup->msw_rescale();
-    }
-
-    if (m_ams_dry_ctr_win) {
-        m_ams_dry_ctr_win->msw_rescale();
     }
 
     m_Humidity_tip_popup.msw_rescale();
@@ -850,27 +814,6 @@ void AMSControl::show_vams_kn_value(bool show)
     //m_vams_lib->show_kn_value(show);
 }
 
-void AMSControl::UpdateAmsDryControl(MachineObject* obj)
-{
-    if (!m_ams_dry_ctr_win->IsShown()) {
-        return;
-    }
-
-    if (!obj || !obj->GetFilaSystem()) {
-        m_ams_dry_ctr_win->Close();
-        return;
-    }
-
-    std::weak_ptr<DevFilaSystem> weak_fila_system = obj->GetFilaSystem();
-
-    if (auto locaked_fila_system = weak_fila_system.lock()) {
-        m_ams_dry_ctr_win->update(locaked_fila_system, obj);
-    } else {
-        m_ams_dry_ctr_win->Close();
-        return;
-    }
-}
-
 std::vector<AMSinfo> AMSControl::GenerateSimulateData() {
     auto caninfo0_0 = Caninfo{ "0", (""), *wxRED, AMSCanType::AMS_CAN_TYPE_VIRTUAL };
     auto caninfo0_1 = Caninfo{ "1", (""), *wxGREEN, AMSCanType::AMS_CAN_TYPE_VIRTUAL };
@@ -1016,26 +959,6 @@ void AMSControl::UpdateAms(const std::string   &series_name,
             auto item = m_ams_item_list.find(id);
             if (item != m_ams_item_list.end())
             { ams_prv.second->UpdateInfo(item->second->get_ams_info());
-            }
-        }
-    }
-
-    /*update humidity popup*/
-    if (m_percent_humidity_dry_popup->IsShown())
-    {
-        string target_id = m_percent_humidity_dry_popup->get_owner_ams_id();
-        for (const auto& the_info : ams_info)
-        {
-            if (target_id == the_info.ams_id)
-            {
-                uiAmsHumidityInfo humidity_info;
-                humidity_info.ams_id = the_info.ams_id;
-                humidity_info.humidity_display_idx = the_info.get_humidity_display_idx();
-                humidity_info.humidity_percent = the_info.humidity_raw;
-                humidity_info.left_dry_time = the_info.left_dray_time;
-                humidity_info.current_temperature = the_info.current_temperature;
-                m_percent_humidity_dry_popup->UpdateInfo(&humidity_info);
-                break;
             }
         }
     }

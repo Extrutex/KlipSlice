@@ -8,9 +8,9 @@
 //    user declare, per extruder, how many physical nozzles of each volume type a multi-nozzle (H2C)
 //    extruder carries. Persisted into the printer preset's `extruder_nozzle_stats` config key, which the
 //    multi-nozzle slicer already consumes (ToolOrdering::build_multi_nozzle_group_result).
-//  - The DEVICE-SYNC surface (MultiNozzleSyncDialog / HotEndTable / NozzleListTable /
-//    tryPopUpMultiNozzleDialog): reads the live nozzle rack from the connected machine via
-//    DevNozzleRack / wgtDeviceNozzleRackNozzleItem and lets the user pick a nozzle option to slice with.
+//  - The DEVICE-SYNC surface (MultiNozzleSyncDialog / NozzleListTable / tryPopUpMultiNozzleDialog):
+//    reads the live nozzle rack from the connected machine via DevNozzleRack and lets the user pick a
+//    nozzle option to slice with.
 //    Popped from the sidebar "sync machine" button when the selected printer is an H2C.
 //
 // Everything here is inert for existing printers: the manual entry points are gated on the printer having
@@ -21,7 +21,6 @@
 #include "libslic3r/PrintConfig.hpp"
 #include "libslic3r/MultiNozzleUtils.hpp"
 #include "slic3r/GUI/DeviceCore/DevNozzleRack.h"
-#include "slic3r/GUI/DeviceTab/wgtDeviceNozzleRack.h"
 
 #include <wx/panel.h>
 #include <wx/webview.h>
@@ -102,35 +101,6 @@ private:
     std::vector<NozzleVolumeType> m_volume_type_list;
 };
 
-class HotEndTable : public wxPanel
-{
-public:
-    HotEndTable(wxWindow* parent);
-    void UpdateRackInfo(std::weak_ptr<DevNozzleRack> rack);
-    void MarkRelatedItems(const NozzleOption& option);
-    void UnMarkRelatedItems(const NozzleOption& option);
-private:
-    StaticBox* CreateNozzleBox(const std::vector<int>& nozzle_indices);
-    void UpdateNozzleItems(const std::unordered_map<int, wgtDeviceNozzleRackNozzleItem*>& nozzle_items,
-        std::shared_ptr<DevNozzleRack> nozzle_rack);
-
-private:
-    struct HotEndAttr {
-        std::string diameter;
-        int extruder_id;
-        NozzleVolumeType volume_type;
-    };
-
-    std::vector<int> FilterHotEnds(const NozzleOption& option);
-
-private:
-    StaticBox* m_arow_nozzle_box{ nullptr };
-    StaticBox* m_brow_nozzle_box{ nullptr };
-    std::unordered_map<int, wgtDeviceNozzleRackNozzleItem*> m_nozzle_items;
-    std::weak_ptr<DevNozzleRack> m_nozzle_rack;
-    void OnPaint(wxPaintEvent& event);
-};
-
 
 wxDECLARE_EVENT(EVT_NOZZLE_SELECTED, wxCommandEvent);
 
@@ -161,7 +131,6 @@ public:
     void UnMarkRelatedItems(const NozzleOption& option);
 private:
     ExtruderBadge* m_badge;
-    HotEndTable* m_table;
 };
 
 

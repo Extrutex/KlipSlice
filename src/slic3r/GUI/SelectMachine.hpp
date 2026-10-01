@@ -45,7 +45,6 @@
 #include "Widgets/ScrolledWindow.hpp"
 #include "Widgets/PopupWindow.hpp"
 #include "Widgets/HyperLink.hpp" // ORCA
-#include "DeviceTab/uiAMSBestPositionPopup.hpp"  // AMS best-position popup
 #include "DeviceCore/DevFilaSwitch.h"            // Orca: DevFilaSwitch::SwitchPos for best-position helpers
 #include <optional>
 #include <wx/simplebook.h>
@@ -399,7 +398,7 @@ protected:
     wxStaticText*                       m_rename_text{nullptr};
     Label*                              m_stext_time{ nullptr };
     Label*                              m_stext_weight{ nullptr };
-    Label*                              m_saveTimeText{ nullptr }; // best-position "saves X" clickable tip
+    Label*                              m_saveTimeText{ nullptr }; // best-position "saves X" tip
     PrinterMsgPanel *                   m_statictext_ams_msg{nullptr};
     Label*                              m_txt_change_filament_times{ nullptr };
     CheckBox*                           m_check_ext_change_assist{ nullptr };
@@ -446,7 +445,6 @@ protected:
     wxGridSizer*                        m_sizer_ams_mapping_right{ nullptr };
 
     PrePrintChecker                     m_pre_print_checker;
-    ReselectMachineDialog*              m_best_pos_dialog{ nullptr }; // AMS best-position popup
 
 public:
     static std::vector<wxString> MACHINE_BED_TYPE_STRING;
@@ -563,10 +561,7 @@ public:
     // Recommends switching nozzle clumping detection to Auto when the file has stringing-prone
     // filament and the printer isn't in Auto.
     bool CheckWarningSmartNozzleBlobAuto(MachineObject* obj_);
-    // AMS best-switch-position popup: suggests the filament arrangement that minimizes
-    // filament-change time on filament-switcher printers; no-op for printers without a switcher.
-    void on_reselect_dialog_btn_clicked(wxMouseEvent&);
-    void update_best_pos_dialog(wxCommandEvent& evt);
+    // "Recommended arrangement saves X" tip for filament-switcher printers; no-op without a switcher.
     void refresh_save_time(MachineObject* obj);
     std::optional<float> get_filament_change_gap_time(MachineObject* obj_) const;
     std::map<int, DevFilaSwitch::SwitchPos> get_filament_suggest_pos(MachineObject* obj_) const;

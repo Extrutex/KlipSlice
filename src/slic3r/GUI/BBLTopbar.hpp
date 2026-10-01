@@ -3,11 +3,11 @@
 #include "wx/wxprec.h"
 #include "wx/aui/auibar.h"
 
-#include "SelectMachine.hpp"
-#include "DeviceManager.hpp"
-
 #include <wx/control.h>
+#include <wx/frame.h>
+#include <wx/menu.h>
 
+namespace Slic3r { namespace GUI {} }
 using namespace Slic3r::GUI;
 
 class CenteredTitle : public wxControl

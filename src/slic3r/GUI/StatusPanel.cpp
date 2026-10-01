@@ -34,15 +34,13 @@
 #include "DeviceCore/DevConfig.h"
 #include "DeviceCore/DevManager.h"
 #include "DeviceCore/DevPrintTaskInfo.h"
+#include "DeviceCore/DevNozzleRack.h"
 
-#include "DeviceTab/wgtDeviceNozzleRack.h"
 
 
 
 #include "PrintOptionsDialog.hpp"
-#include "SafetyOptionsDialog.hpp"
 
-#include "ThermalPreconditioningDialog.hpp"
 
 
 namespace Slic3r { namespace GUI {
@@ -568,7 +566,6 @@ PrintingTaskPanel::PrintingTaskPanel(wxWindow* parent, PrintingTaskType type)
     : wxPanel(parent, wxID_ANY,wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL)
 {
     m_type = type;
-    m_question_button = nullptr;
     create_panel(this);
     SetBackgroundColour(*wxWHITE);
     m_bitmap_background = ScalableBitmap(this, "thumbnail_grid", m_bitmap_thumbnail->GetSize().y);
@@ -578,10 +575,6 @@ PrintingTaskPanel::PrintingTaskPanel(wxWindow* parent, PrintingTaskType type)
 
 PrintingTaskPanel::~PrintingTaskPanel()
 {
-    if (m_question_button) {
-        delete m_question_button;
-        m_question_button = nullptr;
-    }
 }
 
 void PrintingTaskPanel::create_panel(wxWindow* parent)
@@ -768,12 +761,6 @@ void PrintingTaskPanel::create_panel(wxWindow* parent)
     wxBoxSizer *printingstage_vertical_sizer = new wxBoxSizer(wxVERTICAL);
     wxBoxSizer *printingstage_horizontal_sizer = new wxBoxSizer(wxHORIZONTAL);
 
-    m_printing_stage_underline = new wxPanel(m_printing_stage_panel);
-    m_printing_stage_underline->SetMaxSize(wxSize(-1, FromDIP(1)));
-    m_printing_stage_underline->SetMinSize(wxSize(-1, FromDIP(1)));
-    m_printing_stage_underline->SetBackgroundColour(wxColour(146, 146, 146));
-    m_printing_stage_underline->Hide();
-
     m_printing_stage_value = new wxStaticText(m_printing_stage_panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxALIGN_LEFT | wxST_ELLIPSIZE_END);
     m_printing_stage_value->Wrap(-1);
     m_printing_stage_value->SetMaxSize(wxSize(FromDIP(800), -1));
@@ -784,68 +771,12 @@ void PrintingTaskPanel::create_panel(wxWindow* parent)
 #endif
     m_printing_stage_value->SetForegroundColour(STAGE_TEXT_COL);
 
-    m_printing_stage_value->Bind(wxEVT_LEFT_UP, &PrintingTaskPanel::on_stage_clicked, this);
-
-    m_printing_stage_value->Bind(wxEVT_ENTER_WINDOW, [this](wxMouseEvent &event) {
-        auto *dev_manager = wxGetApp().getDeviceManager();
-        MachineObject *obj         = dev_manager ? dev_manager->get_selected_machine() : nullptr;
-        if (obj && obj->stage_curr == 58) {
-            m_printing_stage_value->SetCursor(wxCursor(wxCURSOR_HAND));
-            m_printing_stage_underline->Show();
-        } else {
-            m_printing_stage_value->SetCursor(wxCursor(wxCURSOR_ARROW));
-            m_printing_stage_underline->Hide();
-        }
-        m_printing_stage_panel->Layout();
-        Layout();
-        event.Skip();
-    });
-    m_printing_stage_value->Bind(wxEVT_LEAVE_WINDOW, [this](wxMouseEvent &event) {
-        auto *dev_manager = wxGetApp().getDeviceManager();
-        MachineObject *obj = dev_manager ? dev_manager->get_selected_machine() : nullptr;
-        if (obj && obj->stage_curr == 58) {
-            m_printing_stage_value->SetCursor(wxCURSOR_ARROW);
-            m_printing_stage_underline->Hide();
-        }
-        m_printing_stage_panel->Layout();
-        Layout();
-        event.Skip();
-    });
-
     // penel_text->SetMaxSize(wxSize(FromDIP(600), -1));
     penel_text->SetSizer(bSizer_text);
     penel_text->Layout();
 
-
-    // Create question button
-    m_question_button = new ScalableButton(m_printing_stage_panel, wxID_ANY, "thermal_question", wxEmptyString, wxDefaultSize, wxDefaultPosition, wxBU_EXACTFIT | wxNO_BORDER, true);
-    m_question_button->SetToolTip(_L("Click to view thermal preconditioning explanation"));
-    m_question_button->SetBackgroundColour(wxColour(255, 255, 255));
-    m_question_button->Hide(); // Hide by default
-    m_question_button->Bind(wxEVT_LEFT_UP, &PrintingTaskPanel::on_stage_clicked, this);
-    m_question_button->Bind(wxEVT_ENTER_WINDOW, [this](wxMouseEvent &event) {
-        auto          *dev_manager = wxGetApp().getDeviceManager();
-        MachineObject *obj         = dev_manager ? dev_manager->get_selected_machine() : nullptr;
-        if (obj && obj->stage_curr == 58) {
-            m_question_button->SetCursor(wxCursor(wxCURSOR_HAND));
-            m_printing_stage_underline->Show();
-        }
-        event.Skip();
-    });
-    m_question_button->Bind(wxEVT_LEAVE_WINDOW, [this](wxMouseEvent &event) {
-        auto          *dev_manager = wxGetApp().getDeviceManager();
-        MachineObject *obj         = dev_manager ? dev_manager->get_selected_machine() : nullptr;
-        if (obj && obj->stage_curr == 58) {
-            m_question_button->SetCursor(wxCURSOR_ARROW);
-            m_printing_stage_underline->Hide();
-            event.Skip();
-        }
-    });
-
     printingstage_horizontal_sizer->Add(m_printing_stage_value, 0, wxALIGN_LEFT | wxALIGN_CENTER_VERTICAL, 0);
-    printingstage_horizontal_sizer->Add(m_question_button, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, FromDIP(5));
     printingstage_vertical_sizer->Add(printingstage_horizontal_sizer, 0, wxALIGN_CENTER_VERTICAL, 0);
-    printingstage_vertical_sizer->Add(m_printing_stage_underline, 0, wxEXPAND, 0);
     m_printing_stage_panel->SetSizer(printingstage_vertical_sizer);
 
     // Orca: display the end time of the print
@@ -1161,29 +1092,8 @@ void PrintingTaskPanel::update_stage_value_with_machine(wxString stage, int val,
 {
     m_gauge_progress->SetValue(val);
     m_printing_stage_value->SetLabelText(stage);
-
-    if (obj && obj->stage_curr == 58) {
-        m_question_button->Show(); // Show question button
-    } else {
-        m_question_button->Hide(); // Hide question button
-        m_printing_stage_underline->Hide();
-    }
     m_printing_stage_panel->Layout();
     Layout();
-}
-
-void PrintingTaskPanel::on_stage_clicked(wxMouseEvent &event)
-{
-    auto *dev_manager = wxGetApp().getDeviceManager();
-    MachineObject *obj = dev_manager ? dev_manager->get_selected_machine() : nullptr;
-
-    if (obj && obj->stage_curr == 58) {
-            wxWindow *top    = wxGetTopLevelParent(this);
-            ThermalPreconditioningDialog m_thermal_dialog(top ? top : this, obj->get_dev_id() , "Calculating...");
-            m_thermal_dialog.ShowModal();
-    }
-
-    event.Skip();
 }
 
 void PrintingTaskPanel::update_progress_percent(wxString percent, wxString icon)
@@ -1630,23 +1540,13 @@ wxBoxSizer *StatusBasePanel::create_machine_control_page(wxWindow *parent)
 
     m_options_btn = new Button(m_panel_control_title, _L("Print Options"));
     m_options_btn->SetStyle(ButtonStyle::Confirm, ButtonType::Window);
-  
-    m_safety_btn = new Button(m_panel_control_title, _L("Safety Options"));
-    m_safety_btn->SetStyle(ButtonStyle::Confirm, ButtonType::Window);
 
-    m_calibration_btn = new Button(m_panel_control_title, _L("Calibration"));
-    m_calibration_btn->SetStyle(ButtonStyle::Confirm, ButtonType::Window);
-    m_calibration_btn->EnableTooltipEvenDisabled();
-  
     m_options_btn->Hide();
-    m_safety_btn->Hide();
 
     bSizer_control_title->Add(m_staticText_control, 1, wxALIGN_CENTER_VERTICAL | wxLEFT, PAGE_TITLE_LEFT_MARGIN);
     bSizer_control_title->Add(0, 0, 1, wxEXPAND, 0);
     bSizer_control_title->Add(m_parts_btn, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(10));
     bSizer_control_title->Add(m_options_btn, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(10));
-    bSizer_control_title->Add(m_safety_btn, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(10));
-    bSizer_control_title->Add(m_calibration_btn, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(10));
 
     m_panel_control_title->SetSizer(bSizer_control_title);
     m_panel_control_title->Layout();
@@ -1658,7 +1558,7 @@ wxBoxSizer *StatusBasePanel::create_machine_control_page(wxWindow *parent)
     // The slot sizers keep each group's place in bSizer_control.
     wxBoxSizer *temp_axis_slot = new wxBoxSizer(wxVERTICAL);
     wxBoxSizer *filament_slot  = new wxBoxSizer(wxVERTICAL);
-    /* ams control box or live nozzle-rack panel (rack printers switch between the two) */
+    /* ams control box */
     wxSizer *ams_rack_sizer = new wxBoxSizer(wxHORIZONTAL);
 
     add_build_step([this, parent, temp_axis_slot, filament_slot] {
@@ -1668,20 +1568,9 @@ wxBoxSizer *StatusBasePanel::create_machine_control_page(wxWindow *parent)
     add_build_step([this, parent, ams_rack_sizer] {
         ams_rack_sizer->Add(create_ams_group(parent), 0, wxEXPAND | wxLEFT);
     });
-    add_build_step([this, parent, ams_rack_sizer] {
-        m_panel_nozzle_rack = new wgtDeviceNozzleRack(parent);
-        m_panel_nozzle_rack->Show(false);
-        ams_rack_sizer->Add(m_panel_nozzle_rack, 0, wxEXPAND | wxLEFT);
-    });
-
-    m_ams_rack_switch = new SwitchBoard(parent, _L("Filament"), _L("Hotends"), wxSize(FromDIP(126), FromDIP(26)));
-    m_ams_rack_switch->updateState("left");
-    m_ams_rack_switch->Hide();
-    m_ams_rack_switch->Bind(wxCUSTOMEVT_SWITCH_POS, &StatusBasePanel::on_ams_rack_switch, this);
 
     bSizer_control->Add(0, 0, 0, wxTOP, FromDIP(8));
     bSizer_control->Add(temp_axis_slot,         0, wxALIGN_CENTER|wxLEFT|wxRIGHT, FromDIP(8));
-    bSizer_control->Add(m_ams_rack_switch,      0, wxALIGN_CENTRE|wxTOP, FromDIP(6));
     bSizer_control->Add(0, 0, 0, wxTOP, FromDIP(6));
     bSizer_control->Add(ams_rack_sizer,         0, wxALIGN_CENTER|wxLEFT|wxRIGHT, FromDIP(8));
     bSizer_control->Add(0, 0, 0, wxTOP, FromDIP(6));
@@ -2295,10 +2184,6 @@ void StatusBasePanel::show_ams_group(bool show)
             monitor->Layout();
     }
 
-    // On rack printers, don't clobber the rack view when the user has the switch on "Hotends".
-    // Inert for every non-rack printer: the switch stays hidden, so this guard never triggers.
-    if (show && m_ams_rack_switch->IsShown() && (m_ams_rack_switch->switch_left != true)) { return; }
-
     if (m_ams_control_box->IsShown() != show) {
         m_ams_control_box->Show(show);
         m_ams_control->Layout();
@@ -2335,31 +2220,6 @@ void StatusBasePanel::show_filament_load_group(bool show)
             monitor->Layout();
         }
     }
-}
-
-void StatusBasePanel::jump_to_Rack()
-{
-    if (obj && obj->GetNozzleSystem()->GetNozzleRack()->IsSupported()) {
-        m_ams_rack_switch->updateState("right");
-        m_ams_control_box->Show(false);
-        m_panel_nozzle_rack->Show(true);
-        Layout();
-    }
-}
-
-void StatusBasePanel::on_ams_rack_switch(wxCommandEvent &e)
-{
-    if (!m_ams_control_box->IsShown() && e.GetInt() == 1) {
-        m_ams_control_box->Show(e.GetInt() == 1);
-        m_panel_nozzle_rack->Show(e.GetInt() == 0);
-        Layout();
-    } else if (!m_panel_nozzle_rack->IsShown() && e.GetInt() == 0) {
-        m_ams_control_box->Show(e.GetInt() == 1);
-        m_panel_nozzle_rack->Show(e.GetInt() == 0);
-        Layout();
-    }
-
-    e.Skip();
 }
 
 void StatusPanel::update_camera_state(MachineObject* obj)
@@ -2519,7 +2379,6 @@ void StatusPanel::wire_controls()
     m_bpButton_e_down_10->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_axis_ctrl_e_down_10), NULL, this);
     m_nozzle_btn_panel->Connect(wxCUSTOMEVT_SWITCH_POS, wxCommandEventHandler(StatusPanel::on_nozzle_selected), NULL, this);
 
-    Bind(EVT_AMS_EXTRUSION_CALI, &StatusPanel::on_filament_extrusion_cali, this);
     Bind(EVT_AMS_LOAD, &StatusPanel::on_ams_load, this);
     Bind(EVT_AMS_UNLOAD, &StatusPanel::on_ams_unload, this);
     Bind(EVT_AMS_SWITCH, &StatusPanel::on_ams_switch, this);
@@ -2536,9 +2395,7 @@ void StatusPanel::wire_controls()
     Bind(EVT_SECONDARY_CHECK_RETRY, [this](auto &e) { if (m_ams_control) { m_ams_control->on_retry(); }});
 
     m_switch_speed->Connect(wxEVT_LEFT_DOWN, wxCommandEventHandler(StatusPanel::on_switch_speed), NULL, this);
-    m_calibration_btn->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_start_calibration), NULL, this);
     m_options_btn->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_show_print_options), NULL, this);
-    m_safety_btn->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_show_safety_options), NULL, this);
     m_parts_btn->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_show_parts_options), NULL, this);
 }
 
@@ -2581,9 +2438,7 @@ StatusPanel::~StatusPanel()
         m_bpButton_e_down_10->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_axis_ctrl_e_down_10), NULL, this);
         m_nozzle_btn_panel->Disconnect(wxCUSTOMEVT_SWITCH_POS, wxCommandEventHandler(StatusPanel::on_nozzle_selected), NULL, this);
         m_switch_speed->Disconnect(wxEVT_LEFT_DOWN, wxCommandEventHandler(StatusPanel::on_switch_speed), NULL, this);
-        m_calibration_btn->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_start_calibration), NULL, this);
         m_options_btn->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_show_print_options), NULL, this);
-        m_safety_btn->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_show_safety_options), NULL, this);
         m_parts_btn->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_show_parts_options), NULL, this);
     }
 
@@ -2845,28 +2700,10 @@ void StatusPanel::update(MachineObject *obj)
     update_misc_ctrl(obj);
 
     update_ams(obj);
-    update_cali(obj);
-
-    update_rack(obj);
 
     if (obj) {
         //nozzle ui
         //m_button_left_of_extruder->SetSelected();
-
-        // update extrusion calibration
-        if (m_extrusion_cali_dlg) {
-            m_extrusion_cali_dlg->update_machine_obj(obj);
-            m_extrusion_cali_dlg->update();
-        }
-
-        // update calibration status
-        if (calibration_dlg != nullptr) {
-            calibration_dlg->update_machine_obj(obj);
-            calibration_dlg->update_cali(obj);
-        }
-
-        std::string current_printer_type = obj->printer_type;
-        bool supports_safety = DevPrinterConfigUtil::support_safety_options(current_printer_type);
 
         DevConfig* config = obj->GetConfig();
 
@@ -2880,20 +2717,6 @@ void StatusPanel::update(MachineObject *obj)
             m_options_btn->Hide();
         }
 
-
-        if (obj->support_door_open_check()) {
-            if (supports_safety) {
-                m_safety_btn->Show();
-                if (safety_options_dlg) {
-                    safety_options_dlg->update_machine_obj(obj);
-                    safety_options_dlg->update_options(obj);
-                }
-            } else {
-                m_safety_btn->Hide();
-            }
-        } else {
-            m_safety_btn->Hide();
-        }
 
         m_parts_btn->Show();
 
@@ -3401,7 +3224,6 @@ void StatusPanel::update_ams(MachineObject *obj)
 
     // must select a current can
     m_ams_control->UpdateAms(obj->get_printer_series_str(), obj->printer_type, ams_info, ext_info, *obj->GetExtderSystem(), obj->get_dev_id(), obj, false);
-    m_ams_control->UpdateAmsDryControl(obj);
 
     last_tray_exist_bits  = obj->tray_exist_bits;
     last_ams_exist_bits   = obj->ams_exist_bits;
@@ -3584,40 +3406,6 @@ void StatusPanel::update_ams_control_state(std::string ams_id, std::string slot_
 
     m_ams_control->EnableLoadFilamentBtn(load_error_info.empty(), ams_id, slot_id, load_error_info);
     m_ams_control->EnableUnLoadFilamentBtn(unload_error_info.empty(), ams_id, slot_id,unload_error_info);
-}
-
-void StatusPanel::update_cali(MachineObject *obj)
-{
-    if (!obj) return;
-
-    // disable calibration button in 2D
-    if (!obj->is_fdm_type()) {
-        m_calibration_btn->SetToolTip(_L("Printer 2D mode does not support 3D calibration"));
-        m_calibration_btn->SetLabel(_L("Calibration"));
-        m_calibration_btn->Disable();
-        return;
-    } else if (!m_calibration_btn->IsEnabled()) {
-        m_calibration_btn->SetToolTip(wxEmptyString);
-        m_calibration_btn->Enable();
-    }
-
-    if (obj->is_calibration_running()) {
-        m_calibration_btn->SetLabel(_L("Calibrating"));
-        if (calibration_dlg && calibration_dlg->IsShown()) {
-            m_calibration_btn->Disable();
-        } else {
-            m_calibration_btn->Enable();
-        }
-    } else {
-        // IDLE
-        m_calibration_btn->SetLabel(_L("Calibration"));
-        // disable in printing
-        if (obj->is_in_printing()) {
-            m_calibration_btn->Disable();
-        } else {
-            m_calibration_btn->Enable();
-        }
-    }
 }
 
 void StatusPanel::update_calib_bitmap() {
@@ -4418,55 +4206,6 @@ void StatusPanel::on_ams_setting_click(SimpleEvent &event)
     }
 }
 
-void StatusPanel::on_filament_extrusion_cali(wxCommandEvent &event)
-{
-    if (!m_extrusion_cali_dlg)
-        m_extrusion_cali_dlg = new ExtrusionCalibration((wxWindow*)this, wxID_ANY);
-
-    if (obj) {
-        m_extrusion_cali_dlg->obj = obj;
-        std::string ams_id = m_ams_control->GetCurentAms();
-        std::string tray_id = m_ams_control->GetCurrentCan(ams_id);
-        if (tray_id.empty() && ams_id.compare(std::to_string(VIRTUAL_TRAY_MAIN_ID)) != 0) {
-            wxString txt = _L("Please select an AMS slot before calibration");
-            MessageDialog msg_dlg(nullptr, txt, wxEmptyString, wxICON_WARNING | wxOK);
-            msg_dlg.ShowModal();
-            return;
-        }
-
-        int ams_id_int  = 0;
-        int tray_id_int = 0;
-
-
-        // set ams_filament id is is bbl filament
-        if (ams_id.compare(std::to_string(VIRTUAL_TRAY_MAIN_ID)) == 0) {
-            tray_id_int = VIRTUAL_TRAY_MAIN_ID;
-            m_extrusion_cali_dlg->ams_filament_id = "";
-        }
-        else {
-            ams_id_int = atoi(ams_id.c_str());
-            tray_id_int = atoi(tray_id.c_str());
-
-            auto tray = obj->GetFilaSystem()->GetAmsTray(ams_id, tray_id);
-            if (tray) {
-                if (DevFilaSystem::IsBBL_Filament(tray->tag_uid))
-                    m_extrusion_cali_dlg->ams_filament_id = tray->setting_id;
-                else
-                    m_extrusion_cali_dlg->ams_filament_id = "";
-            }
-        }
-
-        try {
-            m_extrusion_cali_dlg->ams_id = ams_id_int;
-            m_extrusion_cali_dlg->tray_id = tray_id_int;
-            m_extrusion_cali_dlg->SetPosition(m_staticText_control->GetScreenPosition());
-            m_extrusion_cali_dlg->Popup();
-        } catch(...) {
-            ;
-        }
-    }
-}
-
 void StatusPanel::on_filament_edit(wxCommandEvent &event)
 {
     // update params
@@ -5023,27 +4762,6 @@ void StatusPanel::on_show_print_options(wxCommandEvent& event)
     }
 }
 
-void StatusPanel::on_show_safety_options(wxCommandEvent& event)
-{
-    if (obj) {
-        std::string current_printer_type = obj->printer_type;
-        bool supports_safety = DevPrinterConfigUtil::support_safety_options(current_printer_type);
-        if (supports_safety) {
-            if (safety_options_dlg == nullptr) {
-                safety_options_dlg = new SafetyOptionsDialog(this);
-                safety_options_dlg->update_machine_obj(obj);
-                safety_options_dlg->update_options(obj);
-                safety_options_dlg->ShowModal();
-            }
-            else {
-                safety_options_dlg->update_machine_obj(obj);
-                safety_options_dlg->update_options(obj);
-                safety_options_dlg->ShowModal();
-            }
-        }
-    }
-}
-
 void StatusPanel::on_show_parts_options(wxCommandEvent &event)
 {
     if (obj) {
@@ -5065,22 +4783,6 @@ void StatusPanel::update_printer_parts_options(MachineObject* obj_)
         if(print_parts_dlg && print_parts_dlg->IsShown()){
             print_parts_dlg->update_machine_obj(obj_);
             print_parts_dlg->UpdateNozzleInfo();
-        }
-    }
-}
-
-void StatusPanel::on_start_calibration(wxCommandEvent &event)
-{
-    if (obj) {
-        if (calibration_dlg == nullptr) {
-            calibration_dlg = new CalibrationDialog();
-            calibration_dlg->update_machine_obj(obj);
-            calibration_dlg->update_cali(obj);
-            calibration_dlg->ShowModal();
-        } else {
-            calibration_dlg->update_machine_obj(obj);
-            calibration_dlg->update_cali(obj);
-            calibration_dlg->ShowModal();
         }
     }
 }
@@ -5123,7 +4825,6 @@ void StatusPanel::set_default()
     m_setting_button->Show();
     m_tempCtrl_chamber->Show();
     m_options_btn->Show();
-    m_safety_btn->Show();
     m_parts_btn->Show();
 
 
@@ -5137,9 +4838,6 @@ void StatusPanel::set_default()
     m_ams_control->Hide();
     m_ams_control_box->Hide();
     m_ams_control->Reset();
-    m_ams_rack_switch->updateState("left");
-    m_ams_rack_switch->Hide();
-    m_panel_nozzle_rack->Hide();
     m_scale_panel->Hide();
     m_filament_load_box->Hide();
     m_filament_step->Hide();
@@ -5162,16 +4860,12 @@ void StatusPanel::show_status(int status)
      || ((status & (int)MonitorStatus::MONITOR_NO_PRINTER) != 0)
         ) {
         show_printing_status(false, false);
-        m_calibration_btn->Disable();
         m_options_btn->Disable();
-        m_safety_btn->Disable();
         m_parts_btn->Disable();
         m_panel_monitoring_title->Disable();
     } else if ((status & (int) MonitorStatus::MONITOR_NORMAL) != 0) {
         show_printing_status(true, true);
-        m_calibration_btn->Disable();
         m_options_btn->Enable();
-        m_safety_btn->Enable();
         m_parts_btn->Enable();
         m_panel_monitoring_title->Enable();
     }
@@ -5309,18 +5003,11 @@ void StatusPanel::msw_rescale()
     m_extruder_switching_status->msw_rescale();
 
     m_ams_control->msw_rescale();
-    m_panel_nozzle_rack->Rescale();
     // m_filament_step->Rescale();
 
 
-    m_calibration_btn->SetMinSize(wxSize(-1, FromDIP(26)));
-    m_calibration_btn->Rescale();
-
     m_options_btn->SetMinSize(wxSize(-1, FromDIP(26)));
     m_options_btn->Rescale();
-
-    m_safety_btn->SetMinSize(wxSize(-1, FromDIP(26)));
-    m_safety_btn->Rescale();
 
     m_parts_btn->SetMinSize(wxSize(-1, FromDIP(26)));
     m_parts_btn->Rescale();
@@ -5329,20 +5016,6 @@ void StatusPanel::msw_rescale()
 
     Layout();
     Refresh();
-}
-
-void StatusPanel::update_rack(MachineObject *obj)
-{
-    // Rack switch + live rack panel are shown only for printers whose nozzle system reports a rack
-    // (H2C). Every other Bambu printer keeps the switch hidden and the panel collapsed -> the AMS
-    // monitor page is unchanged for X1/P1/A1/H2D/H2S.
-    if (obj && obj->GetNozzleSystem()->GetNozzleRack()->IsSupported()) {
-        m_ams_rack_switch->Show();
-        m_panel_nozzle_rack->UpdateRackInfo(obj->GetNozzleSystem()->GetNozzleRack());
-    } else {
-        m_ams_rack_switch->Show(false);
-        m_panel_nozzle_rack->Show(false);
-    }
 }
 
 void StatusPanel::update_filament_loading_panel(MachineObject* obj)

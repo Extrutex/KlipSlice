@@ -27,8 +27,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/AMSMaterialsSetting.hpp
     GUI/AMSSetting.cpp
     GUI/AMSSetting.hpp
-    GUI/AMSDryControl.cpp
-    GUI/AMSDryControl.hpp
     GUI/AmsWidgets.cpp
     GUI/AmsWidgets.hpp
     GUI/Auxiliary.cpp
@@ -61,8 +59,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/CrealityDiscoveryDialog.hpp
     GUI/calib_dlg.cpp
     GUI/calib_dlg.hpp
-    GUI/Calibration.cpp
-    GUI/Calibration.hpp
     GUI/CalibrationPanel.cpp
     GUI/CalibrationPanel.hpp
     GUI/CalibrationWizardCaliPage.cpp
@@ -77,8 +73,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/CalibrationWizardSavePage.hpp
     GUI/CalibrationWizardStartPage.cpp
     GUI/CalibrationWizardStartPage.hpp
-    GUI/CaliHistoryDialog.cpp
-    GUI/CaliHistoryDialog.hpp
     GUI/Camera.cpp
     GUI/Camera.hpp
     GUI/CameraUtils.cpp
@@ -151,8 +145,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/EncodedFilament.cpp
     GUI/ExtraRenderers.cpp
     GUI/ExtraRenderers.hpp
-    GUI/ExtrusionCalibration.cpp
-    GUI/ExtrusionCalibration.hpp
     GUI/Field.cpp
     GUI/Field.hpp
     GUI/FileArchiveDialog.cpp
@@ -260,8 +252,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/GUI_Utils.hpp
     GUI/HintNotification.cpp
     GUI/HintNotification.hpp
-    GUI/ThermalPreconditioningDialog.cpp
-    GUI/ThermalPreconditioningDialog.hpp
     GUI/HttpServer.cpp
     GUI/HttpServer.hpp
     GUI/I18N.cpp
@@ -539,8 +529,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/Widgets/MultiNozzleSync.hpp
     GUI/Widgets/AxisCtrlButton.cpp
     GUI/Widgets/AxisCtrlButton.hpp
-    GUI/SafetyOptionsDialog.hpp
-    GUI/SafetyOptionsDialog.cpp
     GUI/Widgets/Button.cpp
     GUI/Widgets/Button.hpp
     GUI/Widgets/CheckBox.cpp

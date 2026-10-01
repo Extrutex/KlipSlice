@@ -6,7 +6,6 @@
 #include "../FilamentBitmapUtils.hpp"
 #include "../Utils/WxFontUtils.hpp"
 
-#include "slic3r/GUI/DeviceTab/uiAmsHumidityPopup.h"
 
 #include "slic3r/GUI/DeviceCore/DevFilaSystem.h"
 #include "slic3r/GUI/DeviceCore/DevConfig.h"

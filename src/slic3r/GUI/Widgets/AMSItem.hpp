@@ -872,6 +872,17 @@ wxDECLARE_EVENT(EVT_AMS_CLIBRATION_CANCEL, wxCommandEvent);
 wxDECLARE_EVENT(EVT_AMS_GUIDE_WIKI, wxCommandEvent);
 wxDECLARE_EVENT(EVT_AMS_RETRY, wxCommandEvent);
 wxDECLARE_EVENT(EVT_AMS_SHOW_HUMIDITY_TIPS, wxCommandEvent);
+
+// Client data of EVT_AMS_SHOW_HUMIDITY_TIPS (owned and deleted by the receiver).
+struct uiAmsHumidityInfo
+{
+    std::string ams_id;
+    AMSModel ams_type;
+    int humidity_display_idx = -1;
+    int humidity_percent = -1;
+    float current_temperature;
+    int left_dry_time = -1;
+};
 wxDECLARE_EVENT(EVT_AMS_UNSELETED_VAMS, wxCommandEvent);
 wxDECLARE_EVENT(EVT_AMS_UNSELETED_AMS, wxCommandEvent);
 wxDECLARE_EVENT(EVT_VAMS_ON_FILAMENT_EDIT, wxCommandEvent);

@@ -138,7 +138,6 @@ public:
     void start_update() {update_flag = true;};
 
 
-    void jump_to_Rack();
     void update_network_version_footer();
 };
 

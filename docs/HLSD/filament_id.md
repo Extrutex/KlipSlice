@@ -361,7 +361,7 @@ file degrades to identity with a log line rather than failing.
 | 3mf export | `Plater::export_3mf` writes Bambu's ids into `slice_info.config`, gated on `preset_bundle.is_bbl_vendor()` — the printer reads that file and knows only its own catalog, and no other vendor's export is affected. The CLI has its own writer in `OrcaSlicer.cpp`; it does the same, gated on the `printer_model` prefix that already decides `Print::is_BBL_printer()` for that run |
 | Project ingest | `Plater::priv::load_files` reverse-maps the project's `filament_ids` before the bundle ingests them, so a project saved by an older Orca or by BambuStudio still resolves the same presets |
 | Prints from the printer's SD card | `SelectMachineDialog::update_print_required_data` reverse-maps each plate's slice-info ids as it adopts the plates, so the AMS mapping dialog pairs them with trays |
-| Bambu-specific comparisons | `CalibUtils.cpp`, `DeviceManager.cpp`, `DeviceCore/DevFilaSystem.cpp`, `DeviceCore/DevFilaBlackList.cpp`, `SelectMachine.cpp`, `AMSDryControl.cpp`, `AMSMaterialsSetting.cpp`, `PresetComboBoxes.cpp`, `ColorDecomposeSupport.cpp` |
+| Bambu-specific comparisons | `CalibUtils.cpp`, `DeviceManager.cpp`, `DeviceCore/DevFilaSystem.cpp`, `DeviceCore/DevFilaBlackList.cpp`, `SelectMachine.cpp`, `AMSMaterialsSetting.cpp`, `PresetComboBoxes.cpp`, `ColorDecomposeSupport.cpp` |
 
 That last row is the rule to follow when a new Bambu-specific behaviour is added: **translate
 the value you are about to compare, never the table you compare it against.** The shipped data

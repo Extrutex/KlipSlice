@@ -30,9 +30,7 @@
 #include "DeviceCore/DevFilaSystem.h"
 #include "DeviceCore/DevFilaSwitch.h"
 #include "DeviceCore/DevMappingNozzle.h"
-#include "DeviceCore/DevNozzleRack.h" // Orca: full type for m_rack.lock()->GetNozzleSystem()->GetOwner()
 
-#include "DeviceTab/wgtDeviceNozzleSelect.h"
 #include "DeviceTab/wgtMsgPanel.h"
 
 namespace Slic3r { namespace GUI {
@@ -929,11 +927,6 @@ AmsMapingPopup::AmsMapingPopup(wxWindow *parent, bool use_in_sync_dialog) :
      m_sizer_ams_right->Add(m_flush_warning_panel, 0, wxBOTTOM | wxALIGN_LEFT, FromDIP(8));
      m_sizer_ams_right->Add(content_sizer, 0, wxEXPAND, 0);
 
-     m_rack_nozzle_select = new wgtDeviceNozzleRackSelect(m_scrolled_window);
-     m_rack_nozzle_select->Bind(EVT_NOZZLE_SELECT_CHANGED, &AmsMapingPopup::OnNozzleMappingSelected, this);
-     m_rack_nozzle_select->Bind(EVT_NOZZLE_SELECT_CLICKED, [this](wxCommandEvent &e) { this->Dismiss(); });
-     m_rack_nozzle_select->Show(false);
-
      m_ams_tips_msg_panel = new wgtMsgPanel(m_scrolled_window);
 
      m_left_marea_panel->SetSizer(m_sizer_ams_left);
@@ -960,7 +953,6 @@ AmsMapingPopup::AmsMapingPopup(wxWindow *parent, bool use_in_sync_dialog) :
      m_sizer_ams_v->Add(m_ams_tips_msg_panel, 0, wxEXPAND | wxBOTTOM, FromDIP(10)); // Orca: wxBOTTOM (REF uses the wxEdge enum by mistake)
 
      m_sizer_main_h->Add(m_sizer_ams_v, 0, wxEXPAND | wxRIGHT, FromDIP(10));
-     m_sizer_main_h->Add(m_rack_nozzle_select, 0, wxEXPAND | wxTOP | wxLEFT, FromDIP(15));
 
      m_scrolled_window->SetSizer(m_sizer_main_h);
      m_sizer_main->Add(title_panel, 0, wxEXPAND | wxALL, FromDIP(2));
@@ -1105,7 +1097,6 @@ void AmsMapingPopup::msw_rescale()
     for (auto container : m_amsmapping_container_list) { container->msw_rescale(); }
 
     m_flush_warning_panel->Rescale();
-    m_rack_nozzle_select->Rescale();
 
     Fit();
     Refresh();
@@ -1280,18 +1271,6 @@ void AmsMapingPopup::paintEvent(wxPaintEvent &evt)
     dc.SetPen(wxPen(StateColor::darkModeColorFor(wxColour("#009688")), FromDIP(2))); // Orca: colorful accent border for separation (dark-mode aware)
     dc.SetBrush(*wxTRANSPARENT_BRUSH);
     dc.DrawRoundedRectangle(0, 0, GetSize().x, GetSize().y, 0);
-}
-
-void AmsMapingPopup::OnNozzleMappingSelected(wxCommandEvent& evt)
-{
-    if (auto ptr = m_rack.lock()) {
-        MachineObject* obj = ptr->GetNozzleSystem()->GetOwner();
-        obj->get_nozzle_mapping_result()->SetManualNozzleMappingByFila(m_current_filament_id, m_rack_nozzle_select->GetSelectedNozzlePosID());
-        update_flush_waste(obj);
-    }
-
-    evt.Skip();
-    Dismiss();
 }
 
 void AmsMapingPopup::update_flush_waste(MachineObject* obj)
