@@ -3469,17 +3469,8 @@ void SelectMachineDialog::navigate_to_timelapse_page()
         auto* main_frame = wxGetApp().mainframe;
         if (!main_frame) return;
 
-        // use existing jump_to_monitor to switch to Monitor tab
+        // Switch to the Monitor tab; the printer's own storage browser is not part of KLIPSLICE.
         main_frame->jump_to_monitor();
-
-        // then switch to Storage (Media) tab inside Monitor
-        MonitorPanel* monitor = MonitorPanel::if_built();
-        if (monitor) {
-            auto* tabpanel = monitor->get_tabpanel();
-            if (tabpanel) {
-                tabpanel->SetSelection(MonitorPanel::PT_MEDIA);
-            }
-        }
     });
 
     this->EndModal(wxID_CANCEL);

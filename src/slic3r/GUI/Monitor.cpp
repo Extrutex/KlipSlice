@@ -27,8 +27,6 @@
 #include "MainFrame.hpp"
 #include "Widgets/Label.hpp"
 #include "format.hpp"
-#include "MediaPlayCtrl.h"
-#include "MediaFilePanel.h"
 #include "Plater.hpp"
 #include "BindDialog.hpp"
 
@@ -177,10 +175,6 @@ void MonitorPanel::init_tabpanel()
     m_tabpanel->SetBackgroundColour(wxColour("#FEFFFF"));
     m_tabpanel->Bind(wxEVT_BOOKCTRL_PAGE_CHANGED, [this](wxBookCtrlEvent& e) {
         auto page = m_tabpanel->GetCurrentPage();
-        if (page == m_media_file_panel) {
-            auto title = m_tabpanel->GetPageText(m_tabpanel->GetSelection());
-            m_media_file_panel->SwitchStorage(title == _L("Storage"));
-        }
         // The first page is selected while the panel is built off screen.
         if (page->IsShownOnScreen())
             page->SetFocus();
@@ -192,10 +186,6 @@ void MonitorPanel::init_tabpanel()
     // where built() must already be false.
     add_build_steps_of(*m_status_info_panel);
     m_tabpanel->AddPage(m_status_info_panel, _L("Status"), true);
-    add_build_step([this] {
-        m_media_file_panel = new MediaFilePanel(m_tabpanel);
-        m_tabpanel->AddPage(m_media_file_panel, _L("Storage"), false);
-    });
     add_build_step([this] {
         m_upgrade_panel = new UpgradePanel(m_tabpanel);
         m_tabpanel->AddPage(m_upgrade_panel, _L_CONTEXT(L_CONTEXT("Update", "Firmware"), "Firmware"), false);
@@ -243,7 +233,6 @@ void MonitorPanel::on_sys_color_changed()
 {
     m_status_info_panel->on_sys_color_changed();
     m_upgrade_panel->on_sys_color_changed();
-    m_media_file_panel->Rescale();
 }
 
 void MonitorPanel::msw_rescale()
@@ -255,7 +244,6 @@ void MonitorPanel::msw_rescale()
     m_tabpanel->Rescale();
     //m_status_add_machine_panel->msw_rescale();
     m_status_info_panel->msw_rescale();
-    m_media_file_panel->Rescale();
     m_upgrade_panel->msw_rescale();
     m_hms_panel->msw_rescale();
 
@@ -353,9 +341,8 @@ void MonitorPanel::update_all()
     if (!obj) {
         show_status((int)MONITOR_NO_PRINTER);
         m_hms_panel->clear_hms_tag();
-        m_tabpanel->GetBtnsListCtrl()->showNewTag(3, false);
+        m_tabpanel->GetBtnsListCtrl()->showNewTag(PT_HMS, false);
         if (m_status_info_panel->IsShown()) {
-            m_status_info_panel->m_media_play_ctrl->SetMachineObject(obj);
             m_status_info_panel->update(obj);
         }
         return;
@@ -386,13 +373,10 @@ void MonitorPanel::update_all()
     if (current_page == m_status_info_panel) {
         if (m_status_info_panel->IsShown()) {
             m_status_info_panel->obj = obj;
-            m_status_info_panel->m_media_play_ctrl->SetMachineObject(obj);
             m_status_info_panel->update(obj);
         }
     } else if (current_page == m_upgrade_panel) {
         m_upgrade_panel->update(obj);
-    } else if (current_page == m_media_file_panel) {
-        m_media_file_panel->UpdateByObj(obj);
     }
 
     if (current_page == m_hms_panel || (obj->GetHMS()->GetHMSItems().size() != m_hms_panel->temp_hms_list.size())) {
@@ -413,12 +397,12 @@ void MonitorPanel::update_hms_tag()
 
         if (!hmsitem.second.has_read()) {
             //show HMS new tag
-            m_tabpanel->GetBtnsListCtrl()->showNewTag(3, true);
+            m_tabpanel->GetBtnsListCtrl()->showNewTag(PT_HMS, true);
             return;
         }
     }
 
-    m_tabpanel->GetBtnsListCtrl()->showNewTag(3, false);
+    m_tabpanel->GetBtnsListCtrl()->showNewTag(PT_HMS, false);
 }
 
 bool MonitorPanel::Show(bool show)
@@ -505,8 +489,6 @@ std::string MonitorPanel::get_string_from_tab(PrinterTab tab)
     switch (tab) {
     case PT_STATUS :
         return "status";
-    case PT_MEDIA:
-        return "sd_card";
     case PT_UPDATE:
         return "update";
     case PT_HMS:
@@ -536,19 +518,6 @@ void MonitorPanel::jump_to_Upgrade()
             m_tabpanel->SetSelection(PT_UPDATE);
         }
     }
-}
-
-void MonitorPanel::jump_to_LiveView()
-{
-    if (!this->IsShown()) { return; }
-
-    auto page = m_tabpanel->GetCurrentPage();
-    if (page && page != m_hms_panel)
-    {
-        m_tabpanel->SetSelection(PT_STATUS);
-    }
-
-    m_status_info_panel->get_media_play_ctrl()->jump_to_play();
 }
 
 void MonitorPanel::jump_to_Rack()

@@ -146,15 +146,10 @@ src/slic3r/GUI/Field.cpp
 src/slic3r/GUI/GCodeViewer.cpp
 src/slic3r/GUI/GLCanvas3D.cpp
 src/slic3r/GUI/Calibration.cpp
-src/slic3r/GUI/CameraPopup.cpp
 src/slic3r/GUI/ConnectPrinter.cpp
 src/slic3r/GUI/HMSPanel.cpp
 src/slic3r/GUI/MainFrame.cpp
-src/slic3r/GUI/MediaPlayCtrl.cpp
-src/slic3r/GUI/MediaFilePanel.cpp
-src/slic3r/GUI/ImageGrid.cpp
 src/slic3r/GUI/Widgets/ImageSwitchButton.cpp
-src/slic3r/GUI/Printer/PrinterFileSystem.cpp
 src/slic3r/GUI/Mouse3DController.cpp
 src/slic3r/GUI/SelectMachinePop.cpp
 src/slic3r/GUI/StatusPanel.cpp
@@ -275,10 +270,6 @@ src/slic3r/Utils/PrintHost.cpp
 src/slic3r/GUI/Jobs/OAuthJob.cpp
 src/slic3r/GUI/Gizmos/GLGizmoBrimEars.cpp
 src/slic3r/GUI/Gizmos/GLGizmoBrimEars.hpp
-src/slic3r/GUI/PartSkipDialog.cpp
-src/slic3r/GUI/PartSkipDialog.hpp
-src/slic3r/GUI/SkipPartCanvas.cpp
-src/slic3r/GUI/SkipPartCanvas.hpp
 src/slic3r/GUI/FilamentBitmapUtils.cpp
 src/slic3r/GUI/FilamentBitmapUtils.hpp
 src/slic3r/GUI/FilamentPickerDialog.cpp

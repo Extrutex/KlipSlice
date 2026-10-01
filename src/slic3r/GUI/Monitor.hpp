@@ -54,8 +54,6 @@
 namespace Slic3r {
 namespace GUI {
 
-class MediaFilePanel;
-
 class AddMachinePanel : public wxPanel
 {
 protected:
@@ -80,7 +78,6 @@ private:
     wxSizer*        m_main_sizer{ nullptr };
 
     StatusPanel*        m_status_info_panel{ nullptr };
-    MediaFilePanel*     m_media_file_panel{ nullptr };
     UpgradePanel*       m_upgrade_panel{ nullptr };
     HMSPanel*           m_hms_panel{ nullptr };
 
@@ -106,11 +103,10 @@ public:
 
     enum PrinterTab {
         PT_STATUS  = 0,
-        PT_MEDIA   = 1,
-        PT_UPDATE  = 2,
-        PT_HMS     = 3,
-        PT_DEBUG   = 4,
-        PT_MAX_NUM = 5
+        PT_UPDATE  = 1,
+        PT_HMS     = 2,
+        PT_DEBUG   = 3,
+        PT_MAX_NUM = 4
     };
 
 	void init_bitmap();
@@ -152,7 +148,6 @@ public:
 
     void jump_to_HMS();
     void jump_to_Upgrade();
-    void jump_to_LiveView();
     void jump_to_Rack();
     void update_network_version_footer();
 };

@@ -5,7 +5,6 @@
 #include "DeviceManager.hpp"
 #include "MonitorPage.hpp"
 #include "SliceInfoPanel.hpp"
-#include "CameraPopup.hpp"
 #include "GUI.hpp"
 #include "ThermalPreconditioningDialog.hpp"
 #include <wx/panel.h>
@@ -14,7 +13,7 @@
 #include <wx/sizer.h>
 #include <wx/gbsizer.h>
 #include <wx/webrequest.h>
-#include "MediaPlayCtrl.h"
+#include <wx/webview.h>
 #include "AMSSetting.hpp"
 #include "Calibration.hpp"
 #include "CalibrationWizardPage.hpp"
@@ -34,7 +33,6 @@
 #include "Widgets/FilamentLoad.hpp"
 #include "Widgets/FanControl.hpp"
 #include "HMS.hpp"
-#include "PartSkipDialog.hpp"
 #include "DeviceErrorDialog.hpp"
 #include "StagedBuild.hpp"
 
@@ -66,6 +64,25 @@ enum CameraTimelapseStatus {
     TIMELAPSE_OFF_HOVER,
     TIMELAPSE_ON_NORMAL,
     TIMELAPSE_ON_HOVER,
+};
+
+// Camera title-bar icon: a bitmap that swaps to its hover variant under the mouse.
+class CameraItem : public wxPanel
+{
+public:
+    CameraItem(wxWindow *parent, std::string normal, std::string hover);
+    ~CameraItem();
+
+    bool           m_hover{false};
+    ScalableBitmap m_bitmap_normal;
+    ScalableBitmap m_bitmap_hover;
+
+    void msw_rescale();
+    void on_enter_win(wxMouseEvent &evt);
+    void on_level_win(wxMouseEvent &evt);
+    void paintEvent(wxPaintEvent &evt);
+    void render(wxDC &dc);
+    void doRender(wxDC &dc);
 };
 
 enum PrintingTaskType {
@@ -298,7 +315,6 @@ private:
     wxStaticBitmap* m_bitmap_static_use_weight;
     ScalableButton* m_button_pause_resume;
     ScalableButton* m_button_abort;
-    Button*         m_button_partskip;
     Button*         m_button_market_scoring;
     Button*         m_button_clean;
     Button *                      m_button_market_retry;
@@ -312,10 +328,6 @@ private:
     int                           m_star_count;
     std::vector<ScalableButton *> m_score_star;
     bool                          m_star_count_dirty = false;
-
-    // partskip button
-    int m_part_skipped_count{ 0 };
-    int m_part_skipped_dirty{ 0 };
 
     ProgressBar*    m_gauge_progress;
     Label* m_error_text;
@@ -331,7 +343,6 @@ public:
     void msw_rescale();
 
 public:
-    void enable_partskip_button(MachineObject* obj, bool enable);
     void enable_pause_resume_button(bool enable, std::string type);
     void enable_abort_button(bool enable);
     void update_subtask_name(wxString name);
@@ -357,7 +368,6 @@ public:
 public:
     ScalableButton* get_abort_button() {return m_button_abort;};
     ScalableButton* get_pause_resume_button() {return m_button_pause_resume;};
-    Button* get_partskip_button() { return m_button_partskip; };
     Button* get_market_scoring_button() {return m_button_market_scoring;};
     Button * get_market_retry_buttom() { return m_button_market_retry; };
     Button* get_clean_button() {return m_button_clean;};
@@ -368,10 +378,6 @@ public:
     std::vector<ScalableButton *> &get_score_star() { return m_score_star; }
     bool get_star_count_dirty() { return m_star_count_dirty; }
     void set_star_count_dirty(bool dirty) { m_star_count_dirty = dirty; }
-    int get_part_skipped_count() { return m_part_skipped_count; }
-    void set_part_skipped_count(int count) { m_part_skipped_count = count; }
-    int get_part_skipped_dirty() { return m_part_skipped_dirty; }
-    void set_part_skipped_dirty(int dirty) { m_part_skipped_dirty = dirty; }
     void                           set_has_reted_text(bool has_rated);
     void paint(wxPaintEvent&);
 };
@@ -415,12 +421,9 @@ protected:
     ScalableBitmap m_bitmap_recording_off;
     ScalableBitmap m_bitmap_timelapse_on;
     ScalableBitmap m_bitmap_timelapse_off;
-    ScalableBitmap m_bitmap_vcamera_on;
-    ScalableBitmap m_bitmap_vcamera_off;
     ScalableBitmap m_bitmap_switch_camera;
 
     /* title panel */
-    wxPanel *       media_ctrl_panel;
     wxPanel *       m_panel_monitoring_title;
     wxPanel *       m_panel_printing_title;
     wxPanel *       m_panel_control_title;
@@ -436,15 +439,13 @@ protected:
     wxStaticBitmap *m_bitmap_camera_img;
     wxStaticBitmap *m_bitmap_recording_img;
     wxStaticBitmap *m_bitmap_timelapse_img;
-    wxStaticBitmap* m_bitmap_vcamera_img;
     wxStaticBitmap *m_bitmap_sdcard_img;
     wxStaticBitmap *m_bitmap_static_use_time;
     wxStaticBitmap *m_bitmap_static_use_weight;
     wxStaticBitmap* m_camera_switch_button;
 
 
-    wxMediaCtrl3 *  m_media_ctrl;
-    MediaPlayCtrl * m_media_play_ctrl{nullptr};
+    wxPanel *       m_camera_placeholder{nullptr};
 
     Label *         m_staticText_printing;
     wxStaticBitmap *m_bitmap_thumbnail;
@@ -457,7 +458,6 @@ protected:
     wxStaticText *  m_staticText_progress_left;
     wxStaticText *  m_staticText_layers;
     Button *        m_button_report;
-    Button *        m_button_partskip;
     ScalableButton *m_button_pause_resume;
     ScalableButton *m_button_abort;
     Button *        m_button_clean;
@@ -560,7 +560,6 @@ protected:
     StaticBox* m_filament_load_box;
 
     // Virtual event handlers, override them in your derived class
-    virtual void on_subtask_partskip(wxCommandEvent &event) { event.Skip(); }
     virtual void on_subtask_pause_resume(wxCommandEvent &event) { event.Skip(); }
     virtual void on_subtask_abort(wxCommandEvent &event) { event.Skip(); }
     virtual void on_lamp_switch(wxCommandEvent &event) { event.Skip(); }
@@ -577,13 +576,12 @@ protected:
     virtual void on_axis_ctrl_e_up_10(wxCommandEvent &event) { event.Skip(); }
     virtual void on_axis_ctrl_e_down_10(wxCommandEvent &event) { event.Skip(); }
     virtual void on_nozzle_selected(wxCommandEvent &event) { event.Skip(); }
-    void on_camera_source_change(wxCommandEvent& event);
     void handle_camera_source_change();
     void remove_controls();
     void on_webview_navigating(wxWebViewEvent& evt);
     void on_camera_switch_toggled(wxMouseEvent& event);
     void toggle_custom_camera();
-    void toggle_builtin_camera();
+    void hide_custom_camera();
 
 public:
     StatusBasePanel(wxWindow *      parent,
@@ -617,7 +615,6 @@ public:
 	void           expand_filament_loading(wxMouseEvent &e);
     void           show_ams_group(bool show = true);
     void show_filament_load_group(bool show = true);
-    MediaPlayCtrl* get_media_play_ctrl() {return m_media_play_ctrl;};
 
     void jump_to_Rack();
 
@@ -635,7 +632,6 @@ private:
 protected:
     std::shared_ptr<SliceInfoPopup> m_slice_info_popup;
     std::shared_ptr<ImageTransientPopup> m_image_popup;
-    std::shared_ptr<CameraPopup> m_camera_popup;
     std::set<int> rated_model_id;
     AMSSetting *m_ams_setting_dlg{nullptr};
     PrinterPartsDialog*  print_parts_dlg { nullptr };
@@ -649,12 +645,9 @@ protected:
     SecondaryCheckDialog* con_load_dlg = nullptr;
     MessageDialog *       ctrl_e_hint_dlg             = nullptr;
 
-    SecondaryCheckDialog* sdcard_hint_dlg = nullptr;
-
     FanControlPopupNew* m_fan_control_popup{nullptr};
 
     ExtrusionCalibration *m_extrusion_cali_dlg{nullptr};
-    PartSkipDialog       *m_partskip_dlg{nullptr};
 
     wxString     m_request_url;
     bool         m_start_loading_thumbnail = false;
@@ -663,7 +656,6 @@ protected:
     int          m_last_recording = -1;
     int          m_last_timelapse = -1;
     int          m_last_extrusion = -1;
-    int          m_last_vcamera   = -1;
     int          m_model_mall_request_count = 0;
     bool         m_is_load_with_temp = false;
     json         m_rating_result;
@@ -695,7 +687,6 @@ protected:
 
     void on_market_scoring(wxCommandEvent &event);
     void on_market_retry(wxCommandEvent &event);
-    void on_subtask_partskip(wxCommandEvent &event);
     void on_subtask_pause_resume(wxCommandEvent &event);
     void on_subtask_abort(wxCommandEvent &event);
     void on_print_error_clean(wxCommandEvent &event);
@@ -750,9 +741,7 @@ protected:
     void on_thumbnail_enter(wxMouseEvent &event);
     void on_thumbnail_leave(wxMouseEvent &event);
     void refresh_thumbnail_webrequest(wxMouseEvent& event);
-    void on_switch_vcamera(wxMouseEvent &event);
     void on_camera_enter(wxMouseEvent &event);
-    void on_camera_leave(wxMouseEvent& event);
     void on_auto_leveling(wxCommandEvent &event);
     void on_xyz_abs(wxCommandEvent &event);
 
@@ -774,7 +763,6 @@ protected:
     void update_basic_print_data(bool def = false);
     void update_model_info();
     void update_subtask(MachineObject* obj);
-    void update_partskip_subtask(MachineObject *obj);
     void update_cloud_subtask(MachineObject *obj);
     void update_sdcard_subtask(MachineObject *obj);
     void update_temp_ctrl(MachineObject *obj);
@@ -794,10 +782,6 @@ protected:
 
     /* camera */
     void update_camera_state(MachineObject* obj);
-    bool show_vcamera = false;
-
-    // partskip button
-    void update_partskip_button(MachineObject* obj);
 
     // printer parts options
     void update_printer_parts_options(MachineObject* obj);

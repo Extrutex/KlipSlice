@@ -146,7 +146,6 @@ public:
         LOAD_VIRTUAL_TRAY = 10,
         OK_BUTTON = 11,
         FILAMENT_LOAD_RESUME = 12,
-        JUMP_TO_LIVEVIEW,
 
         NO_REMINDER_NEXT_TIME = 23,
         IGNORE_NO_REMINDER_NEXT_TIME = 25,

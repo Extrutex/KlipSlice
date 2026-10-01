@@ -36,8 +36,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/AuxiliaryDataViewModel.hpp
     GUI/AuxiliaryDialog.cpp
     GUI/AuxiliaryDialog.hpp
-    GUI/AVVideoDecoder.cpp
-    GUI/AVVideoDecoder.hpp
     GUI/Auxiliary.hpp
     GUI/BackgroundSlicingProcess.cpp
     GUI/BackgroundSlicingProcess.hpp
@@ -87,8 +85,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/CaliHistoryDialog.hpp
     GUI/Camera.cpp
     GUI/Camera.hpp
-    GUI/CameraPopup.cpp
-    GUI/CameraPopup.hpp
     GUI/CameraUtils.cpp
     GUI/CameraUtils.hpp
     GUI/CloneDialog.cpp
@@ -290,8 +286,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/IconManager.hpp
     GUI/IdleScheduler.cpp
     GUI/IdleScheduler.hpp
-    GUI/ImageGrid.cpp
-    GUI/ImageGrid.h
     GUI/ImGuiWrapper.cpp
     GUI/FilamentPickerDialog.cpp
     GUI/FilamentPickerDialog.hpp
@@ -363,10 +357,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/MainFrame.hpp
     GUI/MarkdownTip.cpp
     GUI/MarkdownTip.hpp
-    GUI/MediaFilePanel.cpp
-    GUI/MediaFilePanel.h
-    GUI/MediaPlayCtrl.cpp
-    GUI/MediaPlayCtrl.h
     GUI/MeshUtils.cpp
     GUI/MeshUtils.hpp
     GUI/ModelMall.cpp
@@ -454,8 +444,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/PresetHints.hpp
     GUI/PrinterCloudAuthDialog.cpp
     GUI/PrinterCloudAuthDialog.hpp
-    GUI/Printer/PrinterFileSystem.cpp
-    GUI/Printer/PrinterFileSystem.h
     GUI/PrinterWebView.cpp
     GUI/PrinterWebViewHandler.cpp
     GUI/PrinterWebViewHandler.hpp
@@ -492,11 +480,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/SceneRaycaster.hpp
     GUI/SceneCache.cpp
     GUI/SceneCache.hpp
-    GUI/PartSkipCommon.hpp
-    GUI/PartSkipDialog.cpp
-    GUI/PartSkipDialog.hpp
-    GUI/SkipPartCanvas.cpp
-    GUI/SkipPartCanvas.hpp
     GUI/Search.cpp
     GUI/Search.hpp
     GUI/SettingsIndex.cpp
@@ -645,8 +628,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/WipeTowerDialog.cpp
     GUI/wxExtensions.cpp
     GUI/wxExtensions.hpp
-    GUI/wxMediaCtrl3.cpp
-    GUI/wxMediaCtrl3.h
     plugin/PythonInterpreter.cpp
     plugin/PythonInterpreter.hpp
     plugin/PythonPluginBridge.cpp
@@ -981,37 +962,6 @@ elseif (MSVC)
     target_compile_options(libslic3r_gui PRIVATE "/FIslic3r/win_platform.hpp")
 endif ()
 
-if (APPLE)
-    # Static FFmpeg from the deps install: nothing to bundle into the .app,
-    # no rpath/install_name handling. Order matters: avcodec -> swscale -> avutil.
-    find_library(LIBAVCODEC_LIBRARY NAMES libavcodec.a PATHS ${CMAKE_PREFIX_PATH}/lib NO_DEFAULT_PATH)
-    find_library(LIBSWSCALE_LIBRARY NAMES libswscale.a PATHS ${CMAKE_PREFIX_PATH}/lib NO_DEFAULT_PATH)
-    find_library(LIBAVUTIL_LIBRARY NAMES libavutil.a PATHS ${CMAKE_PREFIX_PATH}/lib NO_DEFAULT_PATH)
-    if (NOT LIBAVCODEC_LIBRARY OR NOT LIBSWSCALE_LIBRARY OR NOT LIBAVUTIL_LIBRARY)
-        message(FATAL_ERROR "Static FFmpeg (libavcodec.a/libswscale.a/libavutil.a) not found under ${CMAKE_PREFIX_PATH}/lib. Rebuild the deps — FFMPEG builds static-only on macOS.")
-    endif ()
-    target_link_libraries(libslic3r_gui ${LIBAVCODEC_LIBRARY} ${LIBSWSCALE_LIBRARY} ${LIBAVUTIL_LIBRARY})
-    target_include_directories(libslic3r_gui SYSTEM PRIVATE ${CMAKE_PREFIX_PATH}/include)
-elseif (WIN32)
-    # Prebuilt shared FFmpeg from the deps install. Windows has no pkg-config,
-    # so resolve the import libraries out of the deps prefix directly; the DLLs
-    # are copied next to the executable by the top level CMakeLists.
-    find_library(LIBAVCODEC_LIBRARY NAMES avcodec PATHS ${CMAKE_PREFIX_PATH}/lib NO_DEFAULT_PATH)
-    find_library(LIBSWSCALE_LIBRARY NAMES swscale PATHS ${CMAKE_PREFIX_PATH}/lib NO_DEFAULT_PATH)
-    find_library(LIBAVUTIL_LIBRARY NAMES avutil PATHS ${CMAKE_PREFIX_PATH}/lib NO_DEFAULT_PATH)
-    if (NOT LIBAVCODEC_LIBRARY OR NOT LIBSWSCALE_LIBRARY OR NOT LIBAVUTIL_LIBRARY)
-        message(FATAL_ERROR "FFmpeg (avcodec/swscale/avutil) not found under ${CMAKE_PREFIX_PATH}/lib. Rebuild the deps.")
-    endif ()
-    target_link_libraries(libslic3r_gui ${LIBAVCODEC_LIBRARY} ${LIBSWSCALE_LIBRARY} ${LIBAVUTIL_LIBRARY})
-    target_include_directories(libslic3r_gui SYSTEM PRIVATE ${CMAKE_PREFIX_PATH}/include)
-else ()
-    pkg_check_modules(LIBAV REQUIRED IMPORTED_TARGET
-        libavcodec
-        libswscale
-        libavutil
-    )
-    target_link_libraries(libslic3r_gui PkgConfig::LIBAV)
-endif()
 
 # We need to implement some hacks for wxWidgets and touch the underlying GTK
 # layer and sub-libraries. This forces us to use the include locations and

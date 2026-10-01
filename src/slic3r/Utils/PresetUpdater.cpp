@@ -788,27 +788,19 @@ bool PresetUpdater::priv::get_cached_plugins_version(std::string& cached_version
     // The OTA plugin cache lives in its own ota/plugins subfolder; the update dialog
     // (Plater::priv::update_plugin_when_launch) reads the changelog from the same place.
     auto cache_folder = cache_path / "plugins";
-    std::string network_library, player_library, live555_library;
+    std::string network_library;
     bool has_plugins = false;
 
 #if defined(_MSC_VER) || defined(_WIN32)
     network_library = cache_folder.string() + "/bambu_networking.dll";
-    player_library  = cache_folder.string() + "/BambuSource.dll";
-    live555_library = cache_folder.string() + "/live555.dll";
 #elif defined(__WXMAC__)
     network_library = cache_folder.string() + "/libbambu_networking.dylib";
-    player_library  = cache_folder.string() + "/libBambuSource.dylib";
-    live555_library = cache_folder.string() + "/liblive555.dylib";
 #else
     network_library = cache_folder.string() + "/libbambu_networking.so";
-    player_library  = cache_folder.string() + "/libBambuSource.so";
-    live555_library = cache_folder.string() + "/liblive555.so";
 #endif
 
     std::string changelog_file = cache_folder.string() + "/network_plugins.json";
     if (boost::filesystem::exists(network_library)
-        && boost::filesystem::exists(player_library)
-        && boost::filesystem::exists(live555_library)
         && boost::filesystem::exists(changelog_file))
     {
         has_plugins = true;

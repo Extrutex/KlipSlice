@@ -22,6 +22,8 @@
 #include <wx/mstream.h>
 #include <wx/sstream.h>
 #include <wx/zstream.h>
+#include <wx/textdlg.h>
+#include <wx/dcgraph.h>
 
 #include "DeviceCore/DevBed.h"
 #include "DeviceCore/DevCtrl.h"
@@ -45,6 +47,79 @@
 
 
 namespace Slic3r { namespace GUI {
+
+CameraItem::CameraItem(wxWindow *parent, std::string normal, std::string hover)
+    : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize)
+{
+#ifdef __WINDOWS__
+    SetDoubleBuffered(true);
+#endif //__WINDOWS__
+
+    m_bitmap_normal  = ScalableBitmap(this, normal, 20);
+    m_bitmap_hover   = ScalableBitmap(this, hover, 20);
+
+    SetSize(wxSize(FromDIP(20), FromDIP(20)));
+    SetMinSize(wxSize(FromDIP(20), FromDIP(20)));
+    SetMaxSize(wxSize(FromDIP(20), FromDIP(20)));
+    Bind(wxEVT_PAINT, &CameraItem::paintEvent, this);
+    Bind(wxEVT_ENTER_WINDOW, &CameraItem::on_enter_win, this);
+    Bind(wxEVT_LEAVE_WINDOW, &CameraItem::on_level_win, this);
+}
+
+CameraItem::~CameraItem() {}
+
+void CameraItem::msw_rescale() {
+    m_bitmap_normal.msw_rescale();
+    m_bitmap_hover.msw_rescale();
+}
+
+void CameraItem::on_enter_win(wxMouseEvent &evt)
+{
+    m_hover = true;
+    Refresh();
+}
+
+void CameraItem::on_level_win(wxMouseEvent &evt)
+{
+    m_hover = false;
+    Refresh();
+}
+
+void CameraItem::paintEvent(wxPaintEvent &evt)
+{
+    wxPaintDC dc(this);
+    render(dc);
+}
+
+void CameraItem::render(wxDC &dc)
+{
+#ifdef __WXMSW__
+    wxSize     size = GetSize();
+    wxMemoryDC memdc;
+    wxBitmap   bmp(size.x, size.y);
+    memdc.SelectObject(bmp);
+    memdc.Blit({0, 0}, size, &dc, {0, 0});
+
+    {
+        wxGCDC dc2(memdc);
+        doRender(dc2);
+    }
+
+    memdc.SelectObject(wxNullBitmap);
+    dc.DrawBitmap(bmp, 0, 0);
+#else
+    doRender(dc);
+#endif
+}
+
+void CameraItem::doRender(wxDC &dc)
+{
+    if (m_hover) {
+        dc.DrawBitmap(m_bitmap_hover.bmp(), wxPoint((GetSize().x - m_bitmap_hover.GetBmpSize().x) / 2, (GetSize().y - m_bitmap_hover.GetBmpSize().y) / 2));
+    } else {
+        dc.DrawBitmap(m_bitmap_normal.bmp(), wxPoint((GetSize().x - m_bitmap_normal.GetBmpSize().x) / 2, (GetSize().y - m_bitmap_normal.GetBmpSize().y) / 2));
+    }
+}
 
 #define TEMP_THRESHOLD_VAL 2
 #define TEMP_THRESHOLD_ALLOW_E_CTRL 170.0f
@@ -603,22 +678,6 @@ void PrintingTaskPanel::create_panel(wxWindow* parent)
 
     bSizer_task_btn->Add(FromDIP(10), 0, 0);
 
-    StateColor white_bg(std::pair<wxColour, int>(wxColour(255, 255, 255), StateColor::Disabled), std::pair<wxColour, int>(wxColour(255, 255, 255), StateColor::Pressed),
-                          std::pair<wxColour, int>(wxColour(255, 255, 255), StateColor::Hovered), std::pair<wxColour, int>(wxColour(255, 255, 255), StateColor::Enabled),
-                          std::pair<wxColour, int>(wxColour(255, 255, 255), StateColor::Normal));
-
-    m_button_partskip = new Button(progress_lr_panel, wxEmptyString, "print_control_partskip_disable", 0, 16, wxID_ANY); // ORCA match icon size
-    m_button_partskip->Enable(false);
-    m_button_partskip->Hide();
-    m_button_partskip->SetBackgroundColor(white_bg);
-    m_button_partskip->SetIcon("print_control_partskip_disable");
-    m_button_partskip->SetBorderColor(*wxWHITE);
-    m_button_partskip->SetFont(Label::Body_12);
-    m_button_partskip->SetCornerRadius(0);
-    m_button_partskip->SetToolTip(_L("Parts Skip"));
-    m_button_partskip->Bind(wxEVT_ENTER_WINDOW, [this](auto &e) { m_button_partskip->SetIcon("print_control_partskip_hover"); });
-    m_button_partskip->Bind(wxEVT_LEAVE_WINDOW, [this](auto &e) { m_button_partskip->SetIcon("print_control_partskip"); });
-
     m_button_pause_resume = new ScalableButton(progress_lr_panel, wxID_ANY, "print_control_pause", wxEmptyString, wxDefaultSize, wxDefaultPosition, wxBU_EXACTFIT | wxNO_BORDER,true);
 
     m_button_pause_resume->Bind(wxEVT_ENTER_WINDOW, [this](auto &e) {
@@ -814,8 +873,6 @@ void PrintingTaskPanel::create_panel(wxWindow* parent)
     progress_left_sizer->Add(penel_finish_time, 0, wxEXPAND |wxALL, 0);
     // progress_left_sizer->SetMaxSize(wxSize(FromDIP(600), -1));
 
-    progress_right_sizer->Add(0, 0, 0, wxEXPAND | wxLEFT, FromDIP(18));
-    progress_right_sizer->Add(m_button_partskip, 0, wxALL | wxALIGN_CENTER_VERTICAL, FromDIP(0));//5
     progress_right_sizer->Add(0, 0, 0, wxEXPAND | wxLEFT, FromDIP(18));
     progress_right_sizer->Add(m_button_pause_resume, 0, wxALL | wxALIGN_CENTER_VERTICAL, FromDIP(0));
     progress_right_sizer->Add(0, 0, 0, wxEXPAND | wxLEFT, FromDIP(18));
@@ -1047,24 +1104,6 @@ void PrintingTaskPanel::reset_printing_value()
 {
     this->set_thumbnail_img(m_thumbnail_placeholder.bmp(), m_thumbnail_placeholder.name());
     this->set_plate_index(-1);
-}
-
-void PrintingTaskPanel::enable_partskip_button(MachineObject* obj, bool enable)
-{
-    int stage = 0;
-    bool in_calibration_mode = false;
-    if( obj && (obj->print_type == "system" || CalibUtils::get_calib_mode_by_name(obj->subtask_name, stage) != CalibMode::Calib_None)){
-        in_calibration_mode = true;
-    }
-
-    if (!enable || in_calibration_mode) {
-        m_button_partskip->Enable(false);
-        m_button_partskip->SetLabel("");
-        m_button_partskip->SetIcon("print_control_partskip_disable");
-    }else if(obj && obj->is_support_brtc){
-        m_button_partskip->Enable(true);
-        m_button_partskip->SetIcon("print_control_partskip");   
-    }
 }
 
 void PrintingTaskPanel::enable_pause_resume_button(bool enable, std::string type)
@@ -1389,8 +1428,6 @@ StatusBasePanel::StatusBasePanel(wxWindow *parent, wxWindowID id, const wxPoint 
 
 StatusBasePanel::~StatusBasePanel()
 {
-    delete m_media_play_ctrl;
-
     if (m_custom_camera_view) {
         delete m_custom_camera_view;
         m_custom_camera_view = nullptr;
@@ -1426,8 +1463,6 @@ void StatusBasePanel::init_bitmaps()
     m_bitmap_recording_off = ScalableBitmap(this, wxGetApp().dark_mode() ? "monitor_recording_off_dark" : "monitor_recording_off", 20);
     m_bitmap_timelapse_on = ScalableBitmap(this, wxGetApp().dark_mode() ? "monitor_timelapse_on_dark" : "monitor_timelapse_on", 20);
     m_bitmap_timelapse_off = ScalableBitmap(this, wxGetApp().dark_mode() ? "monitor_timelapse_off_dark" : "monitor_timelapse_off", 20);
-    m_bitmap_vcamera_on = ScalableBitmap(this, wxGetApp().dark_mode() ? "monitor_vcamera_on_dark" : "monitor_vcamera_on", 20);
-    m_bitmap_vcamera_off = ScalableBitmap(this, wxGetApp().dark_mode() ? "monitor_vcamera_off_dark" : "monitor_vcamera_off", 20);
     m_bitmap_switch_camera = ScalableBitmap(this, wxGetApp().dark_mode() ? "camera_switch_dark" : "camera_switch", 20);
 
 }
@@ -1493,10 +1528,6 @@ wxBoxSizer *StatusBasePanel::create_monitoring_page()
     m_bitmap_recording_img->SetMinSize(wxSize(FromDIP(38), FromDIP(24)));
     m_bitmap_timelapse_img->Hide();
 
-    m_bitmap_vcamera_img = new wxStaticBitmap(m_panel_monitoring_title, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxSize(FromDIP(38), FromDIP(24)), 0);
-    m_bitmap_vcamera_img->SetMinSize(wxSize(FromDIP(38), FromDIP(24)));
-    m_bitmap_vcamera_img->Hide();
-
     m_setting_button = new CameraItem(m_panel_monitoring_title, "camera_setting", "camera_setting_hover");
     m_setting_button->SetMinSize(wxSize(FromDIP(38), FromDIP(24)));
     m_setting_button->SetBackgroundColour(STATUS_TITLE_BG);
@@ -1517,7 +1548,6 @@ wxBoxSizer *StatusBasePanel::create_monitoring_page()
     m_bitmap_sdcard_img->SetToolTip(_L("Storage"));
     m_bitmap_timelapse_img->SetToolTip(_L("Timelapse"));
     m_bitmap_recording_img->SetToolTip(_L("Video"));
-    m_bitmap_vcamera_img->SetToolTip(_L("Go Live"));
     m_setting_button->SetToolTip(_L("Camera Setting"));
     m_camera_switch_button->SetToolTip(_L("Switch Camera View"));
 
@@ -1525,7 +1555,6 @@ wxBoxSizer *StatusBasePanel::create_monitoring_page()
     bSizer_monitoring_title->Add(m_bitmap_sdcard_img, 0, wxALIGN_CENTER_VERTICAL | wxALL, FromDIP(5));
     bSizer_monitoring_title->Add(m_bitmap_timelapse_img, 0, wxALIGN_CENTER_VERTICAL | wxALL, FromDIP(5));
     bSizer_monitoring_title->Add(m_bitmap_recording_img, 0, wxALIGN_CENTER_VERTICAL | wxALL, FromDIP(5));
-    bSizer_monitoring_title->Add(m_bitmap_vcamera_img, 0, wxALIGN_CENTER_VERTICAL | wxALL, FromDIP(5));
     bSizer_monitoring_title->Add(m_setting_button, 0, wxALIGN_CENTER_VERTICAL | wxALL, FromDIP(5));
 
     bSizer_monitoring_title->Add(FromDIP(13), 0, 0);
@@ -1535,17 +1564,27 @@ wxBoxSizer *StatusBasePanel::create_monitoring_page()
     bSizer_monitoring_title->Fit(m_panel_monitoring_title);
     sizer->Add(m_panel_monitoring_title, 0, wxEXPAND | wxALL, 0);
 
-//    media_ctrl_panel              = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize);
-//    media_ctrl_panel->SetBackgroundColour(*wxBLACK);
-//    wxBoxSizer *bSizer_monitoring = new wxBoxSizer(wxVERTICAL);
-    m_media_ctrl = new wxMediaCtrl3(this);
-    m_media_ctrl->SetMinSize(wxSize(PAGE_MIN_WIDTH, FromDIP(288)));
+    // Shown in place of the stream while no custom camera source is enabled.
+    m_camera_placeholder = new wxPanel(this, wxID_ANY);
+    m_camera_placeholder->SetMinSize(wxSize(PAGE_MIN_WIDTH, FromDIP(288)));
+    m_camera_placeholder->SetBackgroundColour(*wxBLACK);
+    {
+        auto *hint = new wxStaticText(m_camera_placeholder, wxID_ANY,
+                                      _L("No camera configured. Use the camera setting button to enter the stream URL of the printer's webcam."),
+                                      wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE_HORIZONTAL);
+        hint->SetForegroundColour(*wxWHITE);
+        hint->Wrap(FromDIP(400));
+        auto *hint_sizer = new wxBoxSizer(wxVERTICAL);
+        hint_sizer->AddStretchSpacer();
+        hint_sizer->Add(hint, 0, wxALIGN_CENTER_HORIZONTAL | wxALL, FromDIP(20));
+        hint_sizer->AddStretchSpacer();
+        m_camera_placeholder->SetSizer(hint_sizer);
+    }
 
     m_custom_camera_view = WebView::CreateWebView(this, wxEmptyString);
     m_custom_camera_view->EnableContextMenu(false);
     Bind(wxEVT_WEBVIEW_NAVIGATING, &StatusBasePanel::on_webview_navigating, this, m_custom_camera_view->GetId());
 
-    m_media_play_ctrl = new MediaPlayCtrl(this, m_media_ctrl, wxDefaultPosition, wxSize(-1, FromDIP(40)));
     m_custom_camera_view->Hide();
     m_custom_camera_view->Bind(wxEVT_WEBVIEW_SCRIPT_MESSAGE_RECEIVED, [this](wxWebViewEvent& evt) {
         if (evt.GetString() == "leavepictureinpicture") {
@@ -1554,17 +1593,12 @@ wxBoxSizer *StatusBasePanel::create_monitoring_page()
             m_custom_camera_view->Reload();
         }
         else if (evt.GetString() == "enterpictureinpicture") {
-            toggle_builtin_camera();
+            hide_custom_camera();
         }
     });
 
-    sizer->Add(m_media_ctrl, 1, wxEXPAND | wxALL, 0);
+    sizer->Add(m_camera_placeholder, 1, wxEXPAND | wxALL, 0);
     sizer->Add(m_custom_camera_view, 1, wxEXPAND | wxALL, 0);
-    sizer->Add(m_media_play_ctrl, 0, wxEXPAND | wxALL, 0);
-//    media_ctrl_panel->SetSizer(bSizer_monitoring);
-//    media_ctrl_panel->Layout();
-//
-//    sizer->Add(media_ctrl_panel, 1, wxEXPAND | wxALL, 1);
 
     if (wxGetApp().app_config->get("camera", "enable_custom_source") == "true") {
         handle_camera_source_change();
@@ -2393,34 +2427,6 @@ void StatusPanel::update_camera_state(MachineObject* obj)
             m_panel_monitoring_title->Layout();
         }
     }
-
-    //vcamera
-    if (obj->virtual_camera) {
-        if (m_last_vcamera != (m_media_play_ctrl->IsStreaming() ? 1: 0)) {
-            if (m_media_play_ctrl->IsStreaming()) {
-                m_bitmap_vcamera_img->SetBitmap(m_bitmap_vcamera_on.bmp());
-            } else {
-                m_bitmap_vcamera_img->SetBitmap(m_bitmap_vcamera_off.bmp());
-            }
-            m_last_vcamera = m_media_play_ctrl->IsStreaming() ? 1 : 0;
-        }
-
-        if (!m_bitmap_vcamera_img->IsShown()) {
-            m_bitmap_vcamera_img->Show();
-            m_panel_monitoring_title->Layout();
-        }
-    } else {
-        if (m_bitmap_vcamera_img->IsShown()) {
-            m_bitmap_vcamera_img->Hide();
-            m_panel_monitoring_title->Layout();
-        }
-    }
-
-    //camera setting
-    if (m_camera_popup && m_camera_popup->IsShown()) {
-        bool show_vcamera = m_media_play_ctrl->IsStreaming();
-        m_camera_popup->update(show_vcamera);
-    }
 }
 
 StatusPanel::StatusPanel(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style, const wxString &name)
@@ -2451,7 +2457,6 @@ void StatusPanel::wire_controls()
     //m_switch_fan->SetValue(false);
 
     /* set default enable state */
-    m_project_task_panel->enable_partskip_button(nullptr, false);
     m_project_task_panel->enable_pause_resume_button(false, "resume_disable");
     m_project_task_panel->enable_abort_button(false);
 
@@ -2482,7 +2487,6 @@ void StatusPanel::wire_controls()
 
     // Connect Events
     m_project_task_panel->get_bitmap_thumbnail()->Connect(wxEVT_LEFT_DOWN, wxMouseEventHandler(StatusPanel::refresh_thumbnail_webrequest), NULL, this);
-    m_project_task_panel->get_partskip_button()->Connect(wxEVT_LEFT_DOWN, wxCommandEventHandler(StatusPanel::on_subtask_partskip), NULL, this);
     m_project_task_panel->get_pause_resume_button()->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_subtask_pause_resume), NULL, this);
     m_project_task_panel->get_abort_button()->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_subtask_abort), NULL, this);
     m_project_task_panel->get_market_scoring_button()->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_market_scoring), NULL, this);
@@ -2490,7 +2494,6 @@ void StatusPanel::wire_controls()
     m_project_task_panel->get_clean_button()->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_print_error_clean), NULL, this);
 
     m_setting_button->Connect(wxEVT_LEFT_DOWN, wxMouseEventHandler(StatusPanel::on_camera_enter), NULL, this);
-    m_setting_button->Connect(wxEVT_LEFT_DCLICK, wxMouseEventHandler(StatusPanel::on_camera_enter), NULL, this);
     m_tempCtrl_bed->Connect(wxEVT_KILL_FOCUS, wxFocusEventHandler(StatusPanel::on_bed_temp_kill_focus), NULL, this);
     m_tempCtrl_bed->Connect(wxEVT_SET_FOCUS, wxFocusEventHandler(StatusPanel::on_bed_temp_set_focus), NULL, this);
     m_tempCtrl_nozzle->Connect(wxEVT_KILL_FOCUS, wxFocusEventHandler(StatusPanel::on_nozzle_temp_kill_focus), NULL, this);
@@ -2546,7 +2549,6 @@ StatusPanel::~StatusPanel()
     if (built()) {
         // Disconnect Events
         m_project_task_panel->get_bitmap_thumbnail()->Disconnect(wxEVT_LEFT_DOWN, wxMouseEventHandler(StatusPanel::refresh_thumbnail_webrequest), NULL, this);
-        m_project_task_panel->get_partskip_button()->Disconnect(wxEVT_LEFT_DOWN, wxCommandEventHandler(StatusPanel::on_subtask_partskip), NULL, this);
         m_project_task_panel->get_pause_resume_button()->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_subtask_pause_resume), NULL, this);
         m_project_task_panel->get_abort_button()->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_subtask_abort), NULL, this);
         m_project_task_panel->get_market_scoring_button()->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_market_scoring), NULL, this);
@@ -2554,7 +2556,6 @@ StatusPanel::~StatusPanel()
         m_project_task_panel->get_clean_button()->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_print_error_clean), NULL, this);
 
         m_setting_button->Disconnect(wxEVT_LEFT_DOWN, wxMouseEventHandler(StatusPanel::on_camera_enter), NULL, this);
-        m_setting_button->Disconnect(wxEVT_LEFT_DCLICK, wxMouseEventHandler(StatusPanel::on_camera_enter), NULL, this);
         m_tempCtrl_bed->Disconnect(wxEVT_KILL_FOCUS, wxFocusEventHandler(StatusPanel::on_bed_temp_kill_focus), NULL, this);
         m_tempCtrl_bed->Disconnect(wxEVT_SET_FOCUS, wxFocusEventHandler(StatusPanel::on_bed_temp_set_focus), NULL, this);
         m_tempCtrl_nozzle->Disconnect(wxEVT_KILL_FOCUS, wxFocusEventHandler(StatusPanel::on_nozzle_temp_kill_focus), NULL, this);
@@ -2593,9 +2594,6 @@ StatusPanel::~StatusPanel()
 
     if (ctrl_e_hint_dlg != nullptr)
         delete ctrl_e_hint_dlg;
-
-    if (sdcard_hint_dlg != nullptr)
-        delete sdcard_hint_dlg;
 
     if (m_score_data != nullptr) {
         delete m_score_data;
@@ -2682,35 +2680,6 @@ void StatusPanel::on_market_retry(wxCommandEvent &event)
     obj->get_model_mall_result_need_retry = true;
     } else {
         BOOST_LOG_TRIVIAL(info)<< __FUNCTION__ << "retury failed";
-    }
-}
-
-void StatusPanel::update_partskip_button(MachineObject *obj) {
-    if (!obj) return;
-
-    auto partskip_button = m_project_task_panel->get_partskip_button();
-    if( obj->is_support_partskip ){
-        partskip_button->Show();
-    }else{
-        partskip_button->Hide();
-    }
-    BOOST_LOG_TRIVIAL(info) << "part skip: is_support_partskip: "<< obj->is_support_partskip;
-}
-
-void StatusPanel::on_subtask_partskip(wxCommandEvent &event)
-{
-    if (m_partskip_dlg == nullptr) {
-        m_partskip_dlg = new PartSkipDialog(this->GetParent());
-    }
-    
-    auto dm = GUI::wxGetApp().getDeviceManager();
-    m_partskip_dlg->InitSchedule(dm->get_selected_machine());
-    BOOST_LOG_TRIVIAL(info) << "part skip: initial part skip dialog.";
-    if(m_partskip_dlg->ShowModal() == wxID_OK){
-        int cnt = m_partskip_dlg->GetAllSkippedPartsNum();
-        m_project_task_panel->set_part_skipped_count(cnt);
-        m_project_task_panel->set_part_skipped_dirty(5);
-        BOOST_LOG_TRIVIAL(info) << "part skip: prepare to filter printer dirty data.";
     }
 }
 
@@ -3768,18 +3737,14 @@ void StatusPanel::update_subtask(MachineObject *obj)
     m_project_task_panel->show_layers_num(obj->is_support_layer_num);
 
     update_model_info();
-    update_partskip_button(obj);
     update_printer_parts_options(obj);
 
     if (obj->is_system_printing() || obj->is_in_calibration()) {
         reset_printing_values();
     } else if (obj->is_in_printing() || obj->print_status == "FINISH") {
-        update_partskip_subtask(obj);
-
         if (obj->is_in_prepare() || obj->print_status == "SLICING") {
             m_project_task_panel->market_scoring_hide();
             m_project_task_panel->get_request_failed_panel()->Hide();
-            m_project_task_panel->enable_partskip_button(nullptr, false);
             m_project_task_panel->enable_abort_button(false);
             m_project_task_panel->enable_pause_resume_button(false, "pause_disable");
             wxString prepare_text;
@@ -3821,7 +3786,6 @@ void StatusPanel::update_subtask(MachineObject *obj)
             } else {
                  m_project_task_panel->enable_pause_resume_button(true, "pause");
             }
-            m_project_task_panel->enable_partskip_button(obj, true);
             // update printing stage
             m_project_task_panel->update_left_time(obj->mc_left_time);
             if (obj->subtask_) {
@@ -3838,7 +3802,6 @@ void StatusPanel::update_subtask(MachineObject *obj)
             if (obj->is_printing_finished()) {
                 obj->update_model_task();
                 m_project_task_panel->enable_abort_button(false);
-                m_project_task_panel->enable_partskip_button(nullptr, false);
                 m_project_task_panel->enable_pause_resume_button(false, "resume_disable");
                 // is makeworld subtask
                 if (wxGetApp().has_model_mall() && obj->is_makeworld_subtask()) {
@@ -3901,32 +3864,6 @@ void StatusPanel::update_subtask(MachineObject *obj)
         }
     } else {
         reset_printing_values();
-    }
-}
-
-void StatusPanel::update_partskip_subtask(MachineObject *obj){
-    if (!obj) return;
-    if (!obj->subtask_) return;
-
-    auto partskip_button = m_project_task_panel->get_partskip_button();
-    if (partskip_button) { 
-        int part_cnt = 0;
-        if(m_project_task_panel->get_part_skipped_dirty() > 0){
-            m_project_task_panel->set_part_skipped_dirty(m_project_task_panel->get_part_skipped_dirty() - 1);
-            part_cnt = m_project_task_panel->get_part_skipped_count();
-            BOOST_LOG_TRIVIAL(info) << "part skip: stop recv printer dirty data.";
-        }else{
-            part_cnt = obj->m_partskip_ids.size();
-            BOOST_LOG_TRIVIAL(info) << "part skip: recv printer normal data.";
-        }
-        if (part_cnt > 0)
-            partskip_button->SetLabel(wxString::Format("(%d)", part_cnt));
-        else 
-            partskip_button->SetLabel("");
-    }
-
-    if(m_partskip_dlg && m_partskip_dlg->IsShown()) {
-        m_partskip_dlg->UpdatePartsStateFromPrinter(obj);
     }
 }
 
@@ -3996,7 +3933,6 @@ void StatusPanel::update_sdcard_subtask(MachineObject *obj)
 
 void StatusPanel::reset_printing_values()
 {
-    m_project_task_panel->enable_partskip_button(nullptr, false);
     m_project_task_panel->enable_pause_resume_button(false, "pause_disable");
     m_project_task_panel->enable_abort_button(false);
     m_project_task_panel->reset_printing_value();
@@ -4964,46 +4900,20 @@ void StatusPanel::on_lamp_switch(wxCommandEvent &event)
     }
 }
 
-void StatusPanel::on_switch_vcamera(wxMouseEvent &event)
-{
-    //if (!obj) return;
-    //bool value = m_recording_button->get_switch_status();
-    //obj->command_ipcam_record(!value);
-    m_media_play_ctrl->ToggleStream();
-    show_vcamera = m_media_play_ctrl->IsStreaming();
-    if (m_camera_popup)
-        m_camera_popup->sync_vcamera_state(show_vcamera);
-}
-
 void StatusPanel::on_camera_enter(wxMouseEvent& event)
 {
-    if (obj) {
-        if (m_camera_popup == nullptr)
-            m_camera_popup = std::make_shared<CameraPopup>(this);
-        m_camera_popup->check_func_supported(obj);
-        m_camera_popup->sync_vcamera_state(show_vcamera);
-        m_camera_popup->Bind(EVT_VCAMERA_SWITCH, &StatusPanel::on_switch_vcamera, this);
-        m_camera_popup->Bind(EVT_SDCARD_ABSENT_HINT, [this](wxCommandEvent &e) {
-            if (sdcard_hint_dlg == nullptr) {
-                sdcard_hint_dlg = new SecondaryCheckDialog(this->GetParent(), wxID_ANY, _L("Warning"), SecondaryCheckDialog::VisibleButtons::ONLY_CONFIRM); // ORCA VisibleButtons instead ButtonStyle 
-                sdcard_hint_dlg->update_text(_L("Can't start this without storage."));
-            }
-            sdcard_hint_dlg->on_show();
-            });
-        m_camera_popup->Bind(EVT_CAM_SOURCE_CHANGE, &StatusPanel::on_camera_source_change, this);
-        wxWindow* ctrl = (wxWindow*)event.GetEventObject();
-        wxPoint   pos = ctrl->ClientToScreen(wxPoint(0, 0));
-        wxSize        sz   = ctrl->GetSize();
-        pos.x += sz.x;
-        pos.y += sz.y;
-        m_camera_popup->SetPosition(pos);
-        m_camera_popup->update(m_media_play_ctrl->IsStreaming());
-        m_camera_popup->Popup();
-    }
-}
+    // The camera view shows a custom stream URL (e.g. the webcam served next to Moonraker) in a web view.
+    const wxString current = from_u8(wxGetApp().app_config->get("camera", "custom_source"));
+    wxTextEntryDialog dlg(this,
+                          _L("Stream URL of the printer's webcam, for example http://printer.local/webcam/?action=stream\nLeave it empty to turn the camera view off."),
+                          _L("Camera Setting"), current);
+    if (dlg.ShowModal() != wxID_OK)
+        return;
 
-void StatusBasePanel::on_camera_source_change(wxCommandEvent& event)
-{
+    wxString url = dlg.GetValue();
+    url.Trim().Trim(false);
+    wxGetApp().app_config->set("camera", "custom_source", into_u8(url));
+    wxGetApp().app_config->set("camera", "enable_custom_source", url.empty() ? "false" : "true");
     handle_camera_source_change();
 }
 
@@ -5013,20 +4923,21 @@ void StatusBasePanel::handle_camera_source_change()
     const auto enabled = wxGetApp().app_config->get("camera", "enable_custom_source") == "true";
 
     if (enabled && !new_cam_url.empty()) {
-        m_custom_camera_view->LoadURL(new_cam_url);
+        m_custom_camera_view->LoadURL(from_u8(new_cam_url));
         toggle_custom_camera();
         m_camera_switch_button->Show();
     } else {
-        toggle_builtin_camera();
+        hide_custom_camera();
         m_camera_switch_button->Hide();
     }
+    m_panel_monitoring_title->Layout();
 }
 
-void StatusBasePanel::toggle_builtin_camera()
+void StatusBasePanel::hide_custom_camera()
 {
     m_custom_camera_view->Hide();
-    m_media_ctrl->Show();
-    m_media_play_ctrl->Show();
+    m_camera_placeholder->Show();
+    Layout();
 }
 
 void StatusBasePanel::toggle_custom_camera()
@@ -5035,18 +4946,18 @@ void StatusBasePanel::toggle_custom_camera()
 
     if (enabled) {
         m_custom_camera_view->Show();
-        m_media_ctrl->Hide();
-        m_media_play_ctrl->Hide();
+        m_camera_placeholder->Hide();
+        Layout();
     }
 }
 
 void StatusBasePanel::on_camera_switch_toggled(wxMouseEvent& event)
 {
     const auto enabled = wxGetApp().app_config->get("camera", "enable_custom_source") == "true";
-    if (enabled && m_media_ctrl->IsShown()) {
+    if (enabled && m_camera_placeholder->IsShown()) {
         toggle_custom_camera();
     } else {
-        toggle_builtin_camera();
+        hide_custom_camera();
     }
 }
 
@@ -5065,13 +4976,6 @@ void StatusBasePanel::remove_controls()
         });
     )";
     m_custom_camera_view->RunScript(js_cleanup_video_element);
-}
-
-void StatusPanel::on_camera_leave(wxMouseEvent& event)
-{
-    if (obj && m_camera_popup) {
-        m_camera_popup->Dismiss();
-    }
 }
 
 void StatusPanel::on_auto_leveling(wxCommandEvent &event)
@@ -5221,7 +5125,6 @@ void StatusPanel::set_default()
 
     m_bitmap_timelapse_img->Hide();
     m_bitmap_recording_img->Hide();
-    m_bitmap_vcamera_img->Hide();
     m_setting_button->Show();
     m_tempCtrl_chamber->Show();
     m_options_btn->Show();
@@ -5287,7 +5190,7 @@ void StatusPanel::set_hold_count(int& count)
 void StatusPanel::rescale_camera_icons()
 {
     if (!GetParent() || IsBeingDeleted()) return;
-    if (!m_setting_button || !m_media_play_ctrl || !m_bitmap_vcamera_img || !m_bitmap_sdcard_img || !m_bitmap_recording_img || !m_bitmap_timelapse_img) return;
+    if (!m_setting_button || !m_bitmap_sdcard_img || !m_bitmap_recording_img || !m_bitmap_timelapse_img) return;
 
     m_setting_button->msw_rescale();
 
@@ -5299,15 +5202,6 @@ void StatusPanel::rescale_camera_icons()
     m_bitmap_recording_off = ScalableBitmap(this, wxGetApp().dark_mode()?"monitor_recording_off_dark":"monitor_recording_off", 20);
     m_bitmap_timelapse_on = ScalableBitmap(this, wxGetApp().dark_mode()?"monitor_timelapse_on_dark":"monitor_timelapse_on", 20);
     m_bitmap_timelapse_off = ScalableBitmap(this, wxGetApp().dark_mode()?"monitor_timelapse_off_dark":"monitor_timelapse_off", 20);
-    m_bitmap_vcamera_on = ScalableBitmap(this, wxGetApp().dark_mode()?"monitor_vcamera_on_dark":"monitor_vcamera_on", 20);
-    m_bitmap_vcamera_off = ScalableBitmap(this, wxGetApp().dark_mode()?"monitor_vcamera_off_dark":"monitor_vcamera_off", 20);
-
-    if (m_media_play_ctrl->IsStreaming()) {
-        m_bitmap_vcamera_img->SetBitmap(m_bitmap_vcamera_on.bmp());
-    }
-    else {
-        m_bitmap_vcamera_img->SetBitmap(m_bitmap_vcamera_off.bmp());
-    }
 
     if (!obj) return;
 
@@ -5354,7 +5248,6 @@ void StatusPanel::msw_rescale()
     m_bmToggleBtn_timelapse->Rescale();
     m_panel_control_title->SetSize(wxSize(-1, FromDIP(PAGE_TITLE_HEIGHT)));
     //m_staticText_control->SetMinSize(wxSize(-1, PAGE_TITLE_HEIGHT));
-    m_media_play_ctrl->msw_rescale();
     m_bpButton_xy->SetBitmap(m_bitmap_axis_home);
     m_bpButton_xy->SetMinSize(AXIS_MIN_SIZE);
     m_bpButton_xy->SetSize(AXIS_MIN_SIZE);

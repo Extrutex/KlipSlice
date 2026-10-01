@@ -1657,9 +1657,6 @@ bool SendToPrinterDialog::Show(bool show)
     return DPIDialog::Show(show);
 }
 
-extern wxString hide_passwd(wxString url, std::vector<wxString> const &passwords);
-extern void     refresh_agora_url(char const *device, char const *dev_ver, char const *channel, void *context, void (*callback)(void *context, char const *url));
-
 void SendToPrinterDialog::GetConnection()
 {
     DeviceManager *dm  = GUI::wxGetApp().getDeviceManager();
@@ -1731,7 +1728,6 @@ void SendToPrinterDialog::GetConnection()
                     url += "&device=" + m;
                     url += "&net_ver=" + v;
                     url += "&dev_ver=" + dv;
-                    url += "&refresh_url=" + boost::lexical_cast<std::string>(&refresh_agora_url);
                     url += "&cli_id=" + wxGetApp().app_config->get("slicer_uuid");
                     url += "&cli_ver=" + std::string(SLIC3R_VERSION);
                 }
@@ -1740,11 +1736,6 @@ void SendToPrinterDialog::GetConnection()
                 {
                     m_url_timer->Stop();
                 }
-
-                #if !BBL_RELEASE_TO_PUBLIC
-                                BOOST_LOG_TRIVIAL(info) << "SendToPrinter::camera_url: " << hide_passwd(url, {"?uid=", "authkey=", "passwd="});
-                #endif
-
 
                 if (boost::algorithm::starts_with(url, "bambu:///"))
                 {

@@ -308,7 +308,6 @@ void DeviceErrorDialog::init_button_list()
     init_button(LOAD_VIRTUAL_TRAY, _L("Load"));
     init_button(OK_BUTTON, _L("OK"));
     init_button(FILAMENT_LOAD_RESUME, _L("Filament Loaded, Resume"));
-    init_button(JUMP_TO_LIVEVIEW, _L("View Liveview"));
     init_button(NO_REMINDER_NEXT_TIME, _L("No Reminder Next Time"));
     init_button(REFRESH_NOZZLE, _L("Recheck"));
     init_button(IGNORE_NO_REMINDER_NEXT_TIME, _L("Ignore. Don't Remind Next Time"));
@@ -348,7 +347,6 @@ wxString DeviceErrorDialog::parse_error_level(int error_code)
     }
 }
 
-static const std::unordered_set<string> s_jump_liveview_error_codes = { "0300-8003", "0300-8002", "0300-800A"};
 wxString DeviceErrorDialog::show_error_code(int error_code)
 {
     if (m_error_code == error_code) { return wxEmptyString;}
@@ -375,7 +373,6 @@ wxString DeviceErrorDialog::show_error_code(int error_code)
         /* action buttons*/
         std::vector<int> used_button;
         wxString         error_image_url = wxGetApp().get_hms_query()->query_print_image_action(m_obj, error_code, used_button);
-        if (s_jump_liveview_error_codes.count(error_str)) { used_button.emplace_back(DeviceErrorDialog::JUMP_TO_LIVEVIEW); } // special case
 
         /* do update*/
         update_contents(error_level, error_msg, error_str, error_image_url, used_button);
@@ -565,12 +562,6 @@ void DeviceErrorDialog::on_button_click(ActionButton btn_id)
     }
     case DeviceErrorDialog::FILAMENT_LOAD_RESUME: {
         m_obj->command_hms_resume(std::to_string(m_error_code), m_obj->job_id_);
-        break;
-    }
-    case DeviceErrorDialog::JUMP_TO_LIVEVIEW: {
-        Slic3r::GUI::wxGetApp().mainframe->jump_to_monitor();
-        if (MonitorPanel* monitor = MonitorPanel::if_built())
-            monitor->jump_to_LiveView();
         break;
     }
     case DeviceErrorDialog::NO_REMINDER_NEXT_TIME: {

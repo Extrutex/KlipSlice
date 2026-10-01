@@ -795,7 +795,6 @@ void PrintErrorDialog::init_button_list()
     init_button(LOAD_VIRTUAL_TRAY, _L("Load"));
     init_button(OK_BUTTON, _L("OK"));
     init_button(FILAMENT_LOAD_RESUME, _L("Filament Loaded, Resume"));
-    init_button(JUMP_TO_LIVEVIEW, _L("View Liveview"));
     init_button(NO_REMINDER_NEXT_TIME, _L("No Reminder Next Time"));
     init_button(IGNORE_NO_REMINDER_NEXT_TIME, _L("Ignore. Don't Remind Next Time"));
     init_button(IGNORE_RESUME, _L("Ignore this and Resume"));

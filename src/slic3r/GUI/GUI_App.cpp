@@ -207,12 +207,6 @@ typedef BOOL (WINAPI *LPFN_ISWOW64PROCESS2)(
 using namespace std::literals;
 namespace pt = boost::property_tree;
 
-struct StaticBambuLib
-{
-    static void reset();
-    static void release();
-};
-
 namespace Slic3r {
 namespace GUI {
 
@@ -1512,8 +1506,8 @@ int GUI_App::install_plugin(std::string name, std::string package_name, InstallP
                         boost::system::error_code ec;
                         fs::remove(dest_path, ec);
                         if (ec) {
-                            // On Windows a currently-loaded DLL (e.g. BambuSource.dll, or the
-                            // networking library in legacy mode) cannot be deleted or overwritten
+                            // On Windows a currently-loaded DLL (e.g. the networking library in
+                            // legacy mode) cannot be deleted or overwritten
                             // in place, which failed the whole install with "The plug-in file may
                             // be in use" (issue #14373). It CAN however be renamed aside: the
                             // running module keeps mapping the renamed file while we write the new
@@ -1669,7 +1663,6 @@ void GUI_App::restart_networking()
 {
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(" enter, mainframe %1%")%mainframe;
     on_init_network(true);
-    StaticBambuLib::reset();
     if(m_agent) {
         init_networking_callbacks();
         m_agent->set_on_ssdp_msg_fn(
@@ -2379,7 +2372,6 @@ GUI_App::~GUI_App()
         delete preset_updater;
     }
 
-    StaticBambuLib::release();
     BBLNetworkPlugin::shutdown();
 
 
@@ -3606,31 +3598,19 @@ bool GUI_App::install_network_plugin_from_ota(bool& had_cache)
     }
     had_cache = true;
 
-    std::string network_library, player_library, live555_library, network_library_dst, player_library_dst, live555_library_dst;
+    std::string network_library, network_library_dst;
 #if defined(_MSC_VER) || defined(_WIN32)
     network_library = cache_folder.string() + "/bambu_networking.dll";
-    player_library = cache_folder.string() + "/BambuSource.dll";
-    live555_library = cache_folder.string() + "/live555.dll";
     network_library_dst = plugin_folder.string() + "/" + std::string(BAMBU_NETWORK_LIBRARY) + "_" + cached_version + ".dll";
-    player_library_dst = plugin_folder.string() + "/BambuSource.dll";
-    live555_library_dst = plugin_folder.string() + "/live555.dll";
 #elif defined(__WXMAC__)
     network_library = cache_folder.string() + "/libbambu_networking.dylib";
-    player_library = cache_folder.string() + "/libBambuSource.dylib";
-    live555_library = cache_folder.string() + "/liblive555.dylib";
     network_library_dst = plugin_folder.string() + "/lib" + std::string(BAMBU_NETWORK_LIBRARY) + "_" + cached_version + ".dylib";
-    player_library_dst = plugin_folder.string() + "/libBambuSource.dylib";
-    live555_library_dst = plugin_folder.string() + "/liblive555.dylib";
 #else
     network_library = cache_folder.string() + "/libbambu_networking.so";
-    player_library = cache_folder.string() + "/libBambuSource.so";
-    live555_library = cache_folder.string() + "/liblive555.so";
     network_library_dst = plugin_folder.string() + "/lib" + std::string(BAMBU_NETWORK_LIBRARY) + "_" + cached_version + ".so";
-    player_library_dst = plugin_folder.string() + "/libBambuSource.so";
-    live555_library_dst = plugin_folder.string() + "/liblive555.so";
 #endif
 
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": checking network_library " << network_library << ", player_library " << player_library;
+    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": checking network_library " << network_library;
     if (!boost::filesystem::exists(plugin_folder)) {
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": create directory " << plugin_folder.string();
         boost::filesystem::create_directory(plugin_folder);
@@ -3676,17 +3656,6 @@ bool GUI_App::install_network_plugin_from_ota(bool& had_cache)
         app_config->save();
     }
 
-    if (boost::filesystem::exists(player_library)) {
-        if (!install_file(player_library, player_library_dst))
-            return false;
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": Copying player library from " << player_library << " to " << player_library_dst << " successfully.";
-    }
-
-    if (boost::filesystem::exists(live555_library)) {
-        if (!install_file(live555_library, live555_library_dst))
-            return false;
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": Copying live555 library from " << live555_library << " to " << live555_library_dst << " successfully.";
-    }
     // All cached files consumed - drop the whole ota/plugins cache folder.
     try {
         if (boost::filesystem::exists(cache_folder))
