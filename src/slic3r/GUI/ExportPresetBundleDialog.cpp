@@ -342,11 +342,10 @@ void ExportPresetBundleDialog::OnExportData(const wxString& path, const wxString
     json bundle_structure;
     NetworkAgent* agent = wxGetApp().getAgent();
     std::string clock   = get_curr_time();
+    bundle_structure["version"] = SLIC3R_VERSION;
     if (agent) {
-        bundle_structure["version"]   = SLIC3R_VERSION;
         bundle_structure["bundle_id"] = agent->get_user_id() + "_" + std::string(filename.utf8_string()) + "_" + clock;
     } else {
-        bundle_structure["version"] = "";
         std::string id;
         bundle_structure["bundle_id"] = id + "offline_" + "_" + clock;
     }

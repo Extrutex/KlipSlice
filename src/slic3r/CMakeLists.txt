@@ -501,8 +501,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/UnsavedChangesDialog.hpp
     GUI/UpdateDialogs.cpp
     GUI/UpdateDialogs.hpp
-    GUI/UserManager.cpp
-    GUI/UserManager.hpp
     GUI/UserNotification.cpp
     GUI/UserNotification.hpp
     GUI/WebGuideDialog.cpp

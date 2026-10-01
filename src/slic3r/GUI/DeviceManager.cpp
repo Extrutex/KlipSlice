@@ -475,9 +475,7 @@ void MachineObject::set_access_code(std::string code, bool only_refresh)
                 // device under one printer agent doesn't silently read as already-bound under a
                 // different, independent one. Cloud devices (the else branch below) aren't
                 // scoped this way: they're never recalled from a stale local cache across a
-                // session boundary, since parse_user_print_info() always overwrites their code
-                // fresh from the cloud API's current response, so there's no cross-agent leakage
-                // risk to guard against there.
+                // session boundary, so there's no cross-agent leakage risk to guard against there.
                 if (!code.empty()) {
                     DeviceManager::update_local_machine(*this);
                 } else {
@@ -2665,11 +2663,9 @@ bool MachineObject::is_connected()
         return false;
     }
 
+    // Cloud-bound (non-LAN) printers need a vendor cloud, which this build does not provide.
     if (!is_lan_mode_printer()) {
-        NetworkAgent* m_agent = Slic3r::GUI::wxGetApp().getAgent();
-        if (m_agent) {
-            return m_agent->is_server_connected(Slic3r::GUI::wxGetApp().get_printer_cloud_provider());
-        }
+        return false;
     }
     return true;
 }
@@ -4758,81 +4754,15 @@ void MachineObject::update_slice_info(std::string project_id, std::string profil
 
         BOOST_LOG_TRIVIAL(trace) << "slice_info: start";
         slice_info = new BBLSliceInfo();
-        get_slice_info_thread = new boost::thread([this, project_id, profile_id, subtask_id, plate_idx] {
-            int plate_index = -1;
-
+        get_slice_info_thread = new boost::thread([this, plate_idx] {
             if (!m_agent) return;
             if (!slice_info) return;
             if (!get_slice_info_thread) return;/*STUDIO-12264*/
             if (get_slice_info_thread->interruption_requested()) { return;}
 
-            if (plate_idx >= 0) {
-                plate_index = plate_idx;
+            // Plate details only come from the print report; there is no cloud task lookup.
+            if (plate_idx >= 0)
                 this->m_plate_index = plate_idx;
-            }
-            else {
-                std::string subtask_json;
-                unsigned http_code = 0;
-                std::string http_body;
-                if (m_agent->get_subtask_info(subtask_id, &subtask_json, &http_code, &http_body,
-                                              Slic3r::GUI::wxGetApp().get_printer_cloud_provider()) == 0) {
-                    try {
-                        if (!subtask_json.empty()) {
-
-                            json task_j = json::parse(subtask_json);
-                            if (task_j.contains("content")) {
-                                std::string content_str = task_j["content"].get<std::string>();
-                                json content_j = json::parse(content_str);
-                                plate_index = content_j["info"]["plate_idx"].get<int>();
-                            }
-
-                            if (task_j.contains("context") && task_j["context"].contains("plates")) {
-                                for (int i = 0; i < task_j["context"]["plates"].size(); i++) {
-                                    if (task_j["context"]["plates"][i].contains("index") && task_j["context"]["plates"][i]["index"].get<int>() == plate_index) {
-                                        if (task_j["context"]["plates"][i].contains("thumbnail") && task_j["context"]["plates"][i]["thumbnail"].contains("url")) {
-                                            slice_info->thumbnail_url = task_j["context"]["plates"][i]["thumbnail"]["url"].get<std::string>();
-                                        }
-                                        if (task_j["context"]["plates"][i].contains("prediction")) {
-                                            slice_info->prediction = task_j["context"]["plates"][i]["prediction"].get<int>();
-                                        }
-                                        if (task_j["context"]["plates"][i].contains("weight")) {
-                                            slice_info->weight = task_j["context"]["plates"][i]["weight"].get<float>();
-                                        }
-                                        if (!task_j["context"]["plates"][i]["filaments"].is_null()) {
-                                            for (auto filament : task_j["context"]["plates"][i]["filaments"]) {
-                                                FilamentInfo f;
-                                                if(filament.contains("color")){
-                                                    f.color = filament["color"].get<std::string>();
-                                                }
-                                                if (filament.contains("type")) {
-                                                    f.type = filament["type"].get<std::string>();
-                                                }
-                                                if (filament.contains("used_g")) {
-                                                    f.used_g = stof(filament["used_g"].get<std::string>());
-                                                }
-                                                if (filament.contains("used_m")) {
-                                                    f.used_m = stof(filament["used_m"].get<std::string>());
-                                                }
-                                                slice_info->filaments_info.push_back(f);
-                                            }
-                                        }
-                                        BOOST_LOG_TRIVIAL(trace) << "task_info: thumbnail url=" << slice_info->thumbnail_url;
-                                    }
-                                }
-                            }
-                            else {
-                                BOOST_LOG_TRIVIAL(error) << "task_info: no context or plates";
-                            }
-                        }
-                    }
-                    catch (...) {
-                    }
-                }
-                else {
-                    BOOST_LOG_TRIVIAL(error) << "task_info: get subtask id failed!";
-                }
-            }
-            // this->m_plate_index = plate_index;
             });
     }
 }

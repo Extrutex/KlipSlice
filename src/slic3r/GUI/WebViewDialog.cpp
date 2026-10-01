@@ -421,9 +421,6 @@ void WebViewPanel::OnFreshLoginStatus(wxTimerEvent &event)
         auto* app_config = Slic3r::GUI::wxGetApp().app_config;
         if (app_config && app_config->get_stealth_mode()) return;
         Slic3r::GUI::wxGetApp().get_login_info(ORCA_CLOUD_PROVIDER);
-        if (app_config && app_config->has_cloud_provider(BBL_CLOUD_PROVIDER)) {
-            Slic3r::GUI::wxGetApp().get_login_info(BBL_CLOUD_PROVIDER);
-        }
     }
 }
 

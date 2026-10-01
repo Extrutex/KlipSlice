@@ -196,9 +196,9 @@ void HttpServer::set_request_handler(const std::function<std::shared_ptr<Respons
     this->m_request_handler = request_handler;
 }
 
-std::shared_ptr<HttpServer::Response> HttpServer::bbl_auth_handle_request(const std::string& url)
+std::shared_ptr<HttpServer::Response> HttpServer::default_auth_handle_request(const std::string& url)
 {
-    return auth_handle_request(url, BBL_CLOUD_PROVIDER);
+    return auth_handle_request(url, ORCA_CLOUD_PROVIDER);
 }
 
 std::shared_ptr<HttpServer::Response> HttpServer::auth_handle_request(const std::string& url, const std::string& provider)

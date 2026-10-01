@@ -121,8 +121,6 @@ ZUserLogin::ZUserLogin(std::shared_ptr<ICloudServiceAgent> cloud_agent)
 
         BOOST_LOG_TRIVIAL(info) << "login url = " << TargetUrl.ToStdString();
 
-        m_bbl_user_agent = wxString::Format("BBL-Slicer/v%s", wxGetApp().get_bbl_client_version());
-
         // Create the webview
         m_browser = WebView::CreateWebView(this, TargetUrl);
         if (m_browser == nullptr) {

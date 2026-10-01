@@ -6,7 +6,6 @@ function OnInit()
     TranslatePage();
 
 	SendMsg_GetLoginInfo();
-	SendMsg_GetBambuLoginInfo();
 	SendMsg_GetRecentFile();
 
 	Set_AccountMenu_Event();
@@ -90,23 +89,12 @@ function HandleStudio( pVal )
     SetOrcaLoginInfo(pVal["data"]["avatar"], pVal["data"]["name"], pVal["data"]["account"]);
   } else if (strCmd == "orca_useroffline") {
     SetOrcaUserOffline();
-  } else if (strCmd == "studio_bambu_userlogin") {
-    SetBambuLoginInfo(pVal["data"]["avatar"], pVal["data"]["name"]);
-  } else if (strCmd == "studio_bambu_useroffline") {
-    SetBambuUserOffline();
   } else if (strCmd == "studio_clickmenu") {
     let strName = pVal["data"]["menu"];
 
     GotoMenu(strName);
   } else if (strCmd == "cloud_providers_info") {
     var providers = (pVal["data"] && pVal["data"]["providers"]) || [];
-
-    if (providers.indexOf("bbl") >= 0) {
-      $("#BambuCloudSection").show();
-    } else {
-      SetBambuUserOffline();
-      $("#BambuCloudSection").hide();
-    }
 
     if (providers.indexOf("orca") >= 0) {
       $("#LeftBoard").show();
@@ -141,15 +129,11 @@ function GotoMenu( strMenu )
 
 /*------Account rows------*/
 
-/*----Everything that differs between the two cloud providers lives here----*/
+/*----Everything that is specific to a cloud provider lives here----*/
 var AccountRows = {
   orca:  { row: "#OrcaAccount",  name: "#UserName",      avatar: "#UserAvatarIcon",  dot: null,
-           loginCmd: "homepage_orca_login_or_register",  logoutCmd: "homepage_orca_logout" },
-  bambu: { row: "#BambuAccount", name: "#BambuUserName", avatar: "#BambuAvatarIcon", dot: "#BambuStatusDot",
-           loginCmd: "homepage_bambu_login_or_register", logoutCmd: "homepage_bambu_logout" }
+           loginCmd: "homepage_orca_login_or_register",  logoutCmd: "homepage_orca_logout" }
 };
-
-var BAMBU_FOLD_KEY = "OrcaHome_BambuCloudExpanded";
 
 var m_OpenAccountMenu = null;
 
@@ -227,25 +211,7 @@ function OnAccountMenuLogout() {
   if (account) SendSimpleCommand(account.logoutCmd);
 }
 
-/*----Bambu Cloud is secondary, so its account folds away under the main one----*/
-function SetBambuSectionExpanded(bExpanded, bPersist) {
-  $("#BambuCloudBody").toggleClass("Expanded", bExpanded);
-  $("#BambuAccount").attr("tabindex", bExpanded ? "0" : "-1");  /*----keep the folded row out of the tab order----*/
-  $("#BambuCloudHeader").toggleClass("Expanded", bExpanded).attr("aria-expanded", bExpanded ? "true" : "false");
-  if (!bExpanded && m_OpenAccountMenu === "bambu") CloseAccountMenu();
-  // Best effort: the fold is a per-machine convenience, not a synced preference.
-  if (bPersist) { try { localStorage.setItem(BAMBU_FOLD_KEY, bExpanded ? "1" : "0"); } catch (e) {} }
-}
-
-function ToggleBambuSection() {
-  SetBambuSectionExpanded(!$("#BambuCloudBody").hasClass("Expanded"), true);
-}
-
 function Set_AccountMenu_Event() {
-  var bExpanded = false;
-  try { bExpanded = localStorage.getItem(BAMBU_FOLD_KEY) === "1"; } catch (e) {}
-  SetBambuSectionExpanded(bExpanded, false);
-
   $(document).mousedown(function (e) {
     if (m_OpenAccountMenu === null) return;
     if ($(e.target).closest("#AccountMenu, .AccountRow").length === 0) CloseAccountMenu();
@@ -450,10 +416,6 @@ function OnExploreRecentFile( )
 
 function SetOrcaLoginInfo(strAvatar, strName, strAccount) { SetAccountSignedIn("orca", strAvatar, strName, strAccount); }
 function SetOrcaUserOffline() { SetAccountSignedOut("orca"); }
-function SetBambuLoginInfo(strAvatar, strName) { SetAccountSignedIn("bambu", strAvatar, strName, null); }
-function SetBambuUserOffline() { SetAccountSignedOut("bambu"); }
-
-function SendMsg_GetBambuLoginInfo() { SendSimpleCommand("get_bambu_login_info"); }
 
 function OutputKey(keyCode, isCtrlDown, isShiftDown, isCmdDown) {
 	var tSend = {};

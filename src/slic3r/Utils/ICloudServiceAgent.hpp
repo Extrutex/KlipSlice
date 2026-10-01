@@ -35,7 +35,7 @@ namespace Slic3r {
  */
 
 struct CloudEvent {
-    std::string provider;  // ORCA_CLOUD_PROVIDER or BBL_CLOUD_PROVIDER
+    std::string provider;  // e.g. ORCA_CLOUD_PROVIDER
 };
 
 using AppOnServerConnectedFn = std::function<void(CloudEvent event, int return_code, int reason_code)>;

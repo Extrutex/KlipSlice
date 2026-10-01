@@ -11,7 +11,6 @@
 #include "slic3r/Utils/NetworkAgent.hpp"
 #include "GUI_Init.hpp"
 #include "GUI_ObjectList.hpp"
-#include "slic3r/GUI/UserManager.hpp"
 #include "slic3r/GUI/TaskManager.hpp"
 #include "format.hpp"
 #include "libslic3r_version.h"
@@ -950,11 +949,6 @@ void GUI_App::post_init()
             }
 
             this->check_new_version_sf();
-            const auto cloud_provider = get_printer_cloud_provider();
-            if (is_user_login(cloud_provider) && !app_config->get_stealth_mode()) {
-              // this->check_privacy_version(0);
-              request_user_handle(0, cloud_provider);
-            }
         });
     }
 
@@ -1181,37 +1175,7 @@ void GUI_App::init_networking_callbacks()
                 });
                 return;
             }
-            GUI::wxGetApp().CallAfter([this, provider = event.provider] {
-                if (is_closing())
-                    return;
-                BOOST_LOG_TRIVIAL(trace) << "static: server connected";
-                if (provider != this->get_printer_cloud_provider()) {
-                    return;
-                }
-                m_agent->set_user_selected_machine(m_agent->get_user_selected_machine());
-                if (this->is_enable_multi_machine()) {
-                    auto evt = new wxCommandEvent(EVT_UPDATE_MACHINE_LIST);
-                    wxQueueEvent(this, evt);
-                }
-                m_agent->set_user_selected_machine(m_agent->get_user_selected_machine());
-                if (m_agent->is_user_login(provider)) {
-
-                    /*disconnect lan*/
-                    DeviceManager* dev = this->getDeviceManager();
-                    if (!dev) return;
-
-                    MachineObject *obj = dev->get_selected_machine();
-                    if (!obj) return;
-
-                    /* resubscribe the cache dev list */
-                    if (this->is_enable_multi_machine()) {
-
-                        if (!dev->subscribe_list_cache.empty()) {
-                            dev->subscribe_device_list(dev->subscribe_list_cache);
-                        }
-                    }
-                }
-            });
+            BOOST_LOG_TRIVIAL(trace) << "static: server connected, provider=" << event.provider;
         });
 
         m_agent->set_on_printer_connected_fn([this](std::string dev_id) {
@@ -1337,41 +1301,12 @@ void GUI_App::init_networking_callbacks()
                     return;
                 }
 
-                const std::string provider = this->get_printer_cloud_provider();
-                if (MachineObject* obj = this->m_device_manager->get_user_machine(dev_id, provider)) {
-                    auto sel = this->m_device_manager->get_selected_machine();
-                    if (sel && sel->get_dev_id() == dev_id) {
-                        obj->parse_json("cloud", msg);
-                        GUI::wxGetApp().sidebar().load_ams_list(obj);
-                    } else {
-                        obj->parse_json("cloud", msg, true);
-                    }
-                }
-
                 if (GUI::wxGetApp().plater())
                     GUI::wxGetApp().plater()->update_machine_sync_status();
             });
         };
 
         m_agent->set_on_message_fn(message_arrive_fn);
-
-        auto user_message_arrive_fn = [this](std::string user_id, std::string msg) {
-            if (is_closing()) {
-                return;
-            }
-            CallAfter([this, user_id, msg] {
-                if (is_closing())
-                    return;
-
-                //check user
-                if (user_id == m_agent->get_user_id(get_printer_cloud_provider())) {
-                    this->m_user_manager->parse_json(msg);
-                }
-
-            });
-        };
-
-        m_agent->set_on_user_message_fn(user_message_arrive_fn);
 
 
         auto lan_message_arrive_fn = [this](std::string dev_id, std::string msg) {
@@ -1767,11 +1702,6 @@ int GUI_App::OnExit()
     if (m_device_manager) {
         delete m_device_manager;
         m_device_manager = nullptr;
-    }
-
-    if (m_user_manager) {
-        delete m_user_manager;
-        m_user_manager = nullptr;
     }
 
     // Clear the printer agent cache before destroying the NetworkAgent.
@@ -2603,11 +2533,6 @@ bool GUI_App::on_init_network()
         m_device_manager = new Slic3r::DeviceManager(m_agent);
     else
         m_device_manager->set_agent(m_agent);
-
-    if (!m_user_manager)
-        m_user_manager = new Slic3r::UserManager(m_agent);
-    else
-        m_user_manager->set_agent(m_agent);
 
     if (this->is_enable_multi_machine()) {
         if (!m_task_manager) {
@@ -3681,13 +3606,6 @@ bool GUI_App::is_user_login(const std::string& provider/* = ORCA_CLOUD_PROVIDER*
     return false;
 }
 
-const std::string& GUI_App::get_printer_cloud_provider() const
-{
-    // Orca todo: this need to be revisted. currently it is mainly used for device manager and related clausses and only bambu machines use them.
-    // 
-    return BBL_CLOUD_PROVIDER;
-}
-
 
 bool GUI_App::check_login(const std::string& provider/* = ORCA_CLOUD_PROVIDER*/)
 {
@@ -3731,13 +3649,6 @@ void GUI_App::request_user_logout(const std::string& provider/* = ORCA_CLOUD_PRO
 {
     if (m_agent && m_agent->is_user_login(provider)) {
         m_agent->user_logout(true, provider);
-
-        if (provider == get_printer_cloud_provider()) {
-            m_agent->set_user_selected_machine("");
-            if (m_device_manager) {
-                m_device_manager->clean_user_info(true);
-            }
-        }
 
         if (provider == ORCA_CLOUD_PROVIDER) {
             /* delete old user settings */
@@ -3793,12 +3704,10 @@ std::string GUI_App::handle_web_request(std::string cmd)
             static const std::unordered_set<std::string> stealth_blocked_info_commands = {
                 "get_login_info",
                 "get_orca_login_info",
-                "get_bambu_login_info",
             };
             static const std::unordered_set<std::string> stealth_blocked_login_commands = {
                 "homepage_login_or_register",
                 "homepage_orca_login_or_register",
-                "homepage_bambu_login_or_register",
             };
             if (app_config->get_stealth_mode() && stealth_blocked_info_commands.count(command_str)) {
                 CallAfter([] {
@@ -3824,8 +3733,6 @@ std::string GUI_App::handle_web_request(std::string cmd)
                             this->request_login(true);
                         else if (command_str == "homepage_orca_login_or_register")
                             this->request_login(true, ORCA_CLOUD_PROVIDER);
-                        else if (command_str == "homepage_bambu_login_or_register")
-                            this->request_login(true, BBL_CLOUD_PROVIDER);
                     }
                 });
                 return "";
@@ -3866,18 +3773,6 @@ std::string GUI_App::handle_web_request(std::string cmd)
             }
             else if (command_str.compare("get_orca_login_info") == 0) {
                 CallAfter([this] { get_login_info(ORCA_CLOUD_PROVIDER); });
-            }
-            else if (command_str.compare("get_bambu_login_info") == 0) {
-                CallAfter([this] { get_login_info(BBL_CLOUD_PROVIDER); });
-            }
-            else if (command_str.compare("homepage_bambu_login_or_register") == 0) {
-                CallAfter([this] { request_login(true, BBL_CLOUD_PROVIDER); });
-            }
-            else if (command_str.compare("homepage_bambu_logout") == 0) {
-                CallAfter([this] {
-                    BOOST_LOG_TRIVIAL(info) << "logout: homepage_bambu_logout";
-                    request_user_logout(BBL_CLOUD_PROVIDER);
-                });
             }
             else if (command_str.compare("homepage_orca_login_or_register") == 0) {
                 CallAfter([this] { request_login(true, ORCA_CLOUD_PROVIDER); });
@@ -4286,13 +4181,6 @@ void GUI_App::on_user_login_handle(wxCommandEvent &evt)
     m_last_401_error_time = std::chrono::steady_clock::now();
 
     m_agent->connect_server();
-    // get machine list
-    DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
-    if (!dev) return;
-
-    boost::thread update_thread = boost::thread([dev, provider] {
-        dev->update_user_machine_list_info(provider);
-    });
 
     if (online_login && provider == ORCA_CLOUD_PROVIDER) {
         // The steps below run synchronously on the UI thread (cloud plugin fetch and
@@ -5345,27 +5233,12 @@ bool GUI_App::maybe_migrate_user_presets_on_login()
     };
 
     // Determine the source directory to migrate from.
-    // Priority: 1) Bambu Cloud user folder (if user was logged in), 2) "default" folder, 3) any other user-ID folder
+    // Priority: 1) "default" folder, 2) any other user-ID folder
     fs::path source_dir;
     bool source_is_default = false;
-    bool source_is_bbl = false;
     fs::path default_dir = user_base / DEFAULT_USER_FOLDER_NAME;
 
-    // Check if the user was previously logged into Bambu Cloud and has presets there
-    if (m_agent->is_user_login(BBL_CLOUD_PROVIDER)) {
-        std::string bbl_user_id = m_agent->get_user_id(BBL_CLOUD_PROVIDER);
-        if (!bbl_user_id.empty() && bbl_user_id != new_user_id) {
-            fs::path bbl_dir = user_base / bbl_user_id;
-            if (has_json_presets(bbl_dir)) {
-                source_dir = bbl_dir;
-                source_is_bbl = true;
-                BOOST_LOG_TRIVIAL(info) << "Migration source: Bambu Cloud user folder: " << source_dir;
-            }
-        }
-    }
-
-    // Fallback to default folder
-    if (source_dir.empty() && has_json_presets(default_dir)) {
+    if (has_json_presets(default_dir)) {
         source_dir = default_dir;
         source_is_default = true;
         BOOST_LOG_TRIVIAL(info) << "Migration source: default user folder: " << source_dir;
@@ -5394,11 +5267,7 @@ bool GUI_App::maybe_migrate_user_presets_on_login()
 
     // Ask the user for confirmation with a message tailored to the source type
     wxString source_description;
-    if (source_is_bbl) {
-        source_description = wxString::Format(
-            _L("your Orca Cloud profile (user ID: \"%s\")"),
-            from_u8(source_dir.filename().string()));
-    } else if (source_is_default) {
+    if (source_is_default) {
         source_description = _L("your default profile");
     } else {
         source_description = wxString::Format(
@@ -5629,7 +5498,7 @@ void GUI_App::sync_preset(Preset* preset, bool force)
     if (http_code >= 400 && values_map["code"] == "14") { // Limit
         m_create_preset_blocked[preset->type] = true;
         CallAfter([this] {
-            plater()->get_notification_manager()->push_notification(NotificationType::BBLUserPresetExceedLimit);
+            plater()->get_notification_manager()->push_notification(NotificationType::UserPresetExceedLimit);
             static bool dialog_notified = false;
             if (dialog_notified)
                 return;
@@ -6144,7 +6013,7 @@ void GUI_App::start_sync_user_preset(bool with_progress_dlg)
                         if (total_count == 0) {
                             CallAfter([this] {
                                 if (!is_closing())
-                                    plater()->get_notification_manager()->close_notification_of_type(NotificationType::BBLUserPresetExceedLimit);
+                                    plater()->get_notification_manager()->close_notification_of_type(NotificationType::UserPresetExceedLimit);
                             });
                         }
 
@@ -6384,7 +6253,6 @@ void GUI_App::on_stealth_mode_enter()
     stop_sync_user_preset();
     BOOST_LOG_TRIVIAL(info) << "logout: on_stealth_mode_enter";
     request_user_logout(ORCA_CLOUD_PROVIDER);
-    request_user_logout(BBL_CLOUD_PROVIDER);
     if (WebViewPanel* home = WebViewPanel::if_built()) {
         home->SendCloudProvidersInfo();
     }

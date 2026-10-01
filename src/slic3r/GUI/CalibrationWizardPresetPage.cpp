@@ -1713,20 +1713,14 @@ void CalibrationPresetPage::update_show_status()
 
     MachineObject* obj_ = dev->get_selected_machine();
     if (!obj_) {
-        if (agent->is_user_login(wxGetApp().get_printer_cloud_provider())) {
-            show_status(CaliPresetPageStatus::CaliPresetStatusInvalidPrinter);
-        }
-        else {
-            show_status(CaliPresetPageStatus::CaliPresetStatusNoUserLogin);
-        }
+        show_status(CaliPresetPageStatus::CaliPresetStatusInvalidPrinter);
         return;
     }
 
+    /* cloud-bound printers have no vendor cloud to connect through */
     if (!obj_->is_lan_mode_printer()) {
-        if (!agent->is_server_connected(wxGetApp().get_printer_cloud_provider())) {
-            show_status(CaliPresetPageStatus::CaliPresetStatusConnectingServer);
-            return;
-        }
+        show_status(CaliPresetPageStatus::CaliPresetStatusConnectingServer);
+        return;
     }
 
     if (wxGetApp().app_config) {
@@ -1850,11 +1844,6 @@ void CalibrationPresetPage::show_status(CaliPresetPageStatus status)
         Enable_Send_Button(true);
         Layout();
         Fit();
-    }
-    else if (status == CaliPresetPageStatus::CaliPresetStatusNoUserLogin) {
-        wxString msg_text = _L("No login account, only printers in LAN mode are displayed.");
-        update_print_status_msg(msg_text, false);
-        Enable_Send_Button(false);
     }
     else if (status == CaliPresetPageStatus::CaliPresetStatusInvalidPrinter) {
         update_print_status_msg(wxEmptyString, true);

@@ -367,30 +367,6 @@ void SelectMachinePopup::Popup(wxWindow *WXUNUSED(focus))
         m_refresh_timer->Start(MACHINE_LIST_REFRESH_INTERVAL);
     }
 
-    const std::string provider = wxGetApp().get_printer_cloud_provider();
-    if (wxGetApp().is_user_login(provider)) {
-        if (!get_print_info_thread) {
-            get_print_info_thread = new boost::thread(Slic3r::create_thread([this, token = std::weak_ptr<int>(m_token), provider] {
-                NetworkAgent* agent = wxGetApp().getAgent();
-                unsigned int http_code;
-                std::string body;
-                int result = agent->get_user_print_info(&http_code, &body, provider);
-                CallAfter([token, this, result, body]() {
-                    if (token.expired()) {return;}
-                    if (result == 0) {
-                        m_print_info = body;
-                    }
-                    else {
-                        m_print_info = "";
-                    }
-                    wxCommandEvent event(EVT_UPDATE_USER_MACHINE_LIST);
-                    event.SetEventObject(this);
-                    wxPostEvent(this, event);
-                });
-            }));
-        }
-    }
-
     {
         wxGetApp().reset_to_active();
         wxCommandEvent user_event(EVT_UPDATE_USER_MACHINE_LIST);
@@ -410,14 +386,6 @@ void SelectMachinePopup::OnDismiss()
     if (m_refresh_timer) {
         m_refresh_timer->Stop();
     }
-    if (get_print_info_thread) {
-        if (get_print_info_thread->joinable()) {
-            get_print_info_thread->join();
-            delete get_print_info_thread;
-            get_print_info_thread = nullptr;
-        }
-    }
-
     wxCommandEvent event(EVT_FINISHED_UPDATE_MACHINE_LIST);
     event.SetEventObject(this);
     wxPostEvent(this, event);
@@ -497,7 +465,8 @@ void SelectMachinePopup::update_other_devices()
         if (mobj->printer_agent_id != current_agent_id)
             continue;
 
-        if (!wxGetApp().is_user_login(wxGetApp().get_printer_cloud_provider()) && !mobj->is_lan_mode_printer())
+        /* cloud-bound printers are not reachable without a vendor cloud */
+        if (!mobj->is_lan_mode_printer())
             continue;
 
         /* do not show printer in my list */
@@ -604,11 +573,6 @@ void SelectMachinePopup::update_user_devices()
 {
     Slic3r::DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
     if (!dev) return;
-
-    if (!m_print_info.empty()) {
-        dev->parse_user_print_info(m_print_info);
-        m_print_info = "";
-    }
 
     m_bind_machine_list.clear();
     m_bind_machine_list = dev->get_my_machine_list(dev->get_current_printer_agent_id());
@@ -938,7 +902,7 @@ void EditDevNameDialog::on_edit_name(wxCommandEvent &e)
             auto           utf8_str = new_dev_name.ToUTF8();
             auto           name     = std::string(utf8_str.data(), utf8_str.length());
             if (m_info)
-                dev->modify_device_name(m_info->get_dev_id(), name, wxGetApp().get_printer_cloud_provider());
+                m_info->set_dev_name(name);
         }
         DPIDialog::EndModal(wxID_CLOSE);
     }

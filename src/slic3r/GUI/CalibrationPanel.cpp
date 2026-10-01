@@ -244,32 +244,6 @@ void SelectMObjectPopup::Popup(wxWindow* WXUNUSED(focus))
         m_refresh_timer->Start(MACHINE_LIST_REFRESH_INTERVAL);
     }
 
-    const std::string provider = wxGetApp().get_printer_cloud_provider();
-    if (wxGetApp().is_user_login(provider)) {
-        if (!get_print_info_thread) {
-            get_print_info_thread = new boost::thread(Slic3r::create_thread([this, token = std::weak_ptr<int>(m_token), provider] {
-                NetworkAgent* agent = wxGetApp().getAgent();
-                unsigned int http_code;
-                std::string body;
-                int result = agent->get_user_print_info(&http_code, &body, provider);
-
-                wxGetApp().CallAfter([token, this, result, body]() {
-                    if (token.expired()) {return;}
-                    if (result == 0) {
-                        m_print_info = body;
-                    }
-                    else {
-                        m_print_info = "";
-                    }
-
-                    wxCommandEvent event(EVT_UPDATE_USER_MLIST);
-                    event.SetEventObject(this);
-                    wxPostEvent(this, event);
-                });
-            }));
-        }
-    }
-
     wxPostEvent(this, wxTimerEvent(*m_refresh_timer));
     PopupWindow::Popup();
 }
@@ -282,14 +256,6 @@ void SelectMObjectPopup::OnDismiss()
     if (m_refresh_timer) {
         m_refresh_timer->Stop();
     }
-    if (get_print_info_thread) {
-        if (get_print_info_thread->joinable()) {
-            get_print_info_thread->join();
-            delete get_print_info_thread;
-            get_print_info_thread = nullptr;
-        }
-    }
-
     wxCommandEvent event(EVT_FINISHED_UPDATE_MLIST);
     event.SetEventObject(this);
     wxPostEvent(this, event);
@@ -321,11 +287,6 @@ void SelectMObjectPopup::update_user_devices()
 {
     Slic3r::DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
     if (!dev) return;
-
-    if (!m_print_info.empty()) {
-        dev->parse_user_print_info(m_print_info);
-        m_print_info = "";
-    }
 
     m_bind_machine_list.clear();
     m_bind_machine_list = dev->get_my_machine_list();
@@ -587,9 +548,8 @@ void CalibrationPanel::update_all() {
         int server_status = 0;
         // only disconnected server in cloud mode
         if (obj->connection_type() != "lan") {
-            if (m_agent) {
-                server_status = m_agent->is_server_connected(wxGetApp().get_printer_cloud_provider()) ? 0 : (int)MONITOR_DISCONNECTED_SERVER;
-            }
+            // no vendor cloud: a cloud-mode printer always reports a disconnected server
+            server_status = (int)MONITOR_DISCONNECTED_SERVER;
         }
         show_status((int)MONITOR_DISCONNECTED + server_status);
         return;

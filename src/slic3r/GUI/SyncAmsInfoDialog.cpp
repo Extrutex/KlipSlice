@@ -1973,31 +1973,9 @@ void SyncAmsInfoDialog::Enable_Auto_Refill(bool enable)
 
 void SyncAmsInfoDialog::update_user_machine_list()
 {
-    NetworkAgent *m_agent = wxGetApp().getAgent();
-    const std::string provider = wxGetApp().get_printer_cloud_provider();
-    if (m_agent && m_agent->is_user_login(provider)) {
-        boost::thread get_print_info_thread = Slic3r::create_thread([this, token = std::weak_ptr(m_token), provider] {
-            NetworkAgent *agent = wxGetApp().getAgent();
-            unsigned int  http_code;
-            std::string   body;
-            int           result = agent->get_user_print_info(&http_code, &body, provider);
-            CallAfter([token, this, result, body] {
-                if (token.expired()) { return; }
-                if (result == 0) {
-                    m_print_info = body;
-                } else {
-                    m_print_info = "";
-                }
-                wxCommandEvent event(EVT_UPDATE_USER_MACHINE_LIST);
-                event.SetEventObject(this);
-                wxPostEvent(this, event);
-            });
-        });
-    } else {
-        wxCommandEvent event(EVT_UPDATE_USER_MACHINE_LIST);
-        event.SetEventObject(this);
-        wxPostEvent(this, event);
-    }
+    wxCommandEvent event(EVT_UPDATE_USER_MACHINE_LIST);
+    event.SetEventObject(this);
+    wxPostEvent(this, event);
 }
 
 void SyncAmsInfoDialog::on_refresh(wxCommandEvent &event)
@@ -2122,12 +2100,6 @@ void SyncAmsInfoDialog::update_user_printer()
     Slic3r::DeviceManager *dev = Slic3r::GUI::wxGetApp().getDeviceManager();
     if (!dev) return;
 
-    // update user print info
-    if (!m_print_info.empty()) {
-        dev->parse_user_print_info(m_print_info);
-        m_print_info = "";
-    }
-
     // clear machine list
     m_list.clear();
     std::vector<std::string>               machine_list;
@@ -2228,27 +2200,18 @@ void SyncAmsInfoDialog::update_show_status()
         return;
     }
     if (!dev) return;
-    const std::string provider = wxGetApp().get_printer_cloud_provider();
 
     // blank plate has no valid gcode file
     if (is_must_finish_slice_then_connected_printer()) { return; }
     MachineObject * obj_ = dev->get_selected_machine();
-    if (!obj_) {
-        if (agent) {
-            if (agent->is_user_login(provider)) {
-                show_status(PrintDialogStatus::PrintStatusInvalidPrinter);
-            }
-        }
+    if (!obj_)
         return;
-    }
 
-    /* check cloud machine connections */
+    /* cloud-bound printers have no vendor cloud to connect through */
     if (!obj_->is_lan_mode_printer()) {
-        if (!agent->is_server_connected(provider)) {
-            show_status(PrintDialogStatus::PrintStatusConnectingServer);
-            reset_timeout();
-            return;
-        }
+        show_status(PrintDialogStatus::PrintStatusConnectingServer);
+        reset_timeout();
+        return;
     }
 
     if (!obj_->is_info_ready()) {
@@ -2466,7 +2429,7 @@ void SyncAmsInfoDialog::on_dpi_changed(const wxRect &suggested_rect)
     Refresh();
 }
 
-void SyncAmsInfoDialog::set_default(bool hide_some)
+void SyncAmsInfoDialog::set_default(bool /*hide_some*/)
 {
     if (m_print_type == PrintFromType::FROM_NORMAL) {
         bool is_show = true;
@@ -2501,17 +2464,6 @@ void SyncAmsInfoDialog::set_default(bool hide_some)
 
     // clear combobox
     m_list.clear();
-    m_print_info          = "";
-    // rset status bar
-
-    NetworkAgent *agent = wxGetApp().getAgent();
-    if (agent) {
-        if (!hide_some) {
-            if (agent->is_user_login(wxGetApp().get_printer_cloud_provider())) {
-                show_status(PrintDialogStatus::PrintStatusInit);
-            }
-        }
-    }
 
     if (m_print_type == PrintFromType::FROM_NORMAL) {
         reset_and_sync_ams_list();

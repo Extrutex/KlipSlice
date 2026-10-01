@@ -30,13 +30,11 @@ class SyncAmsInfoDialog : public DPIDialog
     PrintPageMode     m_print_page_mode{PrintPageMode::PrintPageModePrepare};
     std::string       m_print_error_msg;
     std::string       m_print_error_extra;
-    std::string       m_print_info;
     wxString          m_current_project_name;
     PrintDialogStatus m_print_status{PrintStatusInit};
     wxColour          m_colour_def_color{wxColour(255, 255, 255)};
     wxColour          m_colour_bold_color{wxColour(38, 46, 48)};
 
-    std::shared_ptr<int>                 m_token = std::make_shared<int>(0);
     std::map<std::string, PrintOption *> m_checkbox_list;
     std::vector<wxString>                m_bedtype_list;
     std::vector<MachineObject *>         m_list;

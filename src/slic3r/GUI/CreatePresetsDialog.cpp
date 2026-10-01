@@ -3928,11 +3928,10 @@ ExportConfigsDialog::ExportCase ExportConfigsDialog::archive_preset_bundle_to_fi
             json          bundle_structure;
             NetworkAgent *agent = wxGetApp().getAgent();
             std::string   clock = get_curr_timestmp();
+            bundle_structure["version"] = SLIC3R_VERSION;
             if (agent) {
-                bundle_structure["version"]   = SLIC3R_VERSION;
                 bundle_structure["bundle_id"] = agent->get_user_id() + "_" + printer_preset_name_ + "_" + clock;
             } else {
-                bundle_structure["version"]   = "";
                 bundle_structure["bundle_id"] = "offline_" + printer_preset_name_ + "_" + clock;
             }
             bundle_structure["bundle_type"] = "printer config bundle";
@@ -4047,11 +4046,10 @@ ExportConfigsDialog::ExportCase ExportConfigsDialog::archive_filament_bundle_to_
             json          bundle_structure;
             NetworkAgent *agent = wxGetApp().getAgent();
             std::string   clock = get_curr_timestmp();
+            bundle_structure["version"] = SLIC3R_VERSION;
             if (agent) {
-                bundle_structure["version"]   = SLIC3R_VERSION;
                 bundle_structure["bundle_id"] = agent->get_user_id() + "_" + filament_name + "_" + clock;
             } else {
-                bundle_structure["version"]   = "";
                 bundle_structure["bundle_id"] = "offline_" + filament_name + "_" + clock;
             }
             bundle_structure["bundle_type"] = "filament config bundle";

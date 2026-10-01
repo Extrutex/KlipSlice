@@ -444,74 +444,6 @@ namespace Slic3r
         return obj;
     }
 
-    int DeviceManager::query_bind_status(std::string& msg, const std::string& provider)
-    {
-        if (!m_agent)
-        {
-            msg = "";
-            return -1;
-        }
-
-        BOOST_LOG_TRIVIAL(trace) << "DeviceManager::query_bind_status";
-        std::map<std::string, MachineObject*>::iterator it;
-        std::vector<std::string> query_list;
-        for (it = localMachineList.begin(); it != localMachineList.end(); it++)
-        {
-            query_list.push_back(it->first);
-        }
-
-        unsigned int http_code;
-        std::string http_body;
-        int result = m_agent->query_bind_status(query_list, &http_code, &http_body, provider);
-
-        if (result < 0)
-        {
-            msg = (boost::format("code=%1%,body=%2") % http_code % http_body).str();
-        }
-        else
-        {
-            msg = "";
-            try
-            {
-                json j = json::parse(http_body);
-                if (j.contains("bind_list"))
-                {
-
-                    for (auto& item : j["bind_list"])
-                    {
-                        auto it = localMachineList.find(item["dev_id"].get<std::string>());
-                        if (it != localMachineList.end())
-                        {
-                            if (!item["user_id"].is_null())
-                                it->second->bind_user_id = item["user_id"].get<std::string>();
-                            if (!item["user_name"].is_null())
-                                it->second->bind_user_name = item["user_name"].get<std::string>();
-                            else
-                                it->second->bind_user_name = "Free";
-                        }
-                    }
-                }
-            }
-            catch (...)
-            {
-                ;
-            }
-        }
-        return result;
-    }
-
-    MachineObject* DeviceManager::get_user_machine(std::string dev_id, const std::string& provider)
-    {
-        if (!m_agent || !m_agent->is_user_login(provider))
-        {
-            return nullptr;
-        }
-
-        std::map<std::string, MachineObject*>::iterator it = userMachineList.find(dev_id);
-        if (it == userMachineList.end()) return nullptr;
-        return it->second;
-    }
-
     MachineObject* DeviceManager::get_my_machine(std::string dev_id)
     {
         auto list = get_my_machine_list();
@@ -684,10 +616,6 @@ namespace Slic3r
     {
         if (selected_machine.empty()) return nullptr;
 
-        MachineObject* obj = get_user_machine(selected_machine, GUI::wxGetApp().get_printer_cloud_provider());
-        if (obj)
-            return obj;
-
         // return local machine has access code
         auto it = localMachineList.find(selected_machine);
         if (it != localMachineList.end())
@@ -810,147 +738,6 @@ namespace Slic3r
         return "";
     }
 
-    void DeviceManager::modify_device_name(std::string dev_id, std::string dev_name, const std::string& provider)
-    {
-        BOOST_LOG_TRIVIAL(trace) << "modify_device_name";
-        if (m_agent)
-        {
-            int result = m_agent->modify_printer_name(dev_id, dev_name, provider);
-            if (result == 0)
-            {
-                update_user_machine_list_info(provider);
-            }
-        }
-    }
-
-    void DeviceManager::parse_user_print_info(std::string body)
-    {
-        BOOST_LOG_TRIVIAL(trace) << "DeviceManager::parse_user_print_info";
-        std::lock_guard<std::mutex> lock(listMutex);
-
-        if (device_subseries.size() <= 0) {
-            device_subseries = DevPrinterConfigUtil::get_all_subseries();
-            if (device_subseries.size() <= 0) {
-                device_subseries.insert(std::pair<std::string, std::vector<std::string>>("", std::vector<std::string>()));
-            }
-        }
-
-        std::set<std::string> new_list;
-        try
-        {
-            json j = json::parse(body);
-            const std::string provider = GUI::wxGetApp().get_printer_cloud_provider();
-
-#if !BBL_RELEASE_TO_PUBLIC
-            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": " << j;
-#endif
-
-            if (j.contains("devices") && !j["devices"].is_null())
-            {
-                for (auto& elem : j["devices"])
-                {
-                    MachineObject* obj = nullptr;
-                    std::string dev_id;
-                    if (!elem["dev_id"].is_null())
-                    {
-                        dev_id = elem["dev_id"].get<std::string>();
-                        new_list.insert(dev_id);
-                    }
-                    std::map<std::string, MachineObject*>::iterator iter = userMachineList.find(dev_id);
-                    if (iter != userMachineList.end())
-                    {
-                        /* update field */
-                        obj = iter->second;
-                        obj->set_dev_id(dev_id);
-                    }
-                    else
-                    {
-                        obj = new MachineObject(this, m_agent, "", "", "");
-                        obj->printer_agent_id = get_current_printer_agent_id();
-                        if (m_agent)
-                        {
-                            obj->set_bind_status(m_agent->get_user_name(provider));
-                        }
-
-                        if (obj->get_dev_ip().empty())
-                        {
-                            obj->get_dev_ip() = Slic3r::GUI::wxGetApp().app_config->get("ip_address", dev_id);
-                        }
-                        userMachineList.insert(std::make_pair(dev_id, obj));
-                    }
-
-                    if (!obj) continue;
-
-                    if (!elem["dev_id"].is_null())
-                        obj->set_dev_id(elem["dev_id"].get<std::string>());
-                    if (!elem["dev_name"].is_null())
-                        obj->set_dev_name(elem["dev_name"].get<std::string>());
-                    if (!elem["dev_online"].is_null())
-                        obj->m_is_online = elem["dev_online"].get<bool>();
-                    if (elem.contains("dev_model_name") && !elem["dev_model_name"].is_null()) {
-                        auto printer_type = elem["dev_model_name"].get<std::string>();
-                        for (const auto &pair : device_subseries) {
-                            auto it = std::find(pair.second.begin(), pair.second.end(), printer_type);
-                            if (it != pair.second.end())
-                            {
-                                obj->printer_type = Slic3r::_parse_printer_type(pair.first);
-                                break;
-                            }
-                            else
-                            {
-                                obj->printer_type = Slic3r::_parse_printer_type(printer_type);
-                            }
-                        }
-                    }
-                    if (!elem["task_status"].is_null())
-                        obj->iot_print_status = elem["task_status"].get<std::string>();
-                    if (elem.contains("dev_product_name") && !elem["dev_product_name"].is_null())
-                        obj->dev_product_name = elem["dev_product_name"].get<std::string>();
-                    if (elem.contains("dev_access_code") && !elem["dev_access_code"].is_null())
-                    {
-                        std::string acc_code = elem["dev_access_code"].get<std::string>();
-                        acc_code.erase(std::remove(acc_code.begin(), acc_code.end(), '\n'), acc_code.end());
-                        obj->set_access_code(acc_code);
-                    }
-                }
-
-                //remove MachineObject from userMachineList
-                std::map<std::string, MachineObject*>::iterator iterat;
-                for (iterat = userMachineList.begin(); iterat != userMachineList.end(); )
-                {
-                    if (new_list.find(iterat->first) == new_list.end())
-                    {
-                        iterat = userMachineList.erase(iterat);
-                    }
-                    else
-                    {
-                        iterat++;
-                    }
-                }
-            }
-        }
-        catch (std::exception& e)
-        {
-            BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << " exception=" << e.what();
-        }
-    }
-
-    void DeviceManager::update_user_machine_list_info(const std::string& provider)
-    {
-        if (!m_agent) return;
-
-        BOOST_LOG_TRIVIAL(debug) << "update_user_machine_list_info";
-        unsigned int http_code;
-        std::string body;
-        int result = m_agent->get_user_print_info(&http_code, &body, provider);
-        if (result == 0)
-        {
-            // parse_user_print_info and on_machine_alive (SSDP for discovery) both mutate the same userMachineList map.
-            // on_machine_alive mutates the map on the UI thread, do the same for parse_user_print_info.
-            Slic3r::GUI::wxGetApp().CallAfter([this, body]() { parse_user_print_info(body); });
-        }
-    }
-
     void DeviceManager::record_user_last_machine(const std::string& dev_id)
     {
         if (Slic3r::GUI::wxGetApp().app_config) {
@@ -1056,29 +843,6 @@ namespace Slic3r
             m_manager->set_selected_machine("");
             agent->set_user_selected_machine("");
             return;
-        }
-
-        // do some refresh
-        const auto cloud_provider = Slic3r::GUI::wxGetApp().get_printer_cloud_provider();
-        if (Slic3r::GUI::wxGetApp().is_user_login(cloud_provider))
-        {
-            try {
-                m_manager->check_pushing();
-            } catch (const std::exception& e) {
-                BOOST_LOG_TRIVIAL(error) << "DeviceManagerRefresher::on_timer check_pushing exception="
-                                         << e.what();
-            } catch (...) {
-                BOOST_LOG_TRIVIAL(error) << "DeviceManagerRefresher::on_timer check_pushing unknown exception";
-            }
-
-            try {
-                agent->refresh_connection(cloud_provider);
-            } catch (const std::exception& e) {
-                BOOST_LOG_TRIVIAL(error) << "DeviceManagerRefresher::on_timer refresh_connection exception="
-                                         << e.what();
-            } catch (...) {
-                BOOST_LOG_TRIVIAL(error) << "DeviceManagerRefresher::on_timer refresh_connection unknown exception";
-            }
         }
 
         // certificate

@@ -3650,32 +3650,9 @@ void SelectMachineDialog::clear_ip_address_config(wxCommandEvent& e)
 
 void SelectMachineDialog::update_user_machine_list()
 {
-    NetworkAgent* m_agent = wxGetApp().getAgent();
-    const std::string provider = wxGetApp().get_printer_cloud_provider();
-    if (m_agent && m_agent->is_user_login(provider)) {
-        boost::thread get_print_info_thread = Slic3r::create_thread([this, token = std::weak_ptr<int>(m_token), provider] {
-            NetworkAgent* agent = wxGetApp().getAgent();
-            unsigned int http_code;
-            std::string body;
-            int result = agent->get_user_print_info(&http_code, &body, provider);
-            CallAfter([token, this, result, body] {
-                if (token.expired()) {return;}
-                if (result == 0) {
-                    m_print_info = body;
-                }
-                else {
-                    m_print_info = "";
-                }
-                wxCommandEvent event(EVT_UPDATE_USER_MACHINE_LIST);
-                event.SetEventObject(this);
-                wxPostEvent(this, event);
-            });
-        });
-    } else {
-        wxCommandEvent event(EVT_UPDATE_USER_MACHINE_LIST);
-        event.SetEventObject(this);
-        wxPostEvent(this, event);
-    }
+    wxCommandEvent event(EVT_UPDATE_USER_MACHINE_LIST);
+    event.SetEventObject(this);
+    wxPostEvent(this, event);
 }
 
 void SelectMachineDialog::on_refresh(wxCommandEvent &event)
@@ -3888,12 +3865,6 @@ void SelectMachineDialog::update_user_printer()
 {
     Slic3r::DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
     if (!dev) return;
-
-    // update user print info
-    if (!m_print_info.empty()) {
-        dev->parse_user_print_info(m_print_info);
-        m_print_info = "";
-    }
 
     // update the machine list, and select a default machine
     _collect_sorted_machines(dev, m_list);
@@ -4606,7 +4577,7 @@ void SelectMachineDialog::update_show_status(MachineObject* obj_)
 
     /** error check **/
     /* check cloud machine connections */
-    if (!obj_->is_lan_mode_printer() && !agent->is_server_connected(wxGetApp().get_printer_cloud_provider())) {
+    if (!obj_->is_lan_mode_printer()) {
         show_status(PrintDialogStatus::PrintStatusConnectingServer);
         reset_timeout();
         return;
@@ -5277,7 +5248,6 @@ void SelectMachineDialog::set_default()
     //clear combobox
     m_list.clear();
     m_printer_last_select = "";
-    m_print_info = "";
     m_mapping_sugs_sizer->Show(false);
     m_change_filament_times_sizer->Show(false);
     m_txt_change_filament_times->Show(false);
@@ -5285,13 +5255,6 @@ void SelectMachineDialog::set_default()
 
     // rset status bar
     m_status_bar->reset();
-
-    NetworkAgent* agent = wxGetApp().getAgent();
-    if (agent) {
-        if (agent->is_user_login(wxGetApp().get_printer_cloud_provider())) {
-            show_status(PrintDialogStatus::PrintStatusInit);
-        }
-    }
 
     if (m_print_type == PrintFromType::FROM_NORMAL) {
         reset_and_sync_ams_list();

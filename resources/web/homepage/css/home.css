@@ -251,117 +251,6 @@ body
 
 .AccountRow.MenuOpen .AccountChevron { transform: rotate(180deg); }
 
-/*----Bambu Cloud, folded under the main account----*/
-#BambuCloudSection
-{
-	display: none;  /* shown by cloud_providers_info from backend */
-	margin-top: 8px;
-	padding-top: 6px;
-	border-top: 1px solid var(--account-divider);
-}
-
-#BambuCloudHeader
-{
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	height: 28px;
-	padding: 0 10px 0 14px;
-	border-radius: 6px;
-	font-size: 12px;
-	color: var(--account-meta);
-	cursor: pointer;
-	user-select: none;
-}
-
-#BambuCloudHeader:hover
-{
-	color: var(--account-name);
-}
-
-#BambuCloudHeader:focus-visible
-{
-	outline: 2px solid var(--account-action);
-	outline-offset: -2px;
-}
-
-.SectionChevron
-{
-	flex: 0 0 auto;
-	width: 12px;
-	height: 12px;
-	transition: transform 0.2s ease;
-}
-
-#BambuCloudHeader.Expanded .SectionChevron
-{
-	transform: rotate(90deg);
-}
-
-.SectionLabel
-{
-	flex: 1 1 auto;
-	min-width: 0;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-
-#BambuStatusDot
-{
-	flex: 0 0 auto;
-	width: 7px;
-	height: 7px;
-	border-radius: 50%;
-	background-color: var(--account-dot-off);
-}
-
-#BambuStatusDot.Online
-{
-	background-color: var(--account-dot-on);
-}
-
-#BambuCloudBody
-{
-	max-height: 0;
-	overflow: hidden;
-	transition: max-height 0.25s ease;
-}
-
-#BambuCloudBody.Expanded
-{
-	max-height: 200px;
-	padding-bottom: 2px;
-}
-
-.AccountRowCompact
-{
-	padding: 6px 10px 6px 24px;
-}
-
-.AccountRowCompact .AccountAvatar
-{
-	width: 26px;
-	height: 26px;
-}
-
-.AccountRowCompact .AccountName,
-.AccountRowCompact .AccountSecondary
-{
-	font-size: 13px;
-	line-height: 17px;
-}
-
-.AccountRowCompact .AccountSecondary
-{
-	color: var(--account-meta);
-}
-
-.AccountRowCompact.SignedIn .AccountSecondary  /*----the section header already names this provider----*/
-{
-	display: none;
-}
-
 /*----Account menu----*/
 #AccountMenu
 {
@@ -392,9 +281,7 @@ body
 @media (prefers-reduced-motion: reduce)
 {
 	#AccountMenu.Open   { animation: none; }
-	.AccountChevron,
-	.SectionChevron,
-	#BambuCloudBody     { transition: none; }
+	.AccountChevron     { transition: none; }
 }
 
 #AccountMenuHandle

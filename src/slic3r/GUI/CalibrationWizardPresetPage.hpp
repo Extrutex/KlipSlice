@@ -138,7 +138,6 @@ enum CaliPresetPageStatus
 {
     CaliPresetStatusInit = 0,
     CaliPresetStatusNormal,
-    CaliPresetStatusNoUserLogin,
     CaliPresetStatusInvalidPrinter,
     CaliPresetStatusConnectingServer,
     CaliPresetStatusInUpgrading,

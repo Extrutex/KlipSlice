@@ -164,7 +164,7 @@ enum class NotificationType
     BBLMixedFilamentBroken,
 	BBLPreviewOnlyMode,
     BBLPrinterConfigUpdateAvailable,
-	BBLUserPresetExceedLimit,
+	UserPresetExceedLimit,
     BBLFilamentPrintableError,
     BBLSliceLimitError,
     BBLSliceMultiExtruderHeightOutside,
@@ -1110,7 +1110,7 @@ private:
                              return true;
                          }},
 
-        NotificationData{NotificationType::BBLUserPresetExceedLimit, NotificationLevel::WarningNotificationLevel, BBL_NOTICE_MAX_INTERVAL,
+        NotificationData{NotificationType::UserPresetExceedLimit, NotificationLevel::WarningNotificationLevel, BBL_NOTICE_MAX_INTERVAL,
 			_u8L("The number of user presets cached in the cloud has exceeded the upper limit, newly created user presets can only be used locally."), 
 			_u8L("Wiki Guide"),
                          [](wxEvtHandler* evnthndlr) {

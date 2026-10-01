@@ -76,9 +76,6 @@ private:
     wxScrolledWindow*                   m_scrolledWindow{ nullptr };
     wxTimer*                            m_refresh_timer{ nullptr };
     std::vector<MPanel*>                m_user_list_machine_panel;
-    boost::thread*                      get_print_info_thread{ nullptr };
-    std::string                         m_print_info;
-    std::shared_ptr<int>                m_token = std::make_shared<int>(0);
     std::map<std::string, MachineObject*> m_bind_machine_list;
 
 private:

@@ -326,9 +326,8 @@ void MonitorPanel::update_all()
         int server_status = 0;
         // only disconnected server in cloud mode
         if (obj->connection_type() != "lan") {
-            if (m_agent) {
-                server_status = m_agent->is_server_connected(wxGetApp().get_printer_cloud_provider()) ? 0 : (int)MONITOR_DISCONNECTED_SERVER;
-            }
+            // no vendor cloud: a cloud-mode printer always reports a disconnected server
+            server_status = (int)MONITOR_DISCONNECTED_SERVER;
         }
         show_status((int) MONITOR_DISCONNECTED + server_status);
         return;

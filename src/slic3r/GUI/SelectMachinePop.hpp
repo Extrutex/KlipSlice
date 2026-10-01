@@ -164,9 +164,6 @@ private:
     wxTimer *                         m_refresh_timer{nullptr};
     std::vector<MachinePanel*>        m_user_list_machine_panel;
     std::vector<MachinePanel*>        m_other_list_machine_panel;
-    boost::thread*                    get_print_info_thread{ nullptr };
-    std::shared_ptr<int>              m_token = std::make_shared<int>(0);
-    std::string                       m_print_info = "";
     bool                              m_dismiss { false };
 
     std::map<std::string, MachineObject*> m_bind_machine_list;

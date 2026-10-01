@@ -68,7 +68,6 @@ private:
     bool                                m_ftp_try_connect{false};
     std::string                         m_print_error_msg;
     std::string                         m_print_error_extra;
-    std::string                         m_print_info;
     std::string                         m_printer_last_select;
     std::string                         m_device_select;
     wxString                            m_current_project_name;

@@ -534,85 +534,6 @@ wxBoxSizer *PreferencesDialog::create_item_language_combobox(wxString title, wxS
     return m_sizer;
 }
 
-wxBoxSizer *PreferencesDialog::create_item_region_combobox(wxString title, wxString tooltip)
-{
-
-    std::vector<wxString> Regions         = {_L("Asia-Pacific"), _L("China"), _L("Europe"), _L("North America"), _L("Others")};
-    std::vector<wxString> local_regions = {"Asia-Pacific", "China", "Europe", "North America", "Others"};
-
-    auto vlist = Regions;
-
-    auto tip = tooltip.IsEmpty() ? title : tooltip; // auto fill tooltips with title if its empty
-
-    wxBoxSizer *m_sizer = create_item_label(title, tip);
-
-    auto combobox = new ::ComboBox(m_parent, wxID_ANY, wxEmptyString, wxDefaultPosition, DESIGN_LARGE_COMBOBOX_SIZE, 0, nullptr, wxCB_READONLY);
-    combobox->GetDropDown().SetUseContentWidth(true);
-    combobox->SetToolTip(tip);
-
-    m_sizer->Add(combobox, 0, wxALIGN_CENTER);
-
-    std::vector<wxString>::iterator iter;
-    for (iter = vlist.begin(); iter != vlist.end(); iter++) { combobox->Append(*iter); }
-
-    AppConfig * config       = GUI::wxGetApp().app_config;
-
-    int         current_region = 0;
-    if (!config->get("region").empty()) {
-        std::string country_code = config->get("region");
-        for (auto i = 0; i < vlist.size(); i++) {
-            if (local_regions[i].ToStdString() == country_code) {
-                combobox->SetSelection(i);
-                current_region = i;
-            }
-        }
-    }
-
-    combobox->GetDropDown().Bind(wxEVT_COMBOBOX, [this, combobox, current_region, local_regions](wxCommandEvent &e) {
-        auto region_index = e.GetSelection();
-        auto region       = local_regions[region_index];
-
-        /*auto area   = "";
-        if (region == "CHN" || region == "China")
-            area = "CN";
-        else if (region == "USA")
-            area = "US";
-        else if (region == "Asia-Pacific")
-            area = "Others";
-        else if (region == "Europe")
-            area = "US";
-        else if (region == "North America")
-            area = "US";
-        else
-            area = "Others";*/
-        combobox->SetSelection(region_index);
-        NetworkAgent* agent = wxGetApp().getAgent();
-        AppConfig* config = GUI::wxGetApp().app_config;
-        if (agent) {
-            MessageDialog msg_wingow(this, _L("Changing the region will log you out of your account.\n") + "\n" + _L("Do you want to continue?"), _L("Region selection"),
-                                     wxICON_QUESTION | wxOK | wxCANCEL);
-            if (msg_wingow.ShowModal() == wxID_CANCEL) {
-                combobox->SetSelection(current_region);
-                return;
-            } else {
-                wxGetApp().request_user_logout();
-                config->set("region", region.ToStdString());
-                auto area = config->get_country_code();
-                if (agent) {
-                    agent->set_country_code(area);
-                }
-                EndModal(wxID_CANCEL);
-            }
-        } else {
-            config->set("region", region.ToStdString());
-        }
-
-        e.Skip();
-    });
-
-    return m_sizer;
-}
-
 wxBoxSizer *PreferencesDialog::create_item_loglevel_combobox(wxString title, wxString tooltip, std::vector<wxString> vlist)
 {
     auto tip = tooltip.IsEmpty() ? title : tooltip; // auto fill tooltips with title if its empty
@@ -1039,7 +960,6 @@ wxBoxSizer *PreferencesDialog::create_item_checkbox(wxString title, wxString too
             bool enabled = app_config->get_stealth_mode();
             if (enabled) wxGetApp().on_stealth_mode_enter();
             if (m_sync_user_preset_checkbox) m_sync_user_preset_checkbox->Enable(!enabled);
-            if (m_bambu_cloud_checkbox)      m_bambu_cloud_checkbox->Enable(!enabled);
         }
         else if (param == "hide_login_side_panel") {
             if (WebViewPanel* home = WebViewPanel::if_built()) {
@@ -1225,34 +1145,6 @@ wxBoxSizer* PreferencesDialog::create_item_downloads(wxString title, wxString to
 
     return m_sizer;
 }
-
-wxBoxSizer *PreferencesDialog::create_item_bambu_cloud(wxString title, wxString tooltip)
-{
-    wxBoxSizer *m_sizer = create_item_label(title, tooltip);
-
-    auto cb = new ::CheckBox(m_parent);
-    m_bambu_cloud_checkbox = cb;
-    cb->SetValue(app_config->has_cloud_provider(BBL_CLOUD_PROVIDER));
-    cb->SetToolTip(tooltip);
-
-    cb->Bind(wxEVT_TOGGLEBUTTON, [this, cb](wxCommandEvent &e) {
-        e.Skip(); // let CheckBox::update() refresh the bitmap
-        if (cb->GetValue()) {
-            app_config->add_cloud_provider(BBL_CLOUD_PROVIDER);
-        } else {
-            app_config->remove_cloud_provider(BBL_CLOUD_PROVIDER);
-        }
-        app_config->save();
-
-        // Update homepage visibility immediately
-        if (WebViewPanel* home = WebViewPanel::if_built())
-            home->SendCloudProvidersInfo();
-    });
-
-    m_sizer->Add(cb, 0, wxALIGN_CENTER);
-
-    return m_sizer;
-};
 
 #ifdef WIN32
 wxBoxSizer* PreferencesDialog::create_item_link_association( wxString url_prefix, wxString website_name)
@@ -1961,9 +1853,6 @@ void PreferencesDialog::create_items()
     //// ONLINE > Connection
     g_sizer->Add(create_item_title(_L("Connection")), 1, wxEXPAND);
 
-    auto item_region           = create_item_region_combobox(_L("Login region"), "");
-    g_sizer->Add(item_region);
- 
     auto item_stealth_mode     = create_item_checkbox(_L("Stealth mode"), _L("This disables all cloud features, including Orca Cloud profile syncing. Users who prefer to work entirely offline can enable this option.\nNote: When Stealth Mode is enabled, your user profiles will not be backed up to Orca Cloud."), "stealth_mode");
     g_sizer->Add(item_stealth_mode);
 
@@ -1976,12 +1865,6 @@ void PreferencesDialog::create_items()
     });
     g_sizer->Add(item_network_test);
 
-    //// ONLINE > Cloud Providers
-    g_sizer->Add(create_item_title(_L("Cloud Providers")), 1, wxEXPAND);
-
-    auto item_bambu_cloud     = create_item_bambu_cloud(_L("Enable Bambu Cloud"), _L("Allow logging into Bambu Cloud alongside Orca Cloud. When enabled, a Bambu login section appears on the homepage."));
-    g_sizer->Add(item_bambu_cloud);
-
     //// ONLINE > Update & sync
     g_sizer->Add(create_item_title(_L("Update & sync")), 1, wxEXPAND);
 
@@ -1992,7 +1875,6 @@ void PreferencesDialog::create_items()
     g_sizer->Add(item_user_sync);
 
     if (app_config->get_stealth_mode()) {
-        if (m_bambu_cloud_checkbox)      m_bambu_cloud_checkbox->Enable(false);
         if (m_sync_user_preset_checkbox) m_sync_user_preset_checkbox->Enable(false);
     }
 

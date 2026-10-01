@@ -311,7 +311,6 @@ private:
     std::string                         m_print_error_msg;
     std::string                         m_print_error_extra;
     std::string                         m_printer_last_select;
-    std::string                         m_print_info;
     wxString                            m_current_project_name;
     PrintDialogStatus                   m_print_status { PrintStatusInit };
     wxColour                            m_colour_def_color{wxColour(255, 255, 255)};
@@ -321,7 +320,6 @@ private:
     std::unordered_map<string, PrintOption*> m_checkbox_list;
     std::list<PrintOption*>                  m_checkbox_list_order;
 
-    std::shared_ptr<int>                m_token = std::make_shared<int>(0);
     wxString                             m_ams_tooltip;
     std::vector<wxString>               m_bedtype_list;
     std::vector<MachineObject*>         m_list;
