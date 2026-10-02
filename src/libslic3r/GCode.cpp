@@ -9310,10 +9310,17 @@ std::string GCode::retract(bool toolchange, bool is_last_retraction, LiftType li
 
     // wipe (if it's enabled for this extruder and we have a stored wipe path and no-zero wipe distance)
     if (FILAMENT_CONFIG(wipe) && m_wipe.has_path() && scale_(FILAMENT_CONFIG(wipe_distance)) > SCALED_EPSILON) {
+        if (m_config.use_firmware_retraction) {
+            // The firmware owns the retraction: G10 retracts all of it and G11 restores exactly that. Filament
+            // pulled back by E moves during the wipe would never come back, so retract first and wipe dry.
+            gcode += toolchange ? m_writer.retract_for_toolchange() : m_writer.retract();
+            gcode += m_wipe.wipe(*this, 0., toolchange, is_last_retraction);
+        } else {
         Wipe::RetractionValues wipeRetractions = m_wipe.calculateWipeRetractionLengths(*this, toolchange);
         gcode += toolchange ? m_writer.retract_for_toolchange(true, wipeRetractions.retraction_length_before_wipe) :
                               m_writer.retract(true, wipeRetractions.retraction_length_before_wipe);
         gcode += m_wipe.wipe(*this, wipeRetractions.retraction_length_during_wipe, toolchange, is_last_retraction);
+        }
 
         // Orca: wipeRetractions.retraction_length_after_wipe is not being used explicitly,
         // the remaining retraction after wipe is handled by the subsequent m_writer.retract() call
