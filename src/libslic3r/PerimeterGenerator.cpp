@@ -2583,10 +2583,17 @@ void PerimeterGenerator::process_arachne()
                 // instead - the fallback when there is no top fill - walls the top/non-top interface and rings
                 // top-surface islands with inner walls that don't exist when the feature is disabled.
                 const bool     clip_walls_over_top = top_fill_replaces_inner_walls(*this->config);
+                // The precise outer wall keeps its gap to the walls behind it on this layer too. The outline-shrink
+                // method takes the gap out of the region, so a region thinner than twice the gap loses walls. The
+                // toolpath-shift method keeps the region and moves the walls inwards only where the region has room,
+                // like the InnerWallShift strategy does on every other layer. Here the first bead of the region
+                // already is a wall behind the outer wall, so it moves as well (first shifted bead 0).
+                const coord_t  inner_region_shrink = precise_by_outline_shrink ? precise_wall_gap : 0;
                 const Polygons inner_region        = to_polygons(offset_ex(clip_walls_over_top ? infill_contour
                                                                                                : diff_ex(infill_contour, top_expolygons),
-                                                                          -precise_wall_gap));
-                Arachne::WallToolPaths inner_wall_tool_paths(inner_region, perimeter_spacing, perimeter_spacing, coord_t(inner_loop_number + 1), 0, layer_height, input_params_tmp);
+                                                                          -inner_region_shrink));
+                Arachne::WallToolPaths inner_wall_tool_paths(inner_region, perimeter_spacing, perimeter_spacing, coord_t(inner_loop_number + 1), 0, layer_height, input_params_tmp,
+                                                             inner_wall_shift, /*inner_wall_shift_first_bead*/ 0);
                 std::vector<Arachne::VariableWidthLines> inner_perimeters = inner_wall_tool_paths.getToolPaths();
 
                 if (clip_walls_over_top) {

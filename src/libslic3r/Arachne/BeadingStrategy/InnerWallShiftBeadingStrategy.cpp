@@ -6,8 +6,8 @@
 namespace Slic3r::Arachne
 {
 
-InnerWallShiftBeadingStrategy::InnerWallShiftBeadingStrategy(coord_t inner_wall_shift, BeadingStrategyPtr parent)
-    : BeadingStrategy(*parent), parent(std::move(parent)), inner_wall_shift(inner_wall_shift)
+InnerWallShiftBeadingStrategy::InnerWallShiftBeadingStrategy(coord_t inner_wall_shift, BeadingStrategyPtr parent, size_t first_shifted_bead)
+    : BeadingStrategy(*parent), parent(std::move(parent)), inner_wall_shift(inner_wall_shift), first_shifted_bead(first_shifted_bead)
 {
     name = "InnerWallShiftBeadingStrategy";
 }
@@ -55,9 +55,10 @@ BeadingStrategy::Beading InnerWallShiftBeadingStrategy::compute(coord_t thicknes
     // shifted here, the other half mirrors it. An odd middle bead belongs to neither half.
     const size_t count = ret.toolpath_locations.size();
     const size_t half  = count / 2;
-    // Without a printed bead behind the outer wall on its own side of the middle there is nothing to
-    // move: the marker bead of a single outer wall stays at that wall's inner edge.
-    if (half < 2 || std::none_of(ret.bead_widths.begin() + 1, ret.bead_widths.begin() + half, [](const coord_t width) { return width > 0; }))
+    // Without a printed bead to move on its own side of the middle there is nothing to do: the marker
+    // bead of a single outer wall stays at that wall's inner edge.
+    const size_t first = first_shifted_bead;
+    if (half <= first || std::none_of(ret.bead_widths.begin() + first, ret.bead_widths.begin() + half, [](const coord_t width) { return width > 0; }))
         return ret;
 
     // The gap between the innermost bead of this half and the middle of the wall, or the middle bead.
@@ -67,7 +68,7 @@ BeadingStrategy::Beading InnerWallShiftBeadingStrategy::compute(coord_t thicknes
     if (shift == 0)
         return ret;
 
-    for (size_t bead_idx = 1; bead_idx < half; ++bead_idx) {
+    for (size_t bead_idx = first; bead_idx < half; ++bead_idx) {
         ret.toolpath_locations[bead_idx]             += shift;
         ret.toolpath_locations[count - 1 - bead_idx] -= shift;
     }

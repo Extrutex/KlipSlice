@@ -792,6 +792,126 @@ TEST_CASE("Both precise outer wall methods place the walls of a thick wall alike
     require_bead_model(precise_method_block);
 }
 
+// ---- A covered rib next to a top surface (only_one_wall_top) ----
+//
+// With only_one_wall_top the layer under a top surface gets its outer wall and the walls behind it from two
+// separate Arachne runs (PerimeterGenerator::process_arachne), not from one run over the whole wall as on a
+// plain layer. A rib that continues upwards from such a layer must get its walls at the same places as on a
+// plain layer, and the precise outer wall may not make them narrower than they are without it on that same
+// layer (criterion Q1, applied to this second code path).
+
+namespace {
+
+// Rib thicknesses: 1.2 mm leaves one bead for the run behind the outer wall, which never moves; 2.0 mm
+// leaves three, whose outer two have to move with the toolpath shift as the walls behind the outer wall
+// do on a plain layer.
+const std::vector<double> rib_thicknesses = { 1.2, 2.0 };
+constexpr double rib_length      = 12.;
+constexpr double rib_height      = 2.0;
+constexpr double terrace_half    = 3.;   // the terrace ends at z = terrace_top and leaves the rib standing
+constexpr double terrace_top     = 1.0;
+constexpr double terrace_y0      = 3., terrace_y1 = 9.;
+constexpr double rib_probe_y     = 10.5; // across the rib, clear of the terrace and of the rib's end
+constexpr double rib_plain_z     = 0.6;  // a layer with no top surface
+constexpr double rib_terrace_z   = terrace_top; // the layer whose top surface is the terrace
+
+struct RibWalls {
+    std::vector<Crossing> plain;   // across the rib on the plain layer, model frame
+    std::vector<Crossing> terrace; // across the rib on the terrace layer, model frame
+};
+
+std::vector<Crossing> rib_cross_section(const Layer *layer)
+{
+    ProbeLayer out;
+    out.offset = unscaled(get_extents(layer->lslices).min);
+    size_t run = 0;
+    for (const LayerRegion *region : layer->regions())
+        collect(&region->perimeters, true, run, out.beads);
+    std::vector<const Bead *> walls;
+    for (const Bead &b : out.beads)
+        walls.push_back(&b);
+    std::vector<Crossing> xs = cross_section(walls, 1, rib_probe_y + out.offset.y());
+    for (Crossing &c : xs)
+        c.pos -= out.offset.x();
+    return xs;
+}
+
+RibWalls rib_walls(const Cell &cell, double rib_thickness)
+{
+    TriangleMesh rib     = extrude({ ExPolygon(rect_polygon({ 0., 0., rib_thickness, rib_length })) }, rib_height);
+    TriangleMesh terrace = extrude({ ExPolygon(rect_polygon({ 0.5 * rib_thickness - terrace_half, terrace_y0, 0.5 * rib_thickness + terrace_half, terrace_y1 })) }, terrace_top);
+    indexed_triangle_set its = rib.its;
+    its_merge(its, terrace.its);
+
+    DynamicPrintConfig config = cell_config(cell);
+    config.set_deserialize_strict({ { "only_one_wall_top", true } });
+
+    Print print;
+    Model model;
+    std::vector<TriangleMesh> meshes;
+    meshes.emplace_back(TriangleMesh(std::move(its)));
+    init_print(std::move(meshes), print, model, config);
+    print.process();
+    REQUIRE(print.objects().size() == 1);
+
+    const Layer *plain = nullptr, *top = nullptr;
+    for (const Layer *layer : print.objects().front()->layers()) {
+        if (std::abs(layer->print_z - rib_plain_z) < EPSILON)
+            plain = layer;
+        if (std::abs(layer->print_z - rib_terrace_z) < EPSILON)
+            top = layer;
+    }
+    REQUIRE(plain != nullptr);
+    REQUIRE(top != nullptr);
+    // The terrace layer holds a top surface: the terrace is not covered by the layer above.
+    REQUIRE(top->upper_layer != nullptr);
+    REQUIRE(area(diff(to_polygons(top->lslices), to_polygons(top->upper_layer->lslices))) > 0);
+
+    return { rib_cross_section(plain), rib_cross_section(top) };
+}
+
+// The rib's walls sit at the same places on both layers, and on the terrace layer they are as wide as
+// without the precise outer wall.
+void require_rib_walls_alike(const char *cell_name)
+{
+    for (double t : rib_thicknesses) {
+        DYNAMIC_SECTION("rib " << t << " mm") {
+            const RibWalls              walls     = rib_walls(cell_named(cell_name), t);
+            const std::vector<Crossing> reference = rib_walls(cell_named("arachne/precise=0"), t).terrace;
+            INFO(cell_name << ": " << walls.plain.size() << " beads across the rib on the plain layer, " << walls.terrace.size() << " on the terrace layer");
+            REQUIRE(walls.plain.size() >= size_t(std::round(t / wall_width)));
+            REQUIRE(walls.terrace.size() == walls.plain.size());
+            REQUIRE(reference.size() == walls.plain.size());
+            for (size_t i = 0; i < walls.plain.size(); ++ i) {
+                INFO(cell_name << ": bead " << i << " at " << walls.plain[i].pos << " on the plain layer, at " << walls.terrace[i].pos
+                     << " width " << walls.terrace[i].width << " on the terrace layer, " << reference[i].width << " wide there without the precise outer wall");
+                CHECK_THAT(walls.terrace[i].pos, Catch::Matchers::WithinAbs(walls.plain[i].pos, bead_tolerance));
+                CHECK_THAT(walls.terrace[i].width, Catch::Matchers::WithinAbs(reference[i].width, bead_tolerance));
+            }
+        }
+    }
+}
+
+} // namespace
+
+TEST_CASE("Arachne walls of a rib beside a top surface sit where they sit on a plain layer", "[WallGeometry]")
+{
+    require_rib_walls_alike("arachne/precise=0");
+}
+
+TEST_CASE("Arachne precise outer wall by toolpath shift keeps the walls of a rib beside a top surface", "[WallGeometry]")
+{
+    require_rib_walls_alike("arachne/precise=1/shift");
+}
+
+// WALL-1 on the only_one_wall_top path: the outline-shrink method takes the precise wall gap out of the
+// region of the walls behind the outer wall, so the rib's middle bead comes out narrower than without the
+// precise outer wall.
+TEST_CASE("Arachne precise outer wall by outline shrink keeps the walls of a rib beside a top surface", "[WallGeometry][!shouldfail]")
+{
+    require_rib_walls_alike("arachne/precise=1");
+}
+
 TEST_CASE("Classic walls without precise outer wall match the bead model", "[WallGeometry]")
 {
     require_bead_model("classic/precise=0");

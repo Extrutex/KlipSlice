@@ -49,8 +49,10 @@ public:
      * \param inset_count The maximum number of parallel extrusion lines that make up the wall
      * \param wall_0_inset How far to inset the outer wall, to make it adhere better to other walls.
      * \param inner_wall_shift How far to move the walls behind the outer wall inwards where the wall has room for it.
+     * \param inner_wall_shift_first_bead Index of the first bead inner_wall_shift moves, counted from the outline: 1 when the
+     *        outline holds the outer wall, 0 when the outer wall was already placed and this run computes only the walls behind it.
      */
-    WallToolPaths(const Polygons& outline, coord_t bead_width_0, coord_t bead_width_x, size_t inset_count, coord_t wall_0_inset, coordf_t layer_height, const WallToolPathsParams &params, coord_t inner_wall_shift = 0);
+    WallToolPaths(const Polygons& outline, coord_t bead_width_0, coord_t bead_width_x, size_t inset_count, coord_t wall_0_inset, coordf_t layer_height, const WallToolPathsParams &params, coord_t inner_wall_shift = 0, size_t inner_wall_shift_first_bead = 1);
 
     /*!
      * Generates the Toolpaths
@@ -133,6 +135,7 @@ private:
     size_t inset_count; //<! The maximum number of walls to generate
     coord_t wall_0_inset; //<! How far to inset the outer wall. Should only be applied when printing the actual walls, not extra infill/skin/support walls.
     coord_t inner_wall_shift; //<! How far the walls behind the outer wall move inwards (precise outer wall as a toolpath shift).
+    size_t inner_wall_shift_first_bead; //<! The first bead inner_wall_shift moves, counted from the outline.
     coordf_t layer_height;
     bool print_thin_walls; //<! Whether to enable the widening beading meta-strategy for thin features
     coord_t min_feature_size; //<! The minimum size of the features that can be widened by the widening beading meta-strategy. Features thinner than that will not be printed

@@ -22,11 +22,16 @@ namespace Slic3r::Arachne
  *
  * It has to be applied after the LimitedBeadingStrategy: that strategy places the marker bead and
  * knows the real thickness of a wall whose bead count it limited.
+ *
+ * `first_shifted_bead` is the index of the first bead that moves, counted from each outline. It is 1
+ * for a wall that contains its outer wall. For the inner walls that PerimeterGenerator computes on
+ * their own behind an already placed single outer wall (only_one_wall_top), it is 0: there the first
+ * bead of the region is the first wall behind the outer wall and has to move as well.
  */
 class InnerWallShiftBeadingStrategy : public BeadingStrategy
 {
 public:
-    InnerWallShiftBeadingStrategy(coord_t inner_wall_shift, BeadingStrategyPtr parent);
+    InnerWallShiftBeadingStrategy(coord_t inner_wall_shift, BeadingStrategyPtr parent, size_t first_shifted_bead = 1);
 
     ~InnerWallShiftBeadingStrategy() override = default;
 
@@ -44,6 +49,7 @@ public:
 private:
     BeadingStrategyPtr parent;
     coord_t            inner_wall_shift;
+    size_t             first_shifted_bead;
 };
 
 } // namespace Slic3r::Arachne

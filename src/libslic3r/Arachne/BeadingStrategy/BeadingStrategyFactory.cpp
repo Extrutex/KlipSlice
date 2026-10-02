@@ -30,7 +30,8 @@ BeadingStrategyPtr BeadingStrategyFactory::makeStrategy(const coord_t preferred_
                                                         const coord_t outer_wall_offset,
                                                         const coord_t inner_wall_shift,
                                                         const int     inward_distributed_center_wall_count,
-                                                        const double  minimum_variable_line_ratio)
+                                                        const double  minimum_variable_line_ratio,
+                                                        const size_t  inner_wall_shift_first_bead)
 {
     // Handle a special case when there is just one external perimeter.
     // Because big differences in bead width for inner and other perimeters cause issues with current beading strategies.
@@ -59,7 +60,7 @@ BeadingStrategyPtr BeadingStrategyFactory::makeStrategy(const coord_t preferred_
     // Applied after the Limited strategy on purpose: it moves that strategy's marker wall along with the inner walls.
     if (inner_wall_shift > 0) {
         BOOST_LOG_TRIVIAL(trace) << "Applying the InnerWallShift meta-strategy with shift = " << inner_wall_shift << ".";
-        ret = std::make_unique<InnerWallShiftBeadingStrategy>(inner_wall_shift, std::move(ret));
+        ret = std::make_unique<InnerWallShiftBeadingStrategy>(inner_wall_shift, std::move(ret), inner_wall_shift_first_bead);
     }
     return ret;
 }
