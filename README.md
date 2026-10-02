@@ -19,8 +19,10 @@ every path that does not lead to a Klipper machine removed.
   [Moonraker](https://moonraker.readthedocs.io/). There are no vendor-specific
   printer protocols.
 - **No vendor network, no cloud.** The Bambu network plug-in, login, cloud
-  provider, model mall and telemetry are removed. Inherited code for other
-  print hosts is still being removed.
+  provider, model mall and telemetry are removed, and so are the other print
+  host protocols (OctoPrint, PrusaLink, Duet, Creality, Elegoo, Flashforge
+  and the cloud services). Printers are found on the LAN through Moonraker's
+  own Bonjour announcement.
 - **Profiles only for printers that verifiably run Klipper.** 174 printer models
   ship with a system profile, each one backed by per-model evidence (stock
   Klipper, Klipper via an established community mod, or a self-built Klipper
