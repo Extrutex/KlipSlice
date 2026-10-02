@@ -185,7 +185,7 @@ public:
         if (items.size() == VERSION_LEN) {
             try {
                 for (int i = 0; i < VERSION_LEN; i++) {
-                    ver_items[i] = stoi(items[i]);
+                    ver_items[i] = std::stoi(items[i]);
                 }
             }
             catch (...) {
@@ -209,7 +209,7 @@ public:
         if (items.size() == VERSION_LEN) {
             try {
                 for (int i = 0; i < VERSION_LEN; i++) {
-                    ver_target[i] = stoi(items[i]);
+                    ver_target[i] = std::stoi(items[i]);
                     if (ver_target[i] < ver_items[i]) {
                         return 1;
                     }

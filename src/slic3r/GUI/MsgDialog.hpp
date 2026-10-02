@@ -15,6 +15,7 @@
 #include "Widgets/CheckBox.hpp"
 #include "Widgets/TextInput.hpp"
 #include "Widgets/HyperLink.hpp"
+#include "Widgets/Label.hpp"
 #include "BBLStatusBar.hpp"
 #include "libslic3r/Semver.hpp"
 
