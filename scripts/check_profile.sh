@@ -2,7 +2,7 @@
 #
 # Local twin of the "Check profiles" CI job (.github/workflows/check_profiles.yml).
 #
-# Runs the same five checks, in the same order, with the same validator flags, and with the
+# Runs the same six checks, in the same order, with the same validator flags, and with the
 # same semantics: every check runs even after an earlier one fails (the workflow's
 # continue-on-error), then the script exits non-zero once at the end.
 #
@@ -58,7 +58,7 @@ LOG_LEVEL=2
 PREFER_DOWNLOAD=0
 REFRESH=0
 
-ALL_CHECKS=(profile_tool validate_system validate_slice validate_filament_subtypes validate_custom)
+ALL_CHECKS=(profile_tool klipper_guard validate_system validate_slice validate_filament_subtypes validate_custom)
 CHECKS=()
 # "<check><TAB>pass|fail" per check that ran, plus "<check><TAB>skip<TAB>why" for one a vendor
 # scope left out; a string rather than an array because bash 3.2 (still the /bin/bash on macOS)
@@ -73,6 +73,7 @@ Usage: scripts/check_profile.sh [OPTION]... [CHECK]...
 
 Checks (default: all, in this order):
   profile_tool                  scripts/orca_profile_tool.py check
+  klipper_guard                 scripts/klipslice_profile_guard.py
   validate_system               validator -p <profiles> -l <level>
   validate_slice                validator -p <profiles> -s -l <level>
   validate_filament_subtypes    validator -p <profiles> -l <level> -f
@@ -91,7 +92,7 @@ Options:
   -l, --log-level N    validator log level (default: ${LOG_LEVEL}, as in CI)
   -h, --help           show this help
 
-Note: profile_tool is the only check that is not the validator binary; it makes the static
+Note: profile_tool and klipper_guard are the checks that are not the validator binary. profile_tool makes the static
 checks the validator cannot, because the validator loads the tree the way the slicer does
 and so never sees a profile no <vendor>.json indexes, a preset name two files claim, or a
 file normalize and update-index would still rewrite.
@@ -379,6 +380,11 @@ check_profile_tool() {
     python3 "${REPO_ROOT}/scripts/orca_profile_tool.py" check --profiles "${PROFILES_DIR}" --vendor "${VENDOR}"
 }
 
+# The evidence file is cross-checked against every vendor, so this check is never narrowed.
+check_klipper_guard() {
+    python3 "${REPO_ROOT}/scripts/klipslice_profile_guard.py" --profiles "${PROFILES_DIR}"
+}
+
 check_validate_system() {
     "${VALIDATOR}" -p "${PROFILES_DIR}" -v "${VENDOR}" -l "${LOG_LEVEL}"
 }
@@ -563,6 +569,7 @@ EOF
 comment_heading() {
     case "$1" in
         profile_tool) echo "### Profile Check Failed (orca_profile_tool.py)" ;;
+        klipper_guard) echo "### Klipper-only Invariants Failed (klipslice_profile_guard.py)" ;;
         validate_system) echo "### System Profile Validation Failed" ;;
         validate_slice) echo "### Slice Validation Failed (custom g-code expansion)" ;;
         validate_filament_subtypes) echo "### Filament Subtype Validation Failed" ;;

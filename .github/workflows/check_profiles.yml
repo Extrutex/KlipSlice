@@ -15,6 +15,8 @@ on:
     # orca_profile_tool.py reads the variant key sets from PrintConfig.cpp, and its
     # tests the obsolete keys, so a PR changing either must be checked against the profiles.
     - 'src/libslic3r/PrintConfig.cpp'
+    # klipslice_profile_guard.py cross-checks the profiles against the firmware evidence.
+    - 'docs/klipslice/printer-firmware.json'
     - ".github/workflows/check_profiles.yml"
 
   workflow_dispatch:
@@ -55,6 +57,16 @@ jobs:
         run: |
           set +e
           python3 ./scripts/orca_profile_tool.py check 2>&1 | tee ${{ runner.temp }}/profile_tool.log
+          exit ${PIPESTATUS[0]}
+
+      # What makes the tree a KLIPSLICE tree: every machine slices for Klipper through Moonraker,
+      # and every printer model ships with kept evidence in docs/klipslice/printer-firmware.json.
+      - name: Check the Klipper-only invariants (klipslice_profile_guard.py)
+        id: klipper_guard
+        continue-on-error: true
+        run: |
+          set +e
+          python3 ./scripts/klipslice_profile_guard.py 2>&1 | tee ${{ runner.temp }}/klipper_guard.log
           exit ${PIPESTATUS[0]}
 
       # download
@@ -201,7 +213,7 @@ jobs:
           echo "${{ github.event.pull_request.number }}" > ${{ runner.temp }}/profile-check-results/pr_number.txt
 
       - name: Prepare comment artifact
-        if: ${{ always() && github.event_name == 'pull_request' && (steps.profile_tool.outcome == 'failure' || steps.validate_system.outcome == 'failure' || steps.validate_slice.outcome == 'failure' || steps.validate_filament_subtypes.outcome == 'failure' || steps.validate_custom.outcome == 'failure') }}
+        if: ${{ always() && github.event_name == 'pull_request' && (steps.profile_tool.outcome == 'failure' || steps.klipper_guard.outcome == 'failure' || steps.validate_system.outcome == 'failure' || steps.validate_slice.outcome == 'failure' || steps.validate_filament_subtypes.outcome == 'failure' || steps.validate_custom.outcome == 'failure') }}
         run: |
           {
             # Marker matched by check_profiles_comment.yml to delete prior comments.
@@ -214,6 +226,15 @@ jobs:
               echo ""
               echo '```'
               head -c 30000 ${{ runner.temp }}/profile_tool.log || echo "No output captured"
+              echo '```'
+              echo ""
+            fi
+
+            if [ "${{ steps.klipper_guard.outcome }}" = "failure" ]; then
+              echo "### Klipper-only Invariants Failed (klipslice_profile_guard.py)"
+              echo ""
+              echo '```'
+              head -c 30000 ${{ runner.temp }}/klipper_guard.log || echo "No output captured"
               echo '```'
               echo ""
             fi
@@ -267,7 +288,7 @@ jobs:
           retention-days: 1
 
       - name: Fail if any check failed
-        if: ${{ always() && (steps.profile_tool.outcome == 'failure' || steps.validate_system.outcome == 'failure' || steps.validate_slice.outcome == 'failure' || steps.validate_filament_subtypes.outcome == 'failure' || steps.validate_custom.outcome == 'failure') }}
+        if: ${{ always() && (steps.profile_tool.outcome == 'failure' || steps.klipper_guard.outcome == 'failure' || steps.validate_system.outcome == 'failure' || steps.validate_slice.outcome == 'failure' || steps.validate_filament_subtypes.outcome == 'failure' || steps.validate_custom.outcome == 'failure') }}
         run: |
           echo "One or more profile checks failed; see the step logs above."
           echo 'Reproduce the whole run locally with scripts/check_profile.sh (scripts\check_profile.bat on Windows).'

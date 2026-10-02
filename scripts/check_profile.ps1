@@ -5,17 +5,18 @@
 .DESCRIPTION
     The Windows counterpart of scripts/check_profile.sh, and kept deliberately close to it.
 
-    Runs the same five checks, in the same order, with the same validator flags, and with the
+    Runs the same six checks, in the same order, with the same validator flags, and with the
     same semantics: every check runs even after an earlier one fails (the workflow's
     continue-on-error), then the script exits non-zero once at the end.
 
         profile_tool                  scripts/orca_profile_tool.py check
+        klipper_guard                 scripts/klipslice_profile_guard.py
         validate_system               validator -p <profiles> -l <level>
         validate_slice                validator -p <profiles> -s -l <level>
         validate_filament_subtypes    validator -p <profiles> -l <level> -f
         validate_custom               validator against every released custom-preset fixture
 
-    profile_tool is the only check that is not the validator binary; it makes the static checks
+    profile_tool and klipper_guard are the checks that are not the validator binary. profile_tool makes the static checks
     the validator cannot, because the validator loads the tree the way the slicer does and so
     never sees a profile no <vendor>.json indexes, a preset name two files claim, or a file
     normalize and update-index would still rewrite.
@@ -116,7 +117,7 @@ $HostArch = switch ($HostArch) {
     default { 'x86' }
 }
 
-$AllChecks = @('profile_tool', 'validate_system', 'validate_slice', 'validate_filament_subtypes', 'validate_custom')
+$AllChecks = @('profile_tool', 'klipper_guard', 'validate_system', 'validate_slice', 'validate_filament_subtypes', 'validate_custom')
 
 $script:LogWriter = $null
 $script:Python = ''
@@ -447,6 +448,11 @@ $CheckBodies = @{
         Invoke-Tool -Exe (Resolve-Python) -Arguments (@((Join-Path $RepoRoot 'scripts\orca_profile_tool.py'), 'check', '--profiles', $ProfilesDir) + $VendorPyArgs)
     }
 
+    # The evidence file is cross-checked against every vendor, so this check is never narrowed.
+    klipper_guard = {
+        Invoke-Tool -Exe (Resolve-Python) -Arguments @((Join-Path $RepoRoot 'scripts\klipslice_profile_guard.py'), '--profiles', $ProfilesDir)
+    }
+
     validate_system = {
         Invoke-Tool -Exe $Validator -Arguments (@('-p', $ProfilesDir) + $VendorArgs + @('-l', "$LogLevel"))
     }
@@ -581,6 +587,7 @@ $CheckBodies = @{
 # Heading CI puts above this check's log in the PR comment.
 $CommentHeadings = @{
     profile_tool               = '### Profile Check Failed (orca_profile_tool.py)'
+    klipper_guard              = '### Klipper-only Invariants Failed (klipslice_profile_guard.py)'
     validate_system            = '### System Profile Validation Failed'
     validate_slice             = '### Slice Validation Failed (custom g-code expansion)'
     validate_filament_subtypes = '### Filament Subtype Validation Failed'
