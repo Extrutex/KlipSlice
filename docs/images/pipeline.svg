@@ -22,7 +22,7 @@
 
   <!-- discovery: Moonraker advertises itself, the slicer finds it (above the row) -->
   <path d="M500 160 V100 H100 V158" fill="none" stroke="#8b99a4" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arrow-muted)"/>
-  <text x="300" y="90" text-anchor="middle" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="12" fill="#8b99a4">mDNS  _moonraker._tcp  (discovery)</text>
+  <text x="300" y="90" text-anchor="middle" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="12" fill="#8b99a4">mDNS&#160; _moonraker._tcp&#160; (discovery)</text>
 
   <!-- main row: boxes -->
   <g font-family="Inter, 'Segoe UI', system-ui, -apple-system, sans-serif" font-size="14" font-weight="600" fill="#eef3f6" text-anchor="middle">
@@ -90,7 +90,7 @@
 
   <!-- machine sync: printer.cfg limits fed back to the slicer (below the row) -->
   <path d="M740 220 V290 H100 V222" fill="none" stroke="#4db9ff" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arrow-path)"/>
-  <text x="420" y="306" text-anchor="middle" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="12" fill="#4db9ff">printer.cfg limits -> slicer   (machine sync, roadmap)</text>
+  <text x="420" y="306" text-anchor="middle" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="12" fill="#4db9ff">printer.cfg limits -> slicer&#160;&#160; (machine sync, roadmap)</text>
 
   <!-- caption -->
   <text x="40" y="328" font-family="Inter, 'Segoe UI', system-ui, -apple-system, sans-serif" font-size="13" fill="#b4c0c9">The G-code is the last place a limit can be enforced: Klipper executes the accelerations the slicer wrote, so the slicer has to know the machine.</text>
