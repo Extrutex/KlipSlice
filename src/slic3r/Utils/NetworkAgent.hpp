@@ -42,21 +42,17 @@ public:
     int set_on_http_error_fn(AppOnHttpErrorFn fn);
     int set_get_country_code_fn(GetCountryCodeFn fn);
     int connect_server();
-    int refresh_connection(const std::string& provider = "");
 
     int change_user(std::string user_info, const std::string& provider = ORCA_CLOUD_PROVIDER);
     bool is_user_login(const std::string& provider = ORCA_CLOUD_PROVIDER);
     int user_logout(bool request = false, const std::string& provider = ORCA_CLOUD_PROVIDER);
     std::string get_user_id(const std::string& provider = ORCA_CLOUD_PROVIDER);
-    std::string get_user_name(const std::string& provider = ORCA_CLOUD_PROVIDER);
-    std::string get_user_avatar(const std::string& provider = ORCA_CLOUD_PROVIDER);
     std::string get_user_nickname(const std::string& provider = ORCA_CLOUD_PROVIDER);
     std::string build_login_cmd(const std::string& provider = ORCA_CLOUD_PROVIDER);
     std::string build_logout_cmd(const std::string& provider = ORCA_CLOUD_PROVIDER);
     std::string build_login_info(const std::string& provider = ORCA_CLOUD_PROVIDER);
     std::string get_cloud_service_host(const std::string& provider = ORCA_CLOUD_PROVIDER);
     std::string get_cloud_login_url(const std::string& language = "", const std::string& provider = ORCA_CLOUD_PROVIDER);
-    bool is_server_connected(const std::string& provider = ORCA_CLOUD_PROVIDER);
 
     void enable_multi_machine(bool enable, const std::string& provider = ORCA_CLOUD_PROVIDER);
 
@@ -65,21 +61,11 @@ public:
     int get_user_presets(std::map<std::string, std::map<std::string, std::string>>* user_presets, const std::string& provider = ORCA_CLOUD_PROVIDER);
     std::string request_setting_id(std::string name, std::map<std::string, std::string>* values_map, unsigned int* http_code, const std::string& provider = ORCA_CLOUD_PROVIDER);
     int put_setting(std::string setting_id, std::string name, std::map<std::string, std::string>* values_map, unsigned int* http_code, const std::string& provider = ORCA_CLOUD_PROVIDER, bool force = false);
-    int get_setting_list(std::string bundle_version, ProgressFn pro_fn = nullptr, WasCancelledFn cancel_fn = nullptr, const std::string& provider = ORCA_CLOUD_PROVIDER);
     int get_setting_list2(std::string bundle_version, CheckFn chk_fn, ProgressFn pro_fn = nullptr, WasCancelledFn cancel_fn = nullptr, const std::string& provider = ORCA_CLOUD_PROVIDER);
     int delete_setting(std::string setting_id, const std::string& provider = ORCA_CLOUD_PROVIDER);
 
-    int get_my_message(int type, int after, int limit, unsigned int* http_code, std::string* http_body, const std::string& provider = ORCA_CLOUD_PROVIDER);
-    int check_user_task_report(int* task_id, bool* printable, const std::string& provider = ORCA_CLOUD_PROVIDER);
-    int get_user_print_info(unsigned int* http_code, std::string* http_body, const std::string& provider = ORCA_CLOUD_PROVIDER);
     int get_user_tasks(TaskQueryParams params, std::string* http_body, const std::string& provider = ORCA_CLOUD_PROVIDER);
     int get_printer_firmware(std::string dev_id, unsigned* http_code, std::string* http_body, const std::string& provider = ORCA_CLOUD_PROVIDER);
-    int get_task_plate_index(std::string task_id, int* plate_index, const std::string& provider = ORCA_CLOUD_PROVIDER);
-    int get_user_info(int* identifier, const std::string& provider = ORCA_CLOUD_PROVIDER);
-    int get_subtask_info(std::string subtask_id, std::string* task_json, unsigned int* http_code, std::string* http_body, const std::string& provider = ORCA_CLOUD_PROVIDER);
-    int get_slice_info(std::string project_id, std::string profile_id, int plate_index, std::string* slice_json, const std::string& provider = ORCA_CLOUD_PROVIDER);
-    int query_bind_status(std::vector<std::string> query_list, unsigned int* http_code, std::string* http_body, const std::string& provider = ORCA_CLOUD_PROVIDER);
-    int modify_printer_name(std::string dev_id, std::string dev_name, const std::string& provider = ORCA_CLOUD_PROVIDER);
     int get_camera_url(std::string dev_id, std::function<void(std::string)> callback, const std::string& provider = ORCA_CLOUD_PROVIDER);
     int get_subtask(BBLModelTask* task, OnGetSubTaskFn getsub_fn, const std::string& provider = ORCA_CLOUD_PROVIDER);
     int get_my_profile(std::string token, unsigned int* http_code, std::string* http_body, const std::string& provider = ORCA_CLOUD_PROVIDER);
@@ -90,7 +76,6 @@ public:
     int set_on_printer_connected_fn(OnPrinterConnectedFn fn);
     int set_on_subscribe_failure_fn(GetSubscribeFailureFn fn);
     int set_on_message_fn(OnMessageFn fn);
-    int set_on_user_message_fn(OnMessageFn fn);
     int set_on_local_connect_fn(OnLocalConnectedFn fn);
     int set_on_local_message_fn(OnMessageFn fn);
     int set_server_callback(OnServerErrFn fn);
@@ -98,12 +83,9 @@ public:
     int connect_printer(std::string dev_id, std::string dev_ip, std::string username, std::string password, bool use_ssl);
     int disconnect_printer();
     int send_message_to_printer(std::string dev_id, std::string json_str, int qos, int flag);
-    int check_cert();
     void install_device_cert(std::string dev_id, bool lan_only);
     bool start_discovery(bool start, bool sending);
-    int ping_bind(std::string ping_code);
     int bind_detect(std::string dev_ip, std::string sec_link, detectResult& detect);
-    int bind(std::string dev_ip, std::string dev_id, std::string dev_model, std::string sec_link, std::string timezone, bool improved, OnUpdateStatusFn update_fn);
     int unbind(std::string dev_id);
     std::string get_user_selected_machine();
     int set_user_selected_machine(std::string dev_id);
@@ -121,7 +103,6 @@ public:
     std::string to_orca_filament_id(const std::string& printer_filament_id) const;
     std::string from_orca_filament_id(const std::string& orca_filament_id) const;
     int request_bind_ticket(std::string* ticket);
-    int get_hms_snapshot(std::string dev_id, std::string file_name, std::function<void(std::string, int)> callback);
 
 private:
     struct PrinterCallbacks {
@@ -129,7 +110,6 @@ private:
         OnPrinterConnectedFn on_printer_connected_fn = nullptr;
         GetSubscribeFailureFn on_subscribe_failure_fn = nullptr;
         OnMessageFn on_message_fn = nullptr;
-        OnMessageFn on_user_message_fn = nullptr;
         OnLocalConnectedFn on_local_connect_fn = nullptr;
         OnMessageFn on_local_message_fn = nullptr;
         QueueOnMainFn queue_on_main_fn = nullptr;

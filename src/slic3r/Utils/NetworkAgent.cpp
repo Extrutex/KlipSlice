@@ -88,7 +88,6 @@ void NetworkAgent::apply_printer_callbacks(const std::shared_ptr<IPrinterAgent>&
     printer_agent->set_on_printer_connected_fn(callbacks.on_printer_connected_fn);
     printer_agent->set_on_subscribe_failure_fn(callbacks.on_subscribe_failure_fn);
     printer_agent->set_on_message_fn(callbacks.on_message_fn);
-    printer_agent->set_on_user_message_fn(callbacks.on_user_message_fn);
     printer_agent->set_on_local_connect_fn(callbacks.on_local_connect_fn);
     printer_agent->set_on_local_message_fn(callbacks.on_local_message_fn);
     printer_agent->set_queue_on_main_fn(callbacks.queue_on_main_fn);
@@ -203,22 +202,6 @@ std::string NetworkAgent::get_user_id(const std::string& provider)
     return "";
 }
 
-std::string NetworkAgent::get_user_name(const std::string& provider)
-{
-    const auto cloud_agent = get_cloud_agent(provider);
-    if (cloud_agent)
-        return cloud_agent->get_user_name();
-    return "";
-}
-
-std::string NetworkAgent::get_user_avatar(const std::string& provider)
-{
-    const auto cloud_agent = get_cloud_agent(provider);
-    if (cloud_agent)
-        return cloud_agent->get_user_avatar();
-    return "";
-}
-
 std::string NetworkAgent::get_user_nickname(const std::string& provider)
 {
     const auto cloud_agent = get_cloud_agent(provider);
@@ -272,27 +255,6 @@ int NetworkAgent::connect_server()
     return invoke_on_all_cloud_agents(m_cloud_agents, [](ICloudServiceAgent& cloud_agent) { return cloud_agent.connect_server(); });
 }
 
-bool NetworkAgent::is_server_connected(const std::string& provider)
-{
-    const auto cloud_agent = get_cloud_agent(provider);
-    if (cloud_agent)
-        return cloud_agent->is_server_connected();
-    return false;
-}
-
-int NetworkAgent::refresh_connection(const std::string& provider)
-{
-    if(provider.empty())
-        return invoke_on_all_cloud_agents(m_cloud_agents, [](ICloudServiceAgent& cloud_agent) { return cloud_agent.refresh_connection(); });
-    else {
-        const auto cloud_agent = get_cloud_agent(provider);
-        if (cloud_agent)
-            return cloud_agent->refresh_connection();
-        return -1;
-    }
-     
-}
-
 void NetworkAgent::enable_multi_machine(bool enable, const std::string& provider)
 {
     const auto cloud_agent = get_cloud_agent(provider);
@@ -332,14 +294,6 @@ int NetworkAgent::put_setting(std::string                         setting_id,
     return -1;
 }
 
-int NetworkAgent::get_setting_list(std::string bundle_version, ProgressFn pro_fn, WasCancelledFn cancel_fn, const std::string& provider)
-{
-    const auto cloud_agent = get_cloud_agent(provider);
-    if (cloud_agent)
-        return cloud_agent->get_setting_list(std::move(bundle_version), pro_fn, cancel_fn);
-    return -1;
-}
-
 int NetworkAgent::get_setting_list2(
     std::string bundle_version, CheckFn chk_fn, ProgressFn pro_fn, WasCancelledFn cancel_fn, const std::string& provider)
 {
@@ -357,30 +311,6 @@ int NetworkAgent::delete_setting(std::string setting_id, const std::string& prov
     return -1;
 }
 
-int NetworkAgent::get_my_message(int type, int after, int limit, unsigned int* http_code, std::string* http_body, const std::string& provider)
-{
-    const auto cloud_agent = get_cloud_agent(provider);
-    if (cloud_agent)
-        return cloud_agent->get_my_message(type, after, limit, http_code, http_body);
-    return -1;
-}
-
-int NetworkAgent::check_user_task_report(int* task_id, bool* printable, const std::string& provider)
-{
-    const auto cloud_agent = get_cloud_agent(provider);
-    if (cloud_agent)
-        return cloud_agent->check_user_task_report(task_id, printable);
-    return -1;
-}
-
-int NetworkAgent::get_user_print_info(unsigned int* http_code, std::string* http_body, const std::string& provider)
-{
-    const auto cloud_agent = get_cloud_agent(provider);
-    if (cloud_agent)
-        return cloud_agent->get_user_print_info(http_code, http_body);
-    return -1;
-}
-
 int NetworkAgent::get_user_tasks(TaskQueryParams params, std::string* http_body, const std::string& provider)
 {
     const auto cloud_agent = get_cloud_agent(provider);
@@ -394,59 +324,6 @@ int NetworkAgent::get_printer_firmware(std::string dev_id, unsigned* http_code, 
     const auto cloud_agent = get_cloud_agent(provider);
     if (cloud_agent)
         return cloud_agent->get_printer_firmware(std::move(dev_id), http_code, http_body);
-    return -1;
-}
-
-int NetworkAgent::get_task_plate_index(std::string task_id, int* plate_index, const std::string& provider)
-{
-    const auto cloud_agent = get_cloud_agent(provider);
-    if (cloud_agent)
-        return cloud_agent->get_task_plate_index(std::move(task_id), plate_index);
-    return -1;
-}
-
-int NetworkAgent::get_user_info(int* identifier, const std::string& provider)
-{
-    const auto cloud_agent = get_cloud_agent(provider);
-    if (cloud_agent)
-        return cloud_agent->get_user_info(identifier);
-    return -1;
-}
-
-int NetworkAgent::get_subtask_info(
-    std::string subtask_id, std::string* task_json, unsigned int* http_code, std::string* http_body, const std::string& provider)
-{
-    const auto cloud_agent = get_cloud_agent(provider);
-    if (cloud_agent)
-        return cloud_agent->get_subtask_info(std::move(subtask_id), task_json, http_code, http_body);
-    return -1;
-}
-
-int NetworkAgent::get_slice_info(
-    std::string project_id, std::string profile_id, int plate_index, std::string* slice_json, const std::string& provider)
-{
-    const auto cloud_agent = get_cloud_agent(provider);
-    if (cloud_agent)
-        return cloud_agent->get_slice_info(std::move(project_id), std::move(profile_id), plate_index, slice_json);
-    return -1;
-}
-
-int NetworkAgent::query_bind_status(std::vector<std::string> query_list,
-                                    unsigned int*            http_code,
-                                    std::string*             http_body,
-                                    const std::string&       provider)
-{
-    const auto cloud_agent = get_cloud_agent(provider);
-    if (cloud_agent)
-        return cloud_agent->query_bind_status(std::move(query_list), http_code, http_body);
-    return -1;
-}
-
-int NetworkAgent::modify_printer_name(std::string dev_id, std::string dev_name, const std::string& provider)
-{
-    const auto cloud_agent = get_cloud_agent(provider);
-    if (cloud_agent)
-        return cloud_agent->modify_printer_name(std::move(dev_id), std::move(dev_name));
     return -1;
 }
 
@@ -518,14 +395,6 @@ int NetworkAgent::set_on_message_fn(OnMessageFn fn)
     return -1;
 }
 
-int NetworkAgent::set_on_user_message_fn(OnMessageFn fn)
-{
-    m_printer_callbacks.on_user_message_fn = fn;
-    if (m_printer_agent)
-        return m_printer_agent->set_on_user_message_fn(fn);
-    return -1;
-}
-
 int NetworkAgent::set_on_local_connect_fn(OnLocalConnectedFn fn)
 {
     m_printer_callbacks.on_local_connect_fn = fn;
@@ -578,13 +447,6 @@ int NetworkAgent::send_message_to_printer(std::string dev_id, std::string json_s
     return -1;
 }
 
-int NetworkAgent::check_cert()
-{
-    if (m_printer_agent)
-        return m_printer_agent->check_cert();
-    return -1;
-}
-
 void NetworkAgent::install_device_cert(std::string dev_id, bool lan_only)
 {
     if (m_printer_agent)
@@ -598,25 +460,10 @@ bool NetworkAgent::start_discovery(bool start, bool sending)
     return false;
 }
 
-int NetworkAgent::ping_bind(std::string ping_code)
-{
-    if (m_printer_agent)
-        return m_printer_agent->ping_bind(ping_code);
-    return -1;
-}
-
 int NetworkAgent::bind_detect(std::string dev_ip, std::string sec_link, detectResult& detect)
 {
     if (m_printer_agent)
         return m_printer_agent->bind_detect(dev_ip, sec_link, detect);
-    return -1;
-}
-
-int NetworkAgent::bind(
-    std::string dev_ip, std::string dev_id, std::string dev_model, std::string sec_link, std::string timezone, bool improved, OnUpdateStatusFn update_fn)
-{
-    if (m_printer_agent)
-        return m_printer_agent->bind(dev_ip, dev_id, dev_model, sec_link, timezone, improved, update_fn);
     return -1;
 }
 
@@ -737,13 +584,6 @@ int NetworkAgent::request_bind_ticket(std::string* ticket)
 {
     if (m_printer_agent)
         return m_printer_agent->request_bind_ticket(ticket);
-    return -1;
-}
-
-int NetworkAgent::get_hms_snapshot(std::string dev_id, std::string file_name, std::function<void(std::string, int)> callback)
-{
-    if (m_printer_agent)
-        return m_printer_agent->get_hms_snapshot(dev_id, file_name, callback);
     return -1;
 }
 
