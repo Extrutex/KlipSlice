@@ -7102,10 +7102,13 @@ int CLI::run(int argc, char **argv)
                                 record_exit_reson(outfile_dir, CLI_SLICING_ERROR, index+1, message, sliced_info);
                                 flush_and_exit(CLI_SLICING_ERROR);
                             } catch (const std::exception &ex) {
-                                BOOST_LOG_TRIVIAL(error) << "found slicing or export error for partplate "<<index+1 << std::endl;
-                                boost::nowide::cerr << ex.what() << std::endl;
+                                // Record the exception text itself: a bare CLI_SLICING_ERROR tells a caller nothing
+                                // about why the plate failed (open mesh, levitating object, ...).
+                                const std::string message = (ex.what() != nullptr && ex.what()[0] != '\0') ? std::string(ex.what()) : cli_errors[CLI_SLICING_ERROR];
+                                BOOST_LOG_TRIVIAL(error) << "found slicing or export error for partplate " << index+1 << ": " << message;
+                                boost::nowide::cerr << message << std::endl;
                                 //continue;
-                                record_exit_reson(outfile_dir, CLI_SLICING_ERROR, index+1, cli_errors[CLI_SLICING_ERROR], sliced_info);
+                                record_exit_reson(outfile_dir, CLI_SLICING_ERROR, index+1, message, sliced_info);
                                 flush_and_exit(CLI_SLICING_ERROR);
                             }
                         }

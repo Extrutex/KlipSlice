@@ -465,6 +465,9 @@ public:
 
     // Called by make_perimeters()
     void slice();
+    // Post-slice sanity gate: whether layer_count layers of at most max_layer_height each can plausibly
+    // cover an object object_height tall. False means most of the mesh produced no closed contour.
+    static bool layer_count_covers_object_height(size_t layer_count, double object_height, double max_layer_height);
 
     // Helpers to slice support enforcer / blocker meshes by the support generator.
     std::vector<Polygons>       slice_support_volumes(const ModelVolumeType model_volume_type) const;

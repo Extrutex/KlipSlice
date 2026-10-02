@@ -572,3 +572,109 @@ TEST_CASE("Body centering survives islands merging and splitting between layers"
         }
     }
 }
+
+// A 40 mm cube as a triangle soup: every facet keeps its own vertices, shrunk towards the facet's
+// centroid so neighbouring facets are millimetres apart. No slice through it closes a contour, which
+// is what an unwelded OBJ or a mesh with missing faces looks like to the slicer. It stands on a
+// watertight 20 x 20 x 0.6 mm plate so the object does slice to a few layers near the bed.
+static TriangleMesh soup_cube_on_plate()
+{
+    const indexed_triangle_set cube = its_make_cube(40., 40., 40.);
+    std::vector<Vec3f>  vertices;
+    std::vector<Vec3i32> faces;
+    for (const Vec3i32 &face : cube.indices) {
+        const Vec3f centroid = (cube.vertices[face(0)] + cube.vertices[face(1)] + cube.vertices[face(2)]) / 3.f;
+        const int   first    = int(vertices.size());
+        for (int i = 0; i < 3; ++i)
+            vertices.emplace_back(centroid + 0.6f * (cube.vertices[face(i)] - centroid) + Vec3f(0.f, 0.f, 0.6f));
+        faces.emplace_back(first, first + 1, first + 2);
+    }
+    TriangleMesh soup(vertices, faces);
+    TriangleMesh plate = make_cube(20., 20., 0.6);
+    plate.translate(10.f, 10.f, 0.f);
+    soup.merge(plate);
+    return soup;
+}
+
+TEST_CASE("An object whose mesh closes on only a few layers fails to slice with the cause named", "[PrintObject][Regression]")
+{
+    Slic3r::Print print;
+    Slic3r::Model model;
+    init_print({soup_cube_on_plate()}, print, model, {
+        { "layer_height",               0.2 },
+        { "initial_layer_print_height", 0.2 },
+        { "enable_support",             0 },
+    });
+    print.set_status_silent();
+
+    // A 40.6 mm object at 0.2 mm would be about 203 layers; the soup gives three.
+    std::string message;
+    try {
+        print.process();
+        FAIL("slicing accepted a 40 mm object that produced only the plate's layers");
+    } catch (const SlicingError &error) {
+        message = error.what();
+    }
+    CHECK(message.find("not watertight") != std::string::npos);
+    CHECK(message.find("3 layer") != std::string::npos);
+}
+
+TEST_CASE("An object one layer tall still slices", "[PrintObject]")
+{
+    const double layer_height = 0.2;
+    for (const double height : { layer_height, 2. * layer_height }) {
+        DYNAMIC_SECTION("object height " << height) {
+            TriangleMesh mesh = make_cube(20., 20., height);
+            Slic3r::Print print;
+            Slic3r::Model model;
+            init_print({mesh}, print, model, {
+                { "layer_height",               layer_height },
+                { "initial_layer_print_height", layer_height },
+            });
+            print.set_status_silent();
+            REQUIRE_NOTHROW(print.process());
+            REQUIRE(print.objects().front()->layer_count() == size_t(std::lround(height / layer_height)));
+        }
+    }
+}
+
+TEST_CASE("An object cut short by a negative volume still slices", "[PrintObject]")
+{
+    // A 40 mm cube with everything above 1 mm removed by a negative volume: five 0.2 mm layers, and
+    // a height that says nothing about how many layers to expect.
+    DynamicPrintConfig config = DynamicPrintConfig::full_print_config();
+    config.set_deserialize_strict({
+        { "layer_height",               0.2 },
+        { "initial_layer_print_height", 0.2 },
+    });
+    Slic3r::Model model;
+    ModelObject *object = model.add_object();
+    object->name = "cut_cube.stl";
+    object->add_volume(make_cube(20., 20., 40.), ModelVolumeType::MODEL_PART, false);
+    TriangleMesh cutter = make_cube(30., 30., 40.);
+    cutter.translate(-5.f, -5.f, 1.f);
+    object->add_volume(std::move(cutter), ModelVolumeType::NEGATIVE_VOLUME, false);
+    object->add_instance();
+    object->ensure_on_bed();
+
+    Slic3r::Print print;
+    print.auto_assign_extruders(object);
+    print.apply(model, config);
+    print.validate();
+    print.set_status_silent();
+    REQUIRE_NOTHROW(print.process());
+    REQUIRE(print.objects().front()->layer_count() == 5);
+}
+
+TEST_CASE("The post-slice layer-count gate keeps a wide margin", "[PrintObject]")
+{
+    // max layer height 0.3: a 40 mm object needs at least about 67 layers of the thickest kind.
+    CHECK_FALSE(PrintObject::layer_count_covers_object_height(1, 40., 0.3));
+    CHECK_FALSE(PrintObject::layer_count_covers_object_height(3, 40.6, 0.3));
+    // 200 layers of 0.2 mm; one dropped empty top layer is within the slack.
+    CHECK(PrintObject::layer_count_covers_object_height(199, 40., 0.3));
+    // Legitimate short objects: one layer, or two with the top one dropped.
+    CHECK(PrintObject::layer_count_covers_object_height(1, 0.2, 0.3));
+    CHECK(PrintObject::layer_count_covers_object_height(1, 0.6, 0.3));
+    CHECK(PrintObject::layer_count_covers_object_height(0, 0.2, 0.3));
+}
