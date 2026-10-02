@@ -13788,7 +13788,6 @@ int Plater::save_project(bool saveAs)
         j["file_size"] = size;
         j["file_name"] = std::string(filename.mb_str());
 
-        NetworkAgent* agent = wxGetApp().getAgent();
     }
     catch (...) {}
 
@@ -16499,7 +16498,6 @@ void Plater::export_gcode(bool prefer_removable)
             if (preset_bundle) {
                 j["gcode_printer_model"] = preset_bundle->printers.get_edited_preset().get_printer_type(preset_bundle);
             }
-            NetworkAgent *agent = wxGetApp().getAgent();
         } catch (...) {}
 
     }
@@ -17690,7 +17688,6 @@ void Plater::record_slice_preset(std::string action)
         }
 
         j["record_event"] = action;
-        NetworkAgent* agent = wxGetApp().getAgent();
     }
     catch (...)
     {
