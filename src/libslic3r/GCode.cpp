@@ -26,6 +26,7 @@
 #include "libslic3r/format.hpp"
 #include "Time.hpp"
 #include "GCode/ExtrusionProcessor.hpp"
+#include <sstream>
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
@@ -2960,6 +2961,36 @@ static BambuBedType to_bambu_bed_type(BedType type)
     return bambu_bed_type;
 }
 
+// Whether the user's own G-code already reports `parameter` (TOTAL_LAYER or CURRENT_LAYER) to
+// Klipper's print_stats, commonly from the total_layer_count / layer_num placeholders. Every custom
+// G-code field counts, whichever one the user put the command in; text after a ';' is a comment.
+static bool custom_gcode_sets_print_stats_info(const PrintConfig &config, const char *parameter)
+{
+    auto reports = [parameter](const std::string &gcode) {
+        std::istringstream lines(gcode);
+        for (std::string line; std::getline(lines, line);) {
+            line.erase(std::min(line.find(';'), line.size()));
+            if (line.find("SET_PRINT_STATS_INFO") != std::string::npos && line.find(parameter) != std::string::npos)
+                return true;
+        }
+        return false;
+    };
+    for (const std::string &key : config.keys()) {
+        if (!boost::algorithm::ends_with(key, "_gcode"))
+            continue;
+        const ConfigOption *option = config.option(key);
+        if (option->type() == coString) {
+            if (reports(static_cast<const ConfigOptionString*>(option)->value))
+                return true;
+        } else if (option->type() == coStrings) {
+            for (const std::string &gcode : static_cast<const ConfigOptionStrings*>(option)->values)
+                if (reports(gcode))
+                    return true;
+        }
+    }
+    return false;
+}
+
 void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGeneratorCallback thumbnail_cb)
 {
     PROFILE_FUNC();
@@ -3642,6 +3673,13 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
 
     // adds tags for time estimators
     file.write_format(";%s\n", GCodeProcessor::reserved_tag(GCodeProcessor::ETags::First_Line_M73_Placeholder).c_str());
+
+    // Klipper: the layer count and the current layer for print_stats, so Moonraker clients can show
+    // layer progress. Each is written only when the user's G-code does not report it already.
+    const bool is_klipper = print.config().gcode_flavor.value == gcfKlipper;
+    m_report_current_layer = is_klipper && !custom_gcode_sets_print_stats_info(print.config(), "CURRENT_LAYER");
+    if (is_klipper && !custom_gcode_sets_print_stats_info(print.config(), "TOTAL_LAYER"))
+        file.write_format("SET_PRINT_STATS_INFO TOTAL_LAYER=%u\n", m_layer_count);
 
     // Emit machine envelope limits for the Marlin firmware.
     this->print_machine_envelope(file, print);
@@ -5588,6 +5626,9 @@ LayerResult GCode::process_layer(
             + "\n";
         config.set_key_value("max_layer_z", new ConfigOptionFloat(m_max_layer_z));
     }
+    // Klipper: the layer just started (1-based, matching TOTAL_LAYER) for print_stats.
+    if (m_report_current_layer)
+        gcode += "SET_PRINT_STATS_INFO CURRENT_LAYER=" + std::to_string(m_layer_index + 1) + "\n";
     //BBS: set layer time fan speed after layer change gcode
     gcode += ";_SET_FAN_SPEED_CHANGING_LAYER\n";
 

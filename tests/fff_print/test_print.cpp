@@ -26,6 +26,7 @@
 #include <fstream>
 #include <iterator>
 #include <memory>
+#include <sstream>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -628,4 +629,139 @@ TEST_CASE("Slicing errors are reported per object with the object's name", "[Pri
     }
     CHECK(message.rfind("floating cube: ", 0) == 0);
     CHECK(message.find("empty first layer") != std::string::npos);
+}
+
+namespace {
+
+std::vector<std::string> lines_starting_with(const std::string &gcode, const std::string &prefix)
+{
+    std::vector<std::string> found;
+    std::istringstream in(gcode);
+    std::string line;
+    while (std::getline(in, line))
+        if (line.rfind(prefix, 0) == 0)
+            found.push_back(line);
+    return found;
+}
+
+size_t layer_change_count(const std::string &gcode)
+{
+    return lines_starting_with(gcode, ";" + GCodeProcessor::reserved_tag(GCodeProcessor::ETags::Layer_Change)).size();
+}
+
+// Seconds from the "1h 2m 3s" / "45s" / "0.500000s" form get_time_dhms() writes.
+double dhms_seconds(const std::string &text)
+{
+    double seconds = 0.;
+    std::istringstream in(text);
+    double value;
+    char   unit;
+    while (in >> value >> unit) {
+        switch (unit) {
+        case 'd': seconds += value * 86400.; break;
+        case 'h': seconds += value * 3600.; break;
+        case 'm': seconds += value * 60.; break;
+        case 's': seconds += value; break;
+        default: FAIL("unexpected time unit '" << unit << "' in \"" << text << "\"");
+        }
+    }
+    return seconds;
+}
+
+} // namespace
+
+TEST_CASE("Klipper G-code reports the layer count and every layer change to print_stats", "[Print][Klipper]")
+{
+    const std::string gcode = Slic3r::Test::slice({cube(20)}, {
+        { "gcode_flavor",               "klipper" },
+        { "layer_height",               0.2 },
+        { "initial_layer_print_height", 0.2 },
+    });
+    const size_t layers = layer_change_count(gcode);
+    REQUIRE(layers == 100);
+
+    const auto totals = lines_starting_with(gcode, "SET_PRINT_STATS_INFO TOTAL_LAYER=");
+    REQUIRE(totals.size() == 1);
+    CHECK(totals.front() == "SET_PRINT_STATS_INFO TOTAL_LAYER=" + std::to_string(layers));
+
+    const auto currents = lines_starting_with(gcode, "SET_PRINT_STATS_INFO CURRENT_LAYER=");
+    REQUIRE(currents.size() == layers);
+    for (size_t i = 0; i < currents.size(); ++i)
+        CHECK(currents[i] == "SET_PRINT_STATS_INFO CURRENT_LAYER=" + std::to_string(i + 1));
+    CHECK(gcode.find(totals.front()) < gcode.find(currents.front()));
+}
+
+TEST_CASE("Layer progress is left to the user's G-code when it already reports it", "[Print][Klipper]")
+{
+    const std::string gcode = Slic3r::Test::slice({cube(20)}, {
+        { "gcode_flavor",               "klipper" },
+        { "layer_height",               0.2 },
+        { "initial_layer_print_height", 0.2 },
+        { "machine_start_gcode",        "SET_PRINT_STATS_INFO TOTAL_LAYER=[total_layer_count]\nG28" },
+        { "layer_change_gcode",         "SET_PRINT_STATS_INFO CURRENT_LAYER={layer_num + 1}" },
+    });
+    const size_t layers = layer_change_count(gcode);
+    REQUIRE(layers == 100);
+    const auto totals = lines_starting_with(gcode, "SET_PRINT_STATS_INFO TOTAL_LAYER=");
+    REQUIRE(totals.size() == 1);
+    CHECK(totals.front() == "SET_PRINT_STATS_INFO TOTAL_LAYER=" + std::to_string(layers));
+    CHECK(lines_starting_with(gcode, "SET_PRINT_STATS_INFO CURRENT_LAYER=").size() == layers);
+}
+
+TEST_CASE("Only the part of the layer progress the user's G-code leaves out is reported", "[Print][Klipper]")
+{
+    // The user reports the current layer, from the filament start G-code rather than the layer change
+    // one, and only mentions the total in a comment.
+    const std::string gcode = Slic3r::Test::slice({cube(20)}, {
+        { "gcode_flavor",               "klipper" },
+        { "layer_height",               0.2 },
+        { "initial_layer_print_height", 0.2 },
+        { "machine_start_gcode",        "G28 ; SET_PRINT_STATS_INFO TOTAL_LAYER comes from the slicer" },
+        { "filament_start_gcode",       "SET_PRINT_STATS_INFO CURRENT_LAYER=1" },
+    });
+    const size_t layers = layer_change_count(gcode);
+    REQUIRE(layers == 100);
+    const auto totals = lines_starting_with(gcode, "SET_PRINT_STATS_INFO TOTAL_LAYER=");
+    REQUIRE(totals.size() == 1);
+    CHECK(totals.front() == "SET_PRINT_STATS_INFO TOTAL_LAYER=" + std::to_string(layers));
+    // One filament start, and no line per layer from the slicer.
+    CHECK(lines_starting_with(gcode, "SET_PRINT_STATS_INFO CURRENT_LAYER=").size() == 1);
+}
+
+TEST_CASE("The header's first layer time is the time of the first layer's moves", "[Print][Regression]")
+{
+    Slic3r::Print print;
+    Slic3r::Model model;
+    init_print({cube(20)}, print, model, {
+        { "gcode_flavor",               "klipper" },
+        { "layer_height",               0.2 },
+        { "initial_layer_print_height", 0.2 },
+    });
+    print.set_status_silent();
+    const std::string gcode = Slic3r::Test::gcode(print);
+
+    const std::string prefix = "; estimated first layer printing time (normal mode) = ";
+    const auto header = lines_starting_with(gcode, prefix);
+    REQUIRE(header.size() == 1);
+    const double header_seconds = dhms_seconds(header.front().substr(prefix.size()));
+
+    // Re-run the time estimate over the exported file, exactly as the preview would.
+    ScopedTemporaryFile temp(".gcode");
+    {
+        std::ofstream out(temp.string());
+        out << gcode;
+    }
+    GCodeProcessor::s_IsBBLPrinter = false;
+    GCodeProcessor processor;
+    processor.apply_config(print.config());
+    processor.process_file(temp.string());
+    const double first_layer = processor.get_first_layer_time(PrintEstimatedStatistics::ETimeMode::Normal);
+    const double prepare     = processor.get_prepare_time(PrintEstimatedStatistics::ETimeMode::Normal);
+
+    // A 20 mm cube's first layer takes well over the second the start G-code alone (prepare time) does;
+    // the header used to print the latter.
+    REQUIRE(first_layer > 5.);
+    CHECK(first_layer > prepare + 2.);
+    // get_time_dhms truncates to whole seconds.
+    CHECK_THAT(header_seconds, Catch::Matchers::WithinAbs(first_layer, 1.5));
 }

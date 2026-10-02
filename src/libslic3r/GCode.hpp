@@ -695,6 +695,8 @@ private:
     unsigned int                        m_layer_count;
     // Progress bar indicator. Increments from -1 up to layer_count.
     int                                 m_layer_index;
+    // Whether each layer change writes SET_PRINT_STATS_INFO CURRENT_LAYER (Klipper, unless the user's G-code does).
+    bool                                m_report_current_layer { false };
     // Current layer processed. In sequential printing mode, only a single copy will be printed.
     // In non-sequential mode, all its copies will be printed.
     const Layer*                        m_layer;
