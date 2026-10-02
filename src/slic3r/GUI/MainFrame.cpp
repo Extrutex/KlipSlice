@@ -762,7 +762,7 @@ bool MainFrame::handle_global_shortcut(const KeyChord& chord)
         m_print_enable = get_enable_print_status();
         m_print_btn->Enable(m_print_enable);
         if (m_print_enable) {
-            if (wxGetApp().preset_bundle->use_bbl_network() || wxGetApp().app_config->get_bool("use_printer_agents"))
+            if (wxGetApp().app_config->get_bool("use_printer_agents"))
                 wxPostEvent(m_plater, SimpleEvent(EVT_GLTOOLBAR_PRINT_PLATE));
             else
                 wxPostEvent(m_plater, SimpleEvent(EVT_GLTOOLBAR_SEND_GCODE));
@@ -1472,10 +1472,7 @@ void MainFrame::show_device(bool should_use_native) {
     const bool use_printer_agents = wxGetApp().app_config->get_bool("use_printer_agents");
 
     // The web Device page is the extra tab printer-agents mode shows alongside the native one.
-    // Printers that drive the native Bambu device tab have nothing to put in it, so they don't
-    // get it — otherwise a Bambu user sees two Device tabs, one of them permanently empty.
-    const bool want_web_device_tab = use_printer_agents && wxGetApp().preset_bundle != nullptr &&
-                                     !wxGetApp().preset_bundle->use_bbl_device_tab();
+    const bool want_web_device_tab = use_printer_agents && wxGetApp().preset_bundle != nullptr;
 
     // Remove the extra page before switching to any layout that shouldn't have it.
     if (!want_web_device_tab) {
@@ -2030,7 +2027,7 @@ std::vector<MainFrame::PrintSelectType> MainFrame::available_print_actions() con
     const auto preset_bundle      = wxGetApp().preset_bundle;
     const bool use_printer_agents = wxGetApp().app_config->get_bool("use_printer_agents");
 
-    if (preset_bundle && !preset_bundle->is_bbl_vendor() && !use_printer_agents) {
+    if (preset_bundle && !use_printer_agents) {
         // ThirdParty actions
         actions.push_back(eSendGcode);
         // Orca: when the printer accepts a .gcode.3mf (the "Support 3MF as gcode" option),
@@ -2045,7 +2042,7 @@ std::vector<MainFrame::PrintSelectType> MainFrame::available_print_actions() con
     // Orca Slicer actions
     bool support_send      = true;
     bool support_print_all = true;
-    if (preset_bundle && !preset_bundle->use_bbl_network() && !use_printer_agents) {
+    if (preset_bundle && !use_printer_agents) {
         support_send = false; // All 3rd print hosts do not have the send options
         support_print_all = false; // Moonraker takes one file per upload
     }
@@ -4307,9 +4304,6 @@ void MainFrame::load_printer_url(wxString url, wxString apikey)
 void MainFrame::load_printer_url()
 {
     PresetBundle &preset_bundle = *wxGetApp().preset_bundle;
-    if (preset_bundle.use_bbl_device_tab() && !wxGetApp().app_config->get_bool("use_printer_agents"))
-        return;
-
     auto     cfg = preset_bundle.printers.get_edited_preset().config;
     if (cfg.opt_string("print_host").empty()) {
         if (auto *device_manager = wxGetApp().getDeviceManager()) {

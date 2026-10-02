@@ -3650,17 +3650,9 @@ void Sidebar::update_all_preset_comboboxes()
     auto p_mainframe = wxGetApp().mainframe;
     auto cfg = preset_bundle.printers.get_edited_preset().config;
     const bool use_printer_agents = wxGetApp().app_config->get_bool("use_printer_agents");
-    const bool use_native_device_tab = preset_bundle.use_bbl_device_tab() || use_printer_agents;
+    const bool use_native_device_tab = use_printer_agents;
 
-    if (preset_bundle.use_bbl_network()) {
-        //only show connection button for not-BBL printer
-        //p->btn_connect_printer->Hide();
-        p->m_printer_connect->Hide();
-        //only show sync-ams button for BBL printer
-        p->m_bpButton_ams_filament->Show();
-        //update print button default value for bbl or third-party printer
-        p_mainframe->set_print_button_to_default(MainFrame::PrintSelectType::ePrintPlate);
-    } else {
+    {
         //p->btn_connect_printer->Show();
         // ORCA: hide the physical-printer connection button when printer agents are enabled
         p->m_printer_connect->Show(!use_printer_agents);
@@ -3684,9 +3676,8 @@ void Sidebar::update_all_preset_comboboxes()
         else {
             if (cfg.has("printhost_apikey"))
                 apikey = cfg.opt_string("printhost_apikey");
-            print_btn_type = (preset_bundle.is_bbl_vendor() || wxGetApp().app_config->get_bool("use_printer_agents"))
-                                 ? MainFrame::PrintSelectType::ePrintPlate
-                                 : MainFrame::PrintSelectType::eSendGcode;
+            print_btn_type = use_printer_agents ? MainFrame::PrintSelectType::ePrintPlate
+                                                : MainFrame::PrintSelectType::eSendGcode;
         }
 
         if (use_printer_agents)
@@ -3847,8 +3838,7 @@ void Sidebar::update_presets(Preset::Type preset_type)
         bool is_dual_extruder = extruder_variants->size() == 2;
         // why: agent mode drives the native device tab, so the sidebar lays out like BBL
         // (no physical-printer connect button).
-        p->layout_printer(preset_bundle.use_bbl_network() || wxGetApp().app_config->get_bool("use_printer_agents"),
-                          false);
+        p->layout_printer(wxGetApp().app_config->get_bool("use_printer_agents"), false);
 
         // Update nozzle titles from printer config (e.g. "Main Nozzle" / "Auxiliary Nozzle" for N6)
         // UI left = DEPUTY_EXTRUDER_ID(1), UI right = MAIN_EXTRUDER_ID(0)
@@ -13328,8 +13318,7 @@ void Plater::priv::on_action_print_plate(SimpleEvent&)
         BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << ":received print plate event\n" ;
     }
 
-    PresetBundle& preset_bundle = *wxGetApp().preset_bundle;
-    if (preset_bundle.use_bbl_network() || wxGetApp().app_config->get_bool("use_printer_agents")) {
+    if (wxGetApp().app_config->get_bool("use_printer_agents")) {
         open_machine_select_dialog(partplate_list.get_curr_plate_index());
     } else {
         q->send_gcode_legacy(PLATE_CURRENT_IDX, nullptr);
@@ -13382,8 +13371,7 @@ void Plater::priv::on_tab_selection_changing(wxBookCtrlEvent& e)
     sidebar_layout.show = new_name == TAB_ID_PREPARE || new_name == TAB_ID_PREVIEW;
     update_sidebar();
     const bool use_printer_agents = wxGetApp().app_config->get_bool("use_printer_agents");
-    const bool use_native_device_tab = wxGetApp().preset_bundle &&
-        (wxGetApp().preset_bundle->use_bbl_device_tab() || use_printer_agents);
+    const bool use_native_device_tab = wxGetApp().preset_bundle && use_printer_agents;
     // The native Device tab is driven by the printer agents and needs no web view reload.
     if (!(use_native_device_tab && new_name == TAB_ID_MONITOR)) {
         // Pointer test, not a name lookup: in printer-agents mode this page is TAB_ID_MONITOR_WEB
@@ -13440,8 +13428,7 @@ void Plater::priv::on_action_print_all(SimpleEvent&)
         BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << ":received print all event\n" ;
     }
 
-    PresetBundle& preset_bundle = *wxGetApp().preset_bundle;
-    if (preset_bundle.use_bbl_network() || wxGetApp().app_config->get_bool("use_printer_agents")) {
+    if (wxGetApp().app_config->get_bool("use_printer_agents")) {
         open_machine_select_dialog(PLATE_ALL_IDX);
     } else {
         q->send_gcode_legacy(PLATE_ALL_IDX, nullptr);
@@ -16271,8 +16258,6 @@ void Plater::_calib_pa_pattern(const Calib_Params& params)
     wxGetApp().get_tab(Preset::TYPE_PRINTER)->reload_config();
 
     const DynamicPrintConfig full_config = wxGetApp().preset_bundle->full_config();
-    PresetBundle* preset_bundle = wxGetApp().preset_bundle;
-    const bool is_bbl_machine = preset_bundle->is_bbl_vendor();
     auto cur_plate = get_partplate_list().get_plate(0);
 
     // add "handle" cube
@@ -16282,7 +16267,7 @@ void Plater::_calib_pa_pattern(const Calib_Params& params)
     CalibPressureAdvancePattern pa_pattern(
         params,
         full_config,
-        is_bbl_machine,
+        /*is_bbl_machine=*/false,
         *cube,
         cur_plate->get_origin()
     );
@@ -16382,7 +16367,7 @@ void Plater::_calib_pa_pattern_gen_gcode()
     for (auto obj : cur_plate->get_objects_on_this_plate()) {
         auto gcode = model().calib_pa_pattern->generate_custom_gcodes(
                                 preset_bundle->full_config(),
-                                preset_bundle->is_bbl_vendor(),
+                                /*is_bbl_machine=*/false,
                                 *obj,
                                 cur_plate->get_origin()
         );
@@ -17230,7 +17215,7 @@ void Plater::load_gcode(const wxString& filename)
     processor.init_filament_maps_and_nozzle_type_when_import_only_gcode();
     try
     {
-        GCodeProcessor::s_IsBBLPrinter = wxGetApp().preset_bundle->is_bbl_vendor();
+        GCodeProcessor::s_IsBBLPrinter = false;
         processor.process_file(filename.ToUTF8().data());
     }
     catch (const std::exception& ex)
@@ -19439,9 +19424,6 @@ int Plater::export_3mf(const boost::filesystem::path& output_path, SaveStrategy 
         nozzle_diameter_str = nozzle_diameter_option->serialize();
 
     std::string printer_model_id = preset_bundle.printers.get_edited_preset().get_printer_type(&preset_bundle);
-    // The printer reads slice_info.config and knows only its own catalog ids.
-    auto* id_agent = preset_bundle.is_bbl_vendor() ? wxGetApp().getAgent() : nullptr;
-
     for (int i = 0; i < plate_data_list.size(); i++) {
         PlateData *plate_data = plate_data_list[i];
         plate_data->printer_model_id = printer_model_id;
@@ -19450,8 +19432,6 @@ int Plater::export_3mf(const boost::filesystem::path& output_path, SaveStrategy 
             std::string display_filament_type;
             it->type  = cfg.get_filament_type(display_filament_type, it->id);
             it->filament_id = filament_id_opt ? filament_id_opt->get_at(it->id) : "";
-            if (id_agent)
-                it->filament_id = id_agent->from_orca_filament_id(it->filament_id);
             it->color = filament_color ? filament_color->get_at(it->id) : "#FFFFFF";
             // save filament info used in curr plate
             int index = p->partplate_list.get_curr_plate_index();

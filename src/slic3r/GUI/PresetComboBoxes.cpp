@@ -507,93 +507,6 @@ int PresetComboBox::selected_connected_printer() const
     return -1;
 }
 
-bool PresetComboBox::add_ams_filaments(std::string selected, bool alias_name)
-{
-    bool selected_in_ams      = false;
-    bool is_bbl_vendor_preset = m_preset_bundle->is_bbl_vendor();
-    if (is_bbl_vendor_preset && !m_preset_bundle->filament_ams_list.empty()) {
-        // When a filament track switch is installed and calibrated, every AMS filament is reachable
-        // from both extruders, so present one deduplicated group instead of the Left/Right split.
-        bool fila_switch_ready = wxGetApp().sidebar().is_fila_switch_ready();
-        bool dual_extruder   = (m_preset_bundle->filament_ams_list.begin()->first & 0x10000) == 0;
-        if (fila_switch_ready)
-            set_label_marker(Append(_L("AMS filaments"), wxNullBitmap, DD_ITEM_STYLE_SPLIT_ITEM));
-        else
-            set_label_marker(Append(dual_extruder ? _L("Left filaments") : _L("AMS filament"), wxNullBitmap, DD_ITEM_STYLE_SPLIT_ITEM));
-        m_first_ams_filament = GetCount();
-        auto &filaments      = m_collection->get_presets();
-
-        int icon_width = 24;
-        for (auto &entry : m_preset_bundle->filament_ams_list) {
-            auto &      tray        = entry.second;
-            auto  name = tray.opt_string("tray_name", 0u);
-            if (name.size() > 3)
-                icon_width = 32;
-        }
-
-        // Deduplicate by (tray_name, filament_id) so a filament shared by both extruders is
-        // listed once when the switch is ready. Uses Orca's tray naming/lookup, not BBS's.
-        std::set<std::pair<std::string, std::string>> added_filaments;
-
-        for (auto &entry : m_preset_bundle->filament_ams_list) {
-            if (!fila_switch_ready && dual_extruder && (entry.first & 0x10000)) {
-                dual_extruder = false;
-                set_label_marker(Append(_L("Right filaments"), wxNullBitmap, DD_ITEM_STYLE_SPLIT_ITEM));
-            }
-            auto &      tray        = entry.second;
-            std::string filament_id = tray.opt_string("filament_id", 0u);
-            auto        name        = tray.opt_string("tray_name", 0u);
-            if (filament_id.empty()) {
-                BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(":  %1% 's filament_id is empty.") % name;
-                continue;
-            }
-            if (fila_switch_ready) {
-                // skip the external spool and collapse duplicates shared across both extruders
-                if (name == "Ext")
-                    continue;
-                if (!added_filaments.insert(std::make_pair(name, filament_id)).second)
-                    continue;
-            }
-            auto iter = std::find_if(filaments.begin(), filaments.end(),
-                [&filament_id, this](auto &f) { return f.is_compatible && m_collection->get_preset_base(f) == &f && f.filament_id == filament_id; });
-            if (iter == filaments.end()) {
-                auto filament_type = tray.opt_string("filament_type", 0u);
-                if (!filament_type.empty()) {
-                    filament_type = "Generic " + filament_type;
-                    iter          = std::find_if(filaments.begin(), filaments.end(),
-                                        [&filament_type](auto &f) { return f.is_compatible && f.is_system && boost::algorithm::starts_with(f.name, filament_type); });
-                }
-            }
-            if (iter == filaments.end()) {
-                BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(": filament_id %1% not found or system or compatible") % filament_id;
-                continue;
-            }
-            const_cast<Preset&>(*iter).is_visible = true;
-            auto color = tray.opt_string("filament_colour", 0u);
-            auto multi_color = tray.opt<ConfigOptionStrings>("filament_multi_colour")->values;
-            wxBitmap bmp(*get_extruder_color_icon(color, name, icon_width, 16));
-            auto text = get_preset_name(*iter);
-            int      item_id = Append(text, bmp.ConvertToImage(), &m_first_ams_filament + entry.first);
-            SetFlag(GetCount() - 1, (int) FilamentAMSType::FROM_AMS);
-            if (text == selected) {
-                DynamicPrintConfig *cfg    = &wxGetApp().preset_bundle->project_config;
-                if (cfg) {
-                    auto colors = static_cast<ConfigOptionStrings *>(cfg->option("filament_colour")->clone());
-                    if (m_filament_idx < colors->values.size()) {
-                        auto cur_color = colors->values[m_filament_idx];
-                        if (color == cur_color) {
-                            selected_in_ams = true;
-                        }
-                    }
-                }
-            }
-            //validate_selection(id->value == selected); // can not select
-        }
-        m_last_ams_filament = GetCount();
-    }
-    return selected_in_ams;
-}
-
 int PresetComboBox::selected_ams_filament() const
 {
     if (m_first_ams_filament && m_last_selected >= m_first_ams_filament && m_last_selected < m_last_ams_filament) {
@@ -1331,20 +1244,10 @@ void PlaterPresetComboBox::update()
     }
     //if (m_type == Preset::TYPE_PRINTER)
     //    add_connected_printers("", true);
-    bool selected_in_ams = false;
-    if (m_type == Preset::TYPE_FILAMENT) {
+    // The AMS tray group that Bambu printers add to this list is gone with the Bambu vendor.
+    const bool selected_in_ams = false;
+    if (m_type == Preset::TYPE_FILAMENT)
         set_replace_text("Bambu", "BambuStudioBlack");
-        // Orca: selected_system/user_preset hold the FULL preset name because Orca keys the maps above by
-        // full name to avoid alias collisions (BBS keys by alias). add_ams_filaments() compares against
-        // get_preset_name() which returns the alias, so resolve the selection back to its alias here.
-        // Without this, e.g. "Bambu PLA Basic @BBL H2C" never equals the AMS tray alias "Bambu PLA Basic",
-        // so the FROM_AMS flag is never set and update_sync_status() wipes the AMS sync check mark on the
-        // filament cards for connected Bambu printers.
-        wxString selected_full = selected_user_preset.empty() ? selected_system_preset : selected_user_preset;
-        auto     alias_it      = preset_aliases.find(selected_full);
-        wxString selected_alias = alias_it != preset_aliases.end() ? from_u8(alias_it->second) : selected_full;
-        selected_in_ams = add_ams_filaments(into_u8(selected_alias), true);
-    }
 
     std::vector<wxString> filament_orders = {"Bambu PLA Basic", "Bambu PLA Matte", "Bambu PETG HF",    "Bambu ABS",      "Bambu PLA Silk", "Bambu PLA-CF",
                                                 "Bambu PLA Galaxy", "Bambu PLA Metal", "Bambu PLA Marble", "Bambu PETG-CF", "Bambu PETG Translucent", "Bambu ABS-GF"};
@@ -1788,9 +1691,6 @@ void TabPresetComboBox::update()
         //if (i + 1 == m_collection->num_default_presets())
         //    set_label_marker(Append(separator(L("System presets")), wxNullBitmap));
     }
-
-    if (m_type == Preset::TYPE_FILAMENT && m_preset_bundle->is_bbl_vendor())
-        add_ams_filaments(into_u8(selected));
 
     //BBS: add project embedded preset logic
     if (!project_embedded_presets.empty())

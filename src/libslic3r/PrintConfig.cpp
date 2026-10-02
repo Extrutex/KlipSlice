@@ -985,13 +985,6 @@ void PrintConfigDef::init_common_params()
     def->mode = comDevelop;
     def->set_default_value(new ConfigOptionStrings());
 
-    def = this->add("bbl_use_printhost", coBool);
-    def->label = L("Use 3rd-party print host");
-    def->tooltip = L("Allow controlling BambuLab's printer through 3rd party print hosts.");
-    def->mode = comAdvanced;
-    def->cli = ConfigOptionDef::nocli;
-    def->set_default_value(new ConfigOptionBool(false));
-
     def = this->add("use_3mf", coBool);
     def->label = L("Use 3MF instead of G-code");
     def->tooltip = L("Enable this if the printer accepts a 3MF file as the print job. When enabled, KLIPSLICE "
@@ -9285,6 +9278,7 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
         "anisotropic_surfaces", // superseded by top_surface_fill_order / bottom_surface_fill_order
         "scan_first_layer", "bbl_calib_mark_logo", // KLIPSLICE: Bambu-only options, removed
         "flashforge_serial_number", // KLIPSLICE: Flashforge host removed
+        "bbl_use_printhost", // KLIPSLICE: Bambu network removed
     };
 
     if (ignore.find(opt_key) != ignore.end()) {

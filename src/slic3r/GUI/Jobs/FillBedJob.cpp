@@ -228,8 +228,6 @@ void FillBedJob::process(Ctl &ctl)
     m_bedpts = get_shrink_bedpts(m_plater->config(), params);
 
     auto &print                        = wxGetApp().plater()->get_partplate_list().get_current_fff_print();
-    PresetBundle* preset_bundle = wxGetApp().preset_bundle;
-    const bool is_bbl = wxGetApp().preset_bundle->is_bbl_vendor();
 
     update_selected_items_inflation(m_selected, m_plater->config(), params);
     update_unselected_items_inflation(m_unselected, m_plater->config(), params);
@@ -248,7 +246,7 @@ void FillBedJob::process(Ctl &ctl)
         do_stop = ap.bed_idx > 0 && ap.priority == 0;
     };
     // final align用的是凸包，在有fixed item的情况下可能找到的参考点位置是错的，这里就不做了。见STUDIO-3265
-    params.do_final_align = !is_bbl;
+    params.do_final_align = true;
 
     if (m_selected.size() > 100){
         // too many items, just find grid empty cells to put them

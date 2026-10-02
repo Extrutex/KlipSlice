@@ -10972,13 +10972,7 @@ void GLCanvas3D::_set_warning_notification(EWarning warning, bool state)
                     }
                 }
             }
-            std::string extruder_name;
-            if(wxGetApp().preset_bundle->is_bbl_vendor()){
-                extruder_name = extruder_name_list[extruder_id-1];
-            }
-            else{
-                extruder_name += (boost::format(_u8L("Tool %d"))%extruder_id).str();
-            }
+            const std::string extruder_name = (boost::format(_u8L("Tool %d")) % extruder_id).str();
 
             if (error_iter->second.size() == 1) {
                 text += (boost::format(_u8L("Filament %s is placed in the %s, but the generated G-code path exceeds the printable range of the %s.")) %filaments %extruder_name %extruder_name).str();

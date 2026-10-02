@@ -3207,11 +3207,6 @@ void TabPrint::update_description_lines()
 void TabPrint::toggle_options()
 {
     if (!m_active_page) return;
-    // BBS: whether the preset is Bambu Lab printer
-    if (m_preset_bundle) {
-        bool is_BBL_printer = wxGetApp().preset_bundle->is_bbl_vendor();
-        m_config_manipulation.set_is_BBL_Printer(is_BBL_printer);
-    }
 
     m_config_manipulation.toggle_print_fff_options(m_config, int(intptr_t(m_extruder_switch->GetClientData())), m_type < Preset::TYPE_COUNT);
 
@@ -3958,7 +3953,7 @@ void TabPrintLayer::update_custom_dirty(std::vector<std::string> &dirty_options,
 bool Tab::validate_custom_gcode(const wxString& title, const std::string& gcode)
 {
     std::vector<std::string> tags;
-    bool invalid = GCodeProcessor::contains_reserved_tags(gcode, 5, tags, wxGetApp().preset_bundle->is_bbl_vendor());
+    bool invalid = GCodeProcessor::contains_reserved_tags(gcode, 5, tags, false);
     if (invalid) {
         std::string lines = ":\n";
         for (const std::string& keyword : tags)
@@ -4734,10 +4729,6 @@ void TabFilament::toggle_options()
 {
     if (!m_active_page)
         return;
-    bool is_BBL_printer = false;
-    if (m_preset_bundle) {
-        is_BBL_printer = wxGetApp().preset_bundle->is_bbl_vendor();
-    }
 
     auto printer_cfg = m_preset_bundle->printers.get_edited_preset().config;
 
@@ -4809,7 +4800,7 @@ void TabFilament::toggle_options()
 
         bool support_multi_bed_types = std::find(bed_temp_keys.begin(), bed_temp_keys.end(), bed_temp_1st_layer_key) ==
                                            bed_temp_keys.end() ||
-                                       is_BBL_printer || printer_cfg.opt_bool("support_multi_bed_types");
+                                       printer_cfg.opt_bool("support_multi_bed_types");
 
         for (const auto& key : bed_temp_keys)
         {
@@ -4847,17 +4838,18 @@ void TabFilament::toggle_options()
         for (auto el : {"filament_minimal_purge_on_wipe_tower", "filament_loading_speed_start", "filament_loading_speed",
                         "filament_unloading_speed_start", "filament_unloading_speed", "filament_toolchange_delay", "filament_cooling_moves",
                         "filament_cooling_initial_speed", "filament_cooling_final_speed"})
-            toggle_option(el, !is_BBL_printer);
+            toggle_option(el, true);
 
         bool multitool_ramming = m_config->opt_bool("filament_multitool_ramming", 0);
         toggle_option("filament_multitool_ramming_volume", multitool_ramming);
         toggle_option("filament_multitool_ramming_flow", multitool_ramming);
 
-        bool is_BBL_multi_extruder = is_BBL_printer && printer_cfg.option<ConfigOptionFloats>("nozzle_diameter")->size() > 1;
+        // long_retractions_when_ec / retraction_distances_when_ec drive the Bambu dual-nozzle
+        // extruder change and have no Klipper counterpart.
         const int selection = m_variant_combo ? m_variant_combo->GetSelection() : 0;
         const int extruder_idx = std::max(selection, 0);
-        toggle_line("long_retractions_when_ec", is_BBL_multi_extruder, 256 + extruder_idx);
-        toggle_line("retraction_distances_when_ec", is_BBL_multi_extruder && m_config->opt_bool("long_retractions_when_ec", extruder_idx), 256 + extruder_idx);
+        toggle_line("long_retractions_when_ec", false, 256 + extruder_idx);
+        toggle_line("retraction_distances_when_ec", false, 256 + extruder_idx);
     }
 }
 
@@ -5068,7 +5060,6 @@ void TabPrinter::build_fff()
         optgroup->append_single_option_line("printer_structure", "printer_basic_information_advanced#printer-structure");
         optgroup->append_single_option_line("gcode_skip_config_block", "printer_basic_information_advanced#skip-g-code-config-block");
         optgroup->append_single_option_line("pellet_modded_printer", "printer_basic_information_advanced#pellet-modded-printer");
-        optgroup->append_single_option_line("bbl_use_printhost", "printer_basic_information_advanced#use-3rd-party-print-host");
 
         // "Printer Agent" dropdown - printer_agent is a coString; gui_type routes it to
         // PrinterAgentChoice instead of a TextCtrl. Rows and values come from the live agent
@@ -6086,12 +6077,6 @@ void TabPrinter::toggle_options()
             ExtruderType(extruders->values[extruder_id]), get_actual_nozzle_volume_type(extruder_id), "printer_extruder_variant", stride);
     };
 
-    //BBS: whether the preset is Bambu Lab printer
-    bool is_BBL_printer = false;
-    if (m_preset_bundle) {
-       is_BBL_printer = wxGetApp().preset_bundle->is_bbl_vendor();
-    }
-
     bool have_multiple_extruders = true;
     //m_extruders_count > 1;
     //if (m_active_page->title() == "Custom G-code") {
@@ -6100,15 +6085,11 @@ void TabPrinter::toggle_options()
     if (m_active_page->title() == L("Basic information")) {
         const auto &printer_cfg = m_preset_bundle->printers.get_edited_preset().config;
 
-        // SoftFever: hide BBL specific settings
-        toggle_line("bbl_use_printhost", is_BBL_printer);
-
-        // SoftFever: hide non-BBL settings
         for (auto el : {"use_firmware_retraction", "use_relative_e_distances", "support_multi_bed_types", "pellet_modded_printer", "bed_mesh_max", "bed_mesh_min", "bed_mesh_probe_distance", "adaptive_bed_mesh_margin", "thumbnails"})
-          toggle_line(el, !is_BBL_printer);
+          toggle_line(el, true);
 
         bool gcf_is_marlin_firmware = m_config->option<ConfigOptionEnum<GCodeFlavor>>("gcode_flavor")->value == GCodeFlavor::gcfMarlinFirmware;
-        toggle_line("enable_power_loss_recovery", is_BBL_printer || gcf_is_marlin_firmware);
+        toggle_line("enable_power_loss_recovery", gcf_is_marlin_firmware);
 
         const bool support_parallel_printheads = printer_cfg.opt_bool("support_parallel_printheads");
         toggle_line("parallel_printheads_count", support_parallel_printheads);
@@ -6128,8 +6109,8 @@ void TabPrinter::toggle_options()
     }
 
     if (m_active_page->title() == L("Multimaterial")) {
-        const bool supports_wipe_tower_2 = !is_BBL_printer && m_config->opt_enum<WipeTowerType>("wipe_tower_type") == WipeTowerType::Type2;
-        toggle_line("wipe_tower_type", !is_BBL_printer);
+        const bool supports_wipe_tower_2 = m_config->opt_enum<WipeTowerType>("wipe_tower_type") == WipeTowerType::Type2;
+        toggle_line("wipe_tower_type", true);
         // SoftFever: hide specific settings for BBL printer
         for (auto el : {
                  "enable_filament_ramming",
