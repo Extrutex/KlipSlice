@@ -1,28 +1,49 @@
-# KLIPSLICE
-
-**A slicer for Klipper printers, and only for Klipper printers.**
+<p align="center">
+  <img src="docs/images/hero.svg" alt="KLIPSLICE: a slicer for Klipper printers, and only for Klipper printers." width="100%">
+</p>
 
 KLIPSLICE is an open-source 3D printing slicer built exclusively for printers that
 run real [Klipper](https://www.klipper3d.org/). It is a hard fork of OrcaSlicer with
-every path that does not lead to a Klipper machine removed.
+every path that does not lead to a Klipper machine removed: one G-code flavor, one
+print host, and printer profiles only for machines that verifiably run Klipper.
 
 **Documentation:** <https://extrutex.github.io/KlipSlice-Wiki/> (English and German)
 
 > KLIPSLICE is an independent project and is not affiliated with or
 > endorsed by the Klipper project.
 
+## Why a Klipper-only slicer
+
+Klipper executes the limits the G-code sets. Since April 2021 `SET_VELOCITY_LIMIT`
+and `M204` are not clamped to the `max_accel`, `max_velocity` and
+`square_corner_velocity` in `printer.cfg`: whatever the slicer writes is what the
+machine does. The slicer is therefore the last place an envelope violation can be
+caught, and KLIPSLICE treats `printer.cfg` as the datum every emitted value is
+checked against.
+
+<p align="center">
+  <img src="docs/images/envelope.svg" alt="Velocity over time for one move: the profile printer.cfg allows at 10000 mm/s², the profile the G-code requested with M204 S20000, and the hatched region above max_velocity that Klipper executes unchanged." width="100%">
+</p>
+
+## Where the G-code goes
+
+Moonraker is the only print host. G-code upload, print start and printer
+discovery on the LAN all go through Moonraker's own API and its
+`_moonraker._tcp` Bonjour announcement; there are no vendor protocols and no cloud.
+
+<p align="center">
+  <img src="docs/images/pipeline.svg" alt="Data flow from KLIPSLICE through the .gcode file and Moonraker's HTTP API to Klipper and the steppers, with discovery and the planned printer.cfg sync drawn as return paths." width="100%">
+</p>
+
 ## What KLIPSLICE is
 
 - **Klipper only.** The G-code flavor is always `klipper`. Older projects and
   presets with another flavor are converted when they load.
-- **Moonraker is the only print host.** G-code upload and print start go through
-  [Moonraker](https://moonraker.readthedocs.io/). There are no vendor-specific
-  printer protocols.
-- **No vendor network, no cloud.** The Bambu network plug-in, login, cloud
-  provider, model mall and telemetry are removed, and so are the other print
-  host protocols (OctoPrint, PrusaLink, Duet, Creality, Elegoo, Flashforge
-  and the cloud services). Printers are found on the LAN through Moonraker's
-  own Bonjour announcement.
+- **Moonraker is the only print host.** Upload and print start go through
+  [Moonraker](https://moonraker.readthedocs.io/). The host protocols inherited
+  from OrcaSlicer (OctoPrint, PrusaLink, Duet, Creality, Elegoo, Flashforge and
+  the cloud services) are removed, and so are the Bambu network plug-in, login,
+  cloud provider, model mall and telemetry.
 - **Profiles only for printers that verifiably run Klipper.** 174 printer models
   ship with a system profile, each one backed by per-model evidence (stock
   Klipper, Klipper via an established community mod, or a self-built Klipper
@@ -34,6 +55,39 @@ every path that does not lead to a Klipper machine removed.
   The flavor is always Klipper, the host always Moonraker.
 - **Side by side with OrcaSlicer.** KLIPSLICE uses its own binaries and its own
   data directory and never reads or changes an installed OrcaSlicer.
+
+## The kinematics KLIPSLICE knows
+
+Every machine profile names the Klipper `kinematics` it runs on. The figures show
+what moves, what stands still and which motors share a move; the full notes are in
+[`docs/klipslice/kinematics.md`](docs/klipslice/kinematics.md).
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/kinematics-corexy.svg" alt="CoreXY, top view: two stationary motors, two crossed belt loops, moving gantry and toolhead." width="100%"></td>
+    <td width="50%"><img src="docs/images/kinematics-corexy-awd.svg" alt="CoreXY AWD, top view: four stationary motors, each belt driven at both ends." width="100%"></td>
+  </tr>
+  <tr>
+    <td><b>CoreXY</b> &middot; <code>kinematics: corexy</code><br>Voron, RatRig V-Core 3, most self-built machines. Every XY move splits across motor A and motor B.</td>
+    <td><b>CoreXY AWD</b> &middot; <code>[stepper_x1] [stepper_y1]</code><br>RatRig V-Core 4, Voron AWD mods. Same belt path, two steppers per belt.</td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/kinematics-cartesian.svg" alt="Cartesian bed slinger, front view: one motor per axis, the bed carries the part in Y." width="100%"></td>
+    <td><img src="docs/images/kinematics-corexz.svg" alt="CoreXZ, front view: X and Z share two stationary motors through crossed belts, the bed moves in Y." width="100%"></td>
+  </tr>
+  <tr>
+    <td><b>Cartesian</b> &middot; <code>kinematics: cartesian</code><br>Prusa-i3 layout, Ender conversions. Y acceleration is bounded by the mass of bed plus print.</td>
+    <td><b>CoreXZ</b> &middot; <code>kinematics: corexz</code><br>Voron Switchwire, Ender 5 conversions. CoreXY turned on its side.</td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/kinematics-delta.svg" alt="Linear delta, front view: three tower carriages on belts, parallel arms to the effector, circular bed." width="100%"></td>
+    <td><img src="docs/images/kinematics-idex.svg" alt="IDEX, top view: two independent toolhead carriages on one X rail with separate motors and belts." width="100%"></td>
+  </tr>
+  <tr>
+    <td><b>Delta</b> &middot; <code>kinematics: delta</code><br>FLSun V400, T1 and S1, DeltaMaker. One velocity and acceleration limit for all axes, circular bed.</td>
+    <td><b>IDEX</b> &middot; <code>[dual_carriage]</code><br>RatRig V-Core 4 IDEX. Two heads on one rail; Klipper's COPY and MIRROR modes print two parts at once.</td>
+  </tr>
+</table>
 
 ## Vision
 
