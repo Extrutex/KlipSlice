@@ -12,7 +12,7 @@
 
   <!-- title block -->
   <text x="40" y="44" font-family="Inter, 'Segoe UI', system-ui, -apple-system, sans-serif" font-size="18" font-weight="600" letter-spacing="2" fill="#eef3f6">THE LAST GATE</text>
-  <text x="40" y="66" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="13" fill="#8b99a4">max_accel: 10000   square_corner_velocity: 5.0</text>
+  <text x="40" y="66" xml:space="preserve" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="13" fill="#8b99a4">max_accel: 10000   square_corner_velocity: 5.0</text>
 
   <!-- grid: 20 ms per 100 px, 50 mm/s per 40 px -->
   <path d="M100 90V330M200 90V330M300 90V330M400 90V330M500 90V330M600 90V330M700 90V330M100 90H700M100 130H700M100 170H700M100 210H700M100 250H700M100 290H700M100 330H700" fill="none" stroke="#262f37" stroke-width="1" shape-rendering="crispEdges"/>
