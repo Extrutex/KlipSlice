@@ -5,6 +5,7 @@
 #include <exception>
 #include <sstream>
 #include <boost/optional.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/filesystem.hpp>
 #include <nlohmann/json.hpp>

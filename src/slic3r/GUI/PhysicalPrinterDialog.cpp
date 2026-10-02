@@ -5,14 +5,14 @@
 #include <vector>
 #include <string>
 #include <boost/algorithm/string.hpp>
-#include <boost/regex.hpp>
+#include <boost/format.hpp>
 
 #include <wx/sizer.h>
 #include <wx/tooltip.h>
 #include <wx/stattext.h>
 #include <wx/textctrl.h>
 #include <wx/button.h>
-#include <wx/choicdlg.h>
+#include <wx/filedlg.h>
 #include <wx/statbox.h>
 #include <wx/wupdlock.h>
 
