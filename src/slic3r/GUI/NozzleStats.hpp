@@ -1,5 +1,7 @@
 #pragma once
 
+#include <wx/string.h>
+
 #include "libslic3r/PrintConfig.hpp"
 
 namespace Slic3r {
@@ -36,5 +38,8 @@ void seedExtruderNozzleStats(PresetBundle *preset_bundle);
 // The user switched one extruder's nozzle volume type: carry its total nozzle count over to the
 // new type. No-op for Hybrid, which is a mix and not a type every nozzle shares.
 void onNozzleVolumeTypeSwitch(PresetBundle *preset_bundle, int extruder_id, NozzleVolumeType type);
+
+// The translated name of a nozzle volume type, as the settings show it.
+wxString get_nozzle_volume_type_name(NozzleVolumeType type);
 
 }} // namespace Slic3r::GUI

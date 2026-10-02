@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "GUI_App.hpp"
+#include "I18N.hpp"
 #include "Plater.hpp"
 #include "libslic3r/PresetBundle.hpp"
 
@@ -108,6 +109,19 @@ void onNozzleVolumeTypeSwitch(PresetBundle *preset_bundle, int extruder_id, Nozz
         return;
     const int total = getExtruderNozzleCountTotal(preset_bundle, extruder_id);
     setExtruderNozzleCount(preset_bundle, extruder_id, type, total, true);
+}
+
+wxString get_nozzle_volume_type_name(NozzleVolumeType type)
+{
+    switch (type) {
+    case nvtStandard: return _L("Standard");
+    case nvtHighFlow: return _L("High Flow");
+    case nvtHybrid: return _L("Hybrid");
+    case nvtTPUHighFlow: return _L("TPU High Flow");
+    case nvtE3DHighFlow: return _L("E3D High Flow");
+    case nvtExtraHighFlow: return _L("Extra High Flow");
+    default: return wxString();
+    }
 }
 
 }} // namespace Slic3r::GUI

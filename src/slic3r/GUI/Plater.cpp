@@ -129,6 +129,8 @@
 #include "MsgDialog.hpp"
 #include "ToolheadNames.hpp"
 #include "NozzleStats.hpp"
+#include "libslic3r/Flow.hpp"
+#include "libslic3r/ParameterUtils.hpp"
 #include "ProjectDirtyStateManager.hpp"
 #include "Gizmos/GLGizmoSimplify.hpp" // create suggestion notification
 #include "Gizmos/GLGizmoSVG.hpp" // Drop SVG file
@@ -14121,6 +14123,72 @@ bool Plater::add_model(bool imperial_units, std::string fname)
         wxGetApp().mainframe->update_title();
     }
     return loaded;
+}
+
+// Sets every per-extruder value of the speed `key` to the fastest speed the filament's
+// max volumetric speed allows with the edited line width and layer height.
+static void update_speed_parameter(const std::string &key)
+{
+    auto  preset_bundle   = wxGetApp().preset_bundle;
+    auto &printer_config  = preset_bundle->printers.get_edited_preset().config;
+    auto &filament_config = preset_bundle->filaments.get_edited_preset().config;
+    auto &print_config    = preset_bundle->prints.get_edited_preset().config;
+
+    const int        extruder_nums       = preset_bundle->get_printer_extruder_count();
+    std::vector<int> extruder_types      = printer_config.option<ConfigOptionEnumsGeneric>("extruder_type")->values;
+    std::vector<int> nozzle_volume_types = preset_bundle->project_config.option<ConfigOptionEnumsGeneric>("nozzle_volume_type")->values;
+
+    const float nozzle_diameter = printer_config.option<ConfigOptionFloats>("nozzle_diameter")->values[0];
+    const float layer_height    = print_config.option<ConfigOptionFloat>("layer_height")->value;
+    float       line_width      = print_config.get_abs_value("line_width", nozzle_diameter);
+    if (line_width <= 0.f)
+        line_width = Flow::auto_extrusion_width(frPerimeter, nozzle_diameter);
+    const Flow flow(line_width, layer_height, nozzle_diameter);
+
+    for (int i = 0; i < extruder_nums; ++i) {
+        int index = get_index_for_extruder_parameter(filament_config, "filament_max_volumetric_speed", i, ExtruderType(extruder_types[i]), NozzleVolumeType(nozzle_volume_types[i]));
+        const double filament_max_volumetric_speed = filament_config.option<ConfigOptionFloats>("filament_max_volumetric_speed")->get_at(index);
+        const double max_speed = filament_max_volumetric_speed / flow.mm3_per_mm();
+
+        index = get_index_for_extruder_parameter(print_config, key, i, ExtruderType(extruder_types[i]), NozzleVolumeType(nozzle_volume_types[i]));
+        print_config.option<ConfigOptionFloatsNullable>(key)->values[index] = max_speed;
+    }
+}
+
+// The speed `key` capped per extruder by the filament's max volumetric speed, one value per
+// extruder and nozzle volume type, for a flow rate calibration pass.
+static std::vector<double> generate_max_speed_parameter_value(const std::string &key, const bool linear, const int pass)
+{
+    auto  preset_bundle   = wxGetApp().preset_bundle;
+    auto &printer_config  = preset_bundle->printers.get_edited_preset().config;
+    auto &filament_config = preset_bundle->filaments.get_edited_preset().config;
+    auto &print_config    = preset_bundle->prints.get_edited_preset().config;
+
+    const int        extruder_nums       = preset_bundle->get_printer_extruder_count();
+    std::vector<int> extruder_types      = printer_config.option<ConfigOptionEnumsGeneric>("extruder_type")->values;
+    std::vector<int> nozzle_volume_types = preset_bundle->project_config.option<ConfigOptionEnumsGeneric>("nozzle_volume_type")->values;
+
+    const float nozzle_diameter = printer_config.option<ConfigOptionFloats>("nozzle_diameter")->values[0];
+    const float layer_height    = print_config.option<ConfigOptionFloat>("layer_height")->value;
+    const float line_width      = print_config.get_abs_value("line_width", nozzle_diameter);
+    const Flow  flow(line_width, layer_height, nozzle_diameter);
+
+    std::vector<double> speed_values;
+    speed_values.reserve(size_t(extruder_nums) * nozzle_volume_types.size());
+
+    for (int i = 0; i < extruder_nums; ++i) {
+        int index = get_index_for_extruder_parameter(filament_config, "filament_max_volumetric_speed", i, ExtruderType(extruder_types[i]), NozzleVolumeType(nozzle_volume_types[i]));
+        const double filament_max_volumetric_speed = filament_config.option<ConfigOptionFloats>("filament_max_volumetric_speed")->get_at(index);
+        const double cur_flowrate                  = filament_config.option<ConfigOptionFloats>("filament_flow_ratio")->get_at(index);
+        const double max_speed = linear ? filament_max_volumetric_speed / (flow.mm3_per_mm() * (cur_flowrate + (pass == 2 ? 0.035 : 0.05)) / cur_flowrate) :
+                                          filament_max_volumetric_speed / (flow.mm3_per_mm() * (pass == 1 ? 1.2 : 1));
+
+        index = get_index_for_extruder_parameter(print_config, key, i, ExtruderType(extruder_types[i]), NozzleVolumeType(nozzle_volume_types[i]));
+        const double speed_value = std::floor(std::min(print_config.option<ConfigOptionFloatsNullable>(key)->values[index], max_speed));
+        for (size_t v_id = 0; v_id < nozzle_volume_types.size(); ++v_id)
+            speed_values.emplace_back(speed_value);
+    }
+    return speed_values;
 }
 
 void Plater::calib_pa(const Calib_Params& params)

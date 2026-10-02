@@ -17,7 +17,7 @@ static const wxColour TEXT_LIGHT_GRAY = wxColour(107, 107, 107);
 namespace Slic3r {
 namespace GUI {
 
-static wxString PUBLISH_STEP_STRING[STEP_COUNT] = {
+static wxString PUBLISH_STEP_STRING[STEP_PUBLISH_COUNT] = {
     _L("Slice all plates to obtain time and filament estimation"),
     _L("Packing project data into 3MF file"),
     _L("Uploading 3MF"),

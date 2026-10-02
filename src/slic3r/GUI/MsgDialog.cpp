@@ -31,6 +31,8 @@
 namespace Slic3r {
 namespace GUI {
 
+wxDEFINE_EVENT(EVT_CHECKBOX_CHANGE, wxCommandEvent);
+
 MsgDialog::MsgDialog(wxWindow *parent, const wxString &title, const wxString &headline, long style, wxBitmap bitmap, const wxString &forward_str)
 	: DPIDialog(parent ? parent : dynamic_cast<wxWindow*>(wxGetApp().mainframe), wxID_ANY, title, wxDefaultPosition, wxSize(360, -1),wxDEFAULT_DIALOG_STYLE)
 	, boldfont(wxGetApp().normal_font())

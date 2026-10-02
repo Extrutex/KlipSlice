@@ -36,6 +36,11 @@ enum ButtonSizeType{
 
 
 namespace Slic3r {
+
+namespace GUI {
+// Posted by MsgDialog when its "don't show again" box is toggled; GetInt() carries the new state.
+wxDECLARE_EVENT(EVT_CHECKBOX_CHANGE, wxCommandEvent);
+}
 namespace GUI {
 
 struct ButtonData

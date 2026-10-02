@@ -17,6 +17,7 @@
 #include "Plater.hpp"
 #include "Tab.hpp"
 #include "ToolheadNames.hpp"
+#include "NozzleStats.hpp"
 #include "ExtraRenderers.hpp"
 #include "wxExtensions.hpp"
 #include "SavePresetDialog.hpp"
