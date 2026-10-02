@@ -737,3 +737,61 @@ TEST_CASE("Changing an acceleration the wipe tower bakes in regenerates the towe
     CHECK_FALSE(print.is_step_done(psWipeTower));
     CHECK_FALSE(print.is_step_done(psGCodeExport));
 }
+
+// Area of the first layer of a 20 x 20 x 2 mm block with a 0.5 mm wide, 10 mm deep slot cut into its
+// front: two 9.75 mm wide blocks joined by a back block. The back block is a part of its own with a
+// different wall count, so the layer has two regions; only a multi-region layer closes its merged
+// slices before the elephant foot compensation. With the compensation on, the first layer keeps the
+// closed, uncompensated outline it started from (lslices_elfoot_uncompensated).
+static double slotted_block_first_layer_area(double slice_closing_radius)
+{
+    DynamicPrintConfig config = DynamicPrintConfig::full_print_config();
+    config.set_deserialize_strict({
+        { "layer_height",               0.2 },
+        { "initial_layer_print_height", 0.2 },
+        { "elefant_foot_compensation",  0.1 },
+        { "slice_closing_radius",       slice_closing_radius },
+        { "wall_loops",                 2 },
+    });
+
+    Slic3r::Model model;
+    ModelObject *object = model.add_object();
+    object->name = "slotted_block.stl";
+    TriangleMesh right = make_cube(9.75, 20., 2.);
+    TriangleMesh back  = make_cube(20., 10., 2.);
+    right.translate(10.25f, 0.f, 0.f);
+    back.translate(0.f, 10.f, 0.f);
+    object->add_volume(make_cube(9.75, 20., 2.), ModelVolumeType::MODEL_PART, false);
+    object->add_volume(std::move(right), ModelVolumeType::MODEL_PART, false);
+    object->add_volume(std::move(back), ModelVolumeType::MODEL_PART, false)->config.set_key_value("wall_loops", new ConfigOptionInt(3));
+    object->add_instance();
+    object->ensure_on_bed();
+
+    Slic3r::Print print;
+    print.auto_assign_extruders(object);
+    print.apply(model, config);
+    print.validate();
+    print.set_status_silent();
+    print.process();
+    const Layer *first_layer = print.objects().front()->layers().front();
+    REQUIRE(first_layer->regions().size() == 2);
+    return unscaled(unscaled(area(first_layer->lslices)));
+}
+
+TEST_CASE("Each object is sliced with its own slice closing radius", "[PrintObject][Regression]")
+{
+    // Before compensating the elephant foot, a multi-region layer closes its merged slices with
+    // 1.5 x slice_closing_radius (the mesh slicer itself closes with 1 x). That radius was cached in
+    // a function-local static,
+    // so the first object sliced in the process decided the closing of every object after it.
+    // A 0.2 mm radius leaves the 0.5 mm slot open in the slicer (closes up to 0.4 mm) but fills it
+    // in the elephant foot pass (closes up to 0.6 mm), adding the slot's 0.5 x 10 mm to the first
+    // layer; 0.049 mm closes nothing either way.
+    const double slot_area = 0.5 * 10.;
+    const double open      = slotted_block_first_layer_area(0.049);
+    const double closed    = slotted_block_first_layer_area(0.2);
+    CHECK(closed - open > 0.6 * slot_area);
+    // And the order of slicing does not matter: the small radius still leaves the slot open afterwards.
+    const double open_again = slotted_block_first_layer_area(0.049);
+    CHECK_THAT(open_again, Catch::Matchers::WithinAbs(open, 1e-3));
+}
