@@ -25,6 +25,8 @@ add_executable(${_TEST_NAME}_tests
 	test_support_material.cpp
 	test_tree_support.cpp
 	test_trianglemesh.cpp
+	# Wall widths, volumes and positions measured against the rounded-rectangle bead model.
+	test_wall_geometry.cpp
 	test_wipe.cpp
 	test_wipe_tower.cpp
 	)

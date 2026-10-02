@@ -9,6 +9,20 @@ if (NOT ORCA_CLI_TEST_PYTHON)
     return()
 endif ()
 
+# Reads only the G-code, so it runs on macOS too.
+add_test(NAME cli_wall_geometry
+    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_cli_wall_geometry.sh $<TARGET_FILE:OrcaSlicer> ${ORCA_CLI_TEST_PYTHON}
+        ${CMAKE_SOURCE_DIR}/resources/profiles)
+set_tests_properties(cli_wall_geometry PROPERTIES
+    LABELS "CLI;RequiresApp"
+    SKIP_RETURN_CODE 77
+    TIMEOUT 900)
+
+# The tests below read result.json, which the CLI writes on Linux only.
+if (APPLE)
+    return()
+endif ()
+
 add_test(NAME cli_strict_mode
     COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_cli_strict.sh $<TARGET_FILE:OrcaSlicer> ${ORCA_CLI_TEST_PYTHON})
 set_tests_properties(cli_strict_mode PROPERTIES
