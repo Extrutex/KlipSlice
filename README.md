@@ -18,8 +18,9 @@ every path that does not lead to a Klipper machine removed.
 - **Moonraker is the only print host.** G-code upload and print start go through
   [Moonraker](https://moonraker.readthedocs.io/). There are no vendor-specific
   printer protocols.
-- **No vendor network, no cloud.** The vendor network plugin and vendor cloud
-  services are not part of KLIPSLICE; removing the inherited code is ongoing work.
+- **No vendor network, no cloud.** The Bambu network plug-in, login, cloud
+  provider, model mall and telemetry are removed. Inherited code for other
+  print hosts is still being removed.
 - **Profiles only for printers that verifiably run Klipper.** 174 printer models
   ship with a system profile, each one backed by per-model evidence (stock
   Klipper, Klipper via an established community mod, or a self-built Klipper
