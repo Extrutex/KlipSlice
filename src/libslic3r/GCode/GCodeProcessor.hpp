@@ -194,8 +194,7 @@ class Print;
         // (plater->background_process().get_current_gcode_result()). Populated only from
         // Print::get_layered_nozzle_group_result() (ToolOrdering's static L/R + rack subset);
         // default-empty (null) and read by no g-code emitter, so it is invisible in the emitted
-        // g-code. Consumed by the print-dispatch nozzle mapping (DevNozzleMappingCtrl) via
-        // DevUtilBackend::GetNozzleGroupResult.
+        // g-code.
         std::shared_ptr<MultiNozzleUtils::NozzleGroupResultBase> nozzle_group_result;
         float initial_layer_time;
 

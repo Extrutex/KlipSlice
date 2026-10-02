@@ -75,18 +75,11 @@ public:
     // select preset which is selected in PreseBundle
     void update_from_bundle();
 
-    // BBS: printer
-    void add_connected_printers(std::string selected, bool alias_name = false);
-    int  selected_connected_printer() const;
-
     // BBS: ams
     int  selected_ams_filament() const;
 
     void set_filament_idx(const int extr_idx) { m_filament_idx = extr_idx; }
     int  get_filament_idx() const { return m_filament_idx; }
-
-    std::string get_selected_dev_id() const { return m_selected_dev_id; }
-    void clear_selected_dev_id() { m_selected_dev_id.clear(); }
 
     // BBS
     wxString get_tooltip(const Preset& preset);
@@ -137,12 +130,6 @@ protected:
     int space_icon_width;
     int thin_space_icon_width;
     int wide_space_icon_width;
-
-    // BBS: printer
-    int m_first_printer_idx = 0;
-    int m_last_printer_idx  = 0;
-
-    std::string              m_selected_dev_id;
 
     PrinterTechnology printer_technology {ptAny};
 

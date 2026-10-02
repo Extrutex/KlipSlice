@@ -19,7 +19,7 @@ namespace Slic3r {
  * This interface encapsulates all cloud-related functionality including authentication:
  * - Lifecycle methods for agent initialization
  * - User session management (login/logout)
- * - Token access for dependent agents (IPrinterAgent)
+ * - Token access for plugins and dialogs
  * - Login UI command builders for WebView integration
  * - Server connectivity and subscription management
  * - Settings synchronization (presets upload/download)
@@ -27,11 +27,6 @@ namespace Slic3r {
  *
  * Implementations:
  * - OrcaCloudServiceAgent: Native implementation for Orca Cloud (includes OAuth PKCE)
- *
- * Token Sharing Pattern:
- * IPrinterAgent receives an ICloudServiceAgent instance via set_cloud_agent() to
- * access tokens for cloud-relay operations without coupling to a specific auth
- * implementation.
  */
 
 struct CloudEvent {

@@ -277,16 +277,15 @@ to copy into a profile:
 
 ## Ids at the printer boundary
 
-Translating an id for a printer is a capability of the printer agent: `IPrinterAgent` declares
-`to_orca_filament_id` and `from_orca_filament_id` returning their argument, and `NetworkAgent`
-forwards both to the live agent, so a comparison site reaches them through
-`wxGetApp().getAgent()` and leaves an id untranslated while no agent is live. No shipped agent
-overrides them: Moonraker, Qidi and Snapmaker printers either speak our ids or compose their
-own protocol ids (the `QD_*` space above), so both hooks are the identity today. The one live
-caller is `CalibUtils.cpp`, which runs the filament of a calibration through
-`from_orca_filament_id` before handing it to the printer. An agent for a device with its own
-filament catalog overrides the pair and translates only there; nothing between the boundaries
-ever holds a foreign id.
+The printer never sees an id of ours and we never store one of its. The only place an id
+crosses from a printer into the app is the sidebar's filament sync (`Sidebar::sync_ams_list`),
+which reads the filament changer through `src/slic3r/Utils/MoonrakerFilaments.hpp`: Moonraker's
+`lane_data` namespace (AFC, recent Happy Hare), Happy Hare's `mmu` object, a Qidi box or a
+Snapmaker toolhead report materials, colours and vendors, never preset ids, and
+`MoonrakerFilaments::resolve_filament_ids` picks the preset for every loaded slot (the vendor's
+closest colour match when the changer names a vendor, else a visible system base preset of that
+material, else `UNKNOWN_FILAMENT_ID`, which the sync turns into a generic preset of that type).
+A composed protocol id such as Qidi's `QD_*` is therefore never looked up as a `filament_id`.
 
 One libslic3r site still names a foreign catalog id, and needs no change:
 `DynamicPrintConfig::get_filament_type` in `PrintConfig.cpp` picks `PLA-S` / `Sup.PLA` and

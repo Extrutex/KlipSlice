@@ -1045,14 +1045,6 @@ wxBoxSizer *PreferencesDialog::create_item_checkbox(wxString title, wxString too
             wxGetApp().plater()->sidebar().update_presets(Preset::TYPE_FILAMENT);
         }
 
-        if (param == "use_printer_agents")
-        {
-            // Rebuild the Device tab so the native/web-UI choice reflects the new flag
-            // immediately, instead of only on the next printer-preset change or restart.
-            if (wxGetApp().plater())
-                wxGetApp().plater()->sidebar().update_all_preset_comboboxes();
-        }
-
         if (param == "enable_high_low_temp_mixed_printing") {
             if (checkbox->GetValue()) {
                 const wxString warning_title = _L("Bed Temperature Difference Warning");
@@ -1508,9 +1500,6 @@ void PreferencesDialog::create_items()
 
     //// GENERAL > Features
     g_sizer->Add(create_item_title(_L("Features")), 1, wxEXPAND);
-
-    auto item_multi_machine    = create_item_checkbox(_L("Multi device management"), _L("With this option enabled, you can send a task to multiple devices at the same time and manage multiple devices."), "enable_multi_machine", _L("(Requires restart)"));
-    g_sizer->Add(item_multi_machine);
 
     auto item_speed_dial = create_item_checkbox(_L("Open the Speed Dial from the keyboard"),
         _L("When enabled, the Speed Dial keyboard shortcut (Space by default) opens the action search from any page."),
@@ -1978,12 +1967,6 @@ void PreferencesDialog::create_items()
   
     auto item_show_unsupported = create_item_checkbox(_L("Show unsupported presets"), _L("Show incompatible/unsupported presets in the printer and filament dropdown lists. These presets cannot be selected."), "show_unsupported_presets");
     g_sizer->Add(item_show_unsupported);
-
-    auto item_plugin_printer_agents = create_item_checkbox(
-        _L("(Experimental) Use printer agents instead of print hosts"), _L(
-            "Route print jobs for non-Bambu printers through printer plug-in agents instead of the classic print-host upload flow.\nWhen disabled, KLIPSLICE uses the legacy print-host behavior."),
-        "use_printer_agents");
-    g_sizer->Add(item_plugin_printer_agents);
 
     //// DEVELOPER > Experimental Features
     g_sizer->Add(create_item_title(_L("Experimental Features")), 1, wxEXPAND);

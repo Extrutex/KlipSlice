@@ -16,19 +16,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/3DBed.hpp
     GUI/3DScene.cpp
     GUI/3DScene.hpp
-    GUI/Widgets/FilamentLoad.cpp
-    GUI/Widgets/FilamentLoad.hpp
     GUI/AboutDialog.cpp
     GUI/AboutDialog.hpp
-    GUI/AmsMappingPopup.cpp
-    GUI/AmsMappingPopupUpdate.cpp
-    GUI/AmsMappingPopup.hpp
-    GUI/AMSMaterialsSetting.cpp
-    GUI/AMSMaterialsSetting.hpp
-    GUI/AMSSetting.cpp
-    GUI/AMSSetting.hpp
-    GUI/AmsWidgets.cpp
-    GUI/AmsWidgets.hpp
     GUI/Auxiliary.cpp
     GUI/AuxiliaryDataViewModel.cpp
     GUI/AuxiliaryDataViewModel.hpp
@@ -41,8 +30,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/PostProcessor.hpp
     GUI/BBLStatusBar.cpp
     GUI/BBLStatusBar.hpp
-    GUI/BBLStatusBarSend.cpp
-    GUI/BBLStatusBarSend.hpp
     GUI/BBLTopbar.cpp
     GUI/BBLTopbar.hpp
     GUI/BedShapeDialog.cpp
@@ -57,20 +44,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/BuildCommit.hpp
     GUI/calib_dlg.cpp
     GUI/calib_dlg.hpp
-    GUI/CalibrationPanel.cpp
-    GUI/CalibrationPanel.hpp
-    GUI/CalibrationWizardCaliPage.cpp
-    GUI/CalibrationWizardCaliPage.hpp
-    GUI/CalibrationWizard.cpp
-    GUI/CalibrationWizard.hpp
-    GUI/CalibrationWizardPage.cpp
-    GUI/CalibrationWizardPage.hpp
-    GUI/CalibrationWizardPresetPage.cpp
-    GUI/CalibrationWizardPresetPage.hpp
-    GUI/CalibrationWizardSavePage.cpp
-    GUI/CalibrationWizardSavePage.hpp
-    GUI/CalibrationWizardStartPage.cpp
-    GUI/CalibrationWizardStartPage.hpp
     GUI/Camera.cpp
     GUI/Camera.hpp
     GUI/CameraUtils.cpp
@@ -84,16 +57,12 @@ set(SLIC3R_GUI_SOURCES
     GUI/ConfigValueFormatter.cpp
     GUI/ConfigValueFormatter.hpp
     GUI/WizardTypes.hpp
-    GUI/ConnectPrinter.cpp
-    GUI/ConnectPrinter.hpp
     GUI/CreatePresetsDialog.cpp
     GUI/CreatePresetsDialog.hpp
     GUI/DailyTips.cpp
     GUI/DailyTips.hpp
     GUI/DesktopIntegrationDialog.cpp
     GUI/DesktopIntegrationDialog.hpp
-    GUI/DeviceManager.cpp
-    GUI/DeviceManager.hpp
     GUI/Downloader.cpp
     GUI/DownloaderFileGet.cpp
     GUI/DownloaderFileGet.hpp
@@ -269,8 +238,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/FilamentBitmapUtils.hpp
     GUI/BaseTransparentDPIFrame.cpp
     GUI/BaseTransparentDPIFrame.hpp
-    GUI/SyncAmsInfoDialog.cpp
-    GUI/SyncAmsInfoDialog.hpp
     GUI/ImGuiWrapper.hpp
     GUI/IMSlider.cpp
     GUI/IMSlider.hpp
@@ -297,13 +264,9 @@ set(SLIC3R_GUI_SOURCES
     GUI/Jobs/OrientJob.cpp
     GUI/Jobs/OrientJob.hpp
     GUI/Jobs/PlaterWorker.hpp
-    GUI/Jobs/PrintJob.cpp
-    GUI/Jobs/PrintJob.hpp
     GUI/Jobs/ProgressIndicator.hpp
     GUI/Jobs/RotoptimizeJob.cpp
     GUI/Jobs/RotoptimizeJob.hpp
-    GUI/Jobs/SendJob.cpp
-    GUI/Jobs/SendJob.hpp
     GUI/Jobs/SLAImportDialog.hpp
     GUI/Jobs/SLAImportJob.cpp
     GUI/Jobs/SLAImportJob.hpp
@@ -327,14 +290,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/MarkdownTip.hpp
     GUI/MeshUtils.cpp
     GUI/MeshUtils.hpp
-    GUI/MonitorBasePanel.cpp
-    GUI/BBLStatusBarPrint.hpp
-    GUI/BBLStatusBarPrint.cpp
-    GUI/MonitorBasePanel.h
-    GUI/Monitor.cpp
-    GUI/Monitor.hpp
-    GUI/MonitorPage.cpp
-    GUI/MonitorPage.hpp
     GUI/MixedFilamentDialog.cpp
     GUI/MixedFilamentDialog.hpp
     GUI/GradientCurveEditor.cpp
@@ -351,18 +306,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/MsgDialog.hpp
     GUI/MultiChoiceDialog.hpp
     GUI/MultiChoiceDialog.cpp
-    GUI/MultiMachine.cpp
-    GUI/MultiMachine.hpp
-    GUI/MultiMachineManagerPage.cpp
-    GUI/MultiMachineManagerPage.hpp
-    GUI/MultiMachinePage.cpp
-    GUI/MultiMachinePage.hpp
-    GUI/MultiPrintJob.cpp
-    GUI/MultiPrintJob.hpp
-    GUI/MultiSendMachineModel.cpp
-    GUI/MultiSendMachineModel.hpp
-    GUI/MultiTaskManagerPage.cpp
-    GUI/MultiTaskManagerPage.hpp
     GUI/MultiTaskModel.cpp
     GUI/MultiTaskModel.hpp
     GUI/NetworkTestDialog.cpp
@@ -412,8 +355,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/PrinterWebView.hpp
     GUI/PrintHostDialogs.cpp
     GUI/PrintHostDialogs.hpp
-    GUI/PrintOptionsDialog.cpp
-    GUI/PrintOptionsDialog.hpp
     GUI/PrivacyUpdateDialog.cpp
     GUI/PrivacyUpdateDialog.hpp
     GUI/ProgressStatusBar.cpp
@@ -432,8 +373,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/RammingChart.hpp
     GUI/RecenterDialog.cpp
     GUI/RecenterDialog.hpp
-    GUI/ReleaseNote.cpp
-    GUI/ReleaseNote.hpp
     GUI/RemovableDriveManager.cpp
     GUI/RemovableDriveManager.hpp
     GUI/SavePresetDialog.cpp
@@ -448,27 +387,13 @@ set(SLIC3R_GUI_SOURCES
     GUI/SettingsIndex.hpp
     GUI/Selection.cpp
     GUI/Selection.hpp
-    GUI/SelectMachine.cpp
-    GUI/SelectMachine.hpp
-    GUI/PrePrintChecker.hpp
-    GUI/PrePrintChecker.cpp
-    GUI/SelectMachinePop.cpp
-    GUI/SelectMachinePop.hpp
-    GUI/SendMultiMachinePage.cpp
-    GUI/SendMultiMachinePage.hpp
     GUI/SendSystemInfoDialog.cpp
     GUI/SendSystemInfoDialog.hpp
-    GUI/SendToPrinter.cpp
-    GUI/SendToPrinter.hpp
     GUI/SingleChoiceDialog.cpp
     GUI/SingleChoiceDialog.hpp
-    GUI/SliceInfoPanel.cpp
-    GUI/SliceInfoPanel.hpp
     GUI/SlicingProgressNotification.cpp
     GUI/SlicingProgressNotification.hpp
     GUI/StagedBuild.hpp
-    GUI/StatusPanel.cpp
-    GUI/StatusPanel.hpp
     GUI/StepMeshDialog.cpp
     GUI/StepMeshDialog.hpp
     GUI/SurfaceDrag.cpp
@@ -479,8 +404,9 @@ set(SLIC3R_GUI_SOURCES
     GUI/TabButton.hpp
     GUI/Tab.cpp
     GUI/Tab.hpp
-    GUI/TaskManager.cpp
-    GUI/TaskManager.hpp
+    GUI/ToolheadNames.hpp
+    GUI/NozzleStats.cpp
+    GUI/NozzleStats.hpp
     GUI/TextLines.cpp
     GUI/TextLines.hpp
     GUI/TickCode.cpp
@@ -499,12 +425,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/WebUserLoginDialog.hpp
     GUI/WebViewDialog.cpp
     GUI/WebViewDialog.hpp
-    GUI/Widgets/AMSControl.cpp
-    GUI/Widgets/AMSControl.hpp
-    GUI/Widgets/AMSItem.cpp
-    GUI/Widgets/AMSItem.hpp
-    GUI/Widgets/MultiNozzleSync.cpp
-    GUI/Widgets/MultiNozzleSync.hpp
     GUI/Widgets/AxisCtrlButton.cpp
     GUI/Widgets/AxisCtrlButton.hpp
     GUI/Widgets/Button.cpp
@@ -521,8 +441,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/Widgets/DropDown.hpp
     GUI/Widgets/ErrorMsgStaticText.cpp
     GUI/Widgets/ErrorMsgStaticText.hpp
-    GUI/Widgets/FanControl.cpp
-    GUI/Widgets/FanControl.hpp
     GUI/Widgets/HyperLink.cpp
     GUI/Widgets/HyperLink.hpp
     GUI/Widgets/ImageSwitchButton.cpp
@@ -551,8 +469,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/Widgets/SideButton.hpp
     GUI/Widgets/SideMenuPopup.cpp
     GUI/Widgets/SideMenuPopup.hpp
-    GUI/Widgets/SideTools.cpp
-    GUI/Widgets/SideTools.hpp
     GUI/Widgets/SpinInput.cpp
     GUI/Widgets/SpinInput.hpp
     GUI/Widgets/StateColor.cpp
@@ -619,9 +535,6 @@ set(SLIC3R_GUI_SOURCES
     plugin/PluginAuditManager.hpp
     plugin/PluginResolver.cpp
     plugin/PluginResolver.hpp
-    plugin/pluginTypes/printerAgent/PrinterAgentPluginCapability.hpp
-    plugin/pluginTypes/printerAgent/PrinterAgentPluginCapability.cpp
-    plugin/pluginTypes/printerAgent/PrinterAgentPluginCapabilityTrampoline.hpp
     plugin/pluginTypes/pages/PagesPluginCapability.hpp
     plugin/pluginTypes/pages/PagesPluginCapability.cpp
     plugin/pluginTypes/pages/PagesPluginCapabilityTrampoline.hpp
@@ -642,8 +555,6 @@ set(SLIC3R_GUI_SOURCES
     Utils/MeshInspect.hpp
     Utils/PaintCLI.cpp
     Utils/PaintCLI.hpp
-    Utils/CalibUtils.cpp
-    Utils/CalibUtils.hpp
     Utils/ColorSpaceConvert.cpp
     Utils/ColorSpaceConvert.hpp
     Utils/EmbossStyleManager.cpp
@@ -669,15 +580,8 @@ set(SLIC3R_GUI_SOURCES
     Utils/NetworkAgentFactory.hpp
     Utils/NetworkAgentFactory.cpp
     Utils/ICloudServiceAgent.hpp
-    Utils/IPrinterAgent.hpp
     Utils/OrcaCloudServiceAgent.cpp
     Utils/OrcaCloudServiceAgent.hpp
-    Utils/QidiPrinterAgent.cpp
-    Utils/QidiPrinterAgent.hpp
-    Utils/SnapmakerPrinterAgent.cpp
-    Utils/SnapmakerPrinterAgent.hpp
-    Utils/MoonrakerPrinterAgent.cpp
-    Utils/MoonrakerPrinterAgent.hpp
     Utils/Moonraker.cpp
     Utils/Moonraker.hpp
     Utils/MoonrakerFilaments.cpp
@@ -696,8 +600,6 @@ set(SLIC3R_GUI_SOURCES
     Utils/UndoRedo.hpp
     Utils/WxFontUtils.cpp
     Utils/WxFontUtils.hpp
-    Utils/FileTransferUtils.cpp
-    Utils/FileTransferUtils.hpp
     Utils/wxInspectorPlugins/DPIAwarePlugin.hpp
     Utils/wxInspectorPlugins/DPIAwarePlugin.cpp
     Utils/wxInspectorPlugins/CustomWidgetsPlugin.hpp
@@ -729,8 +631,6 @@ if (SLIC3R_CAD)
     )
 endif ()
 
-add_subdirectory(GUI/DeviceCore)
-add_subdirectory(GUI/DeviceTab)
 
 if (WIN32)
     list(APPEND SLIC3R_GUI_SOURCES

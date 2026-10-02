@@ -16,7 +16,6 @@
 #include "Widgets/TextInput.hpp"
 #include "Widgets/HyperLink.hpp"
 #include "BBLStatusBar.hpp"
-#include "BBLStatusBarSend.hpp"
 #include "libslic3r/Semver.hpp"
 
 class wxBoxSizer;

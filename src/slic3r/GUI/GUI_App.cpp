@@ -4,14 +4,12 @@
 #include "libslic3r/Platform.hpp"
 #include "GUI_App.hpp"
 #include "Shortcuts.hpp"
-#include "DeviceManager.hpp"
 #include "PresetBundleDialog.hpp"
 #include "WebUserLoginDialog.hpp"
 #include "WebViewDialog.hpp"
 #include "slic3r/Utils/NetworkAgent.hpp"
 #include "GUI_Init.hpp"
 #include "GUI_ObjectList.hpp"
-#include "slic3r/GUI/TaskManager.hpp"
 #include "format.hpp"
 #include "libslic3r_version.h"
 #include "BuildCommit.hpp"
@@ -98,8 +96,6 @@
 #include "EncodedFilament.hpp"
 #include "GeneratedConfig.hpp"
 
-#include "DeviceCore/DevManager.h"
-
 #include "../Utils/PresetUpdater.hpp"
 #include "../Utils/PrintHost.hpp"
 #include "../Utils/Process.hpp"
@@ -141,7 +137,6 @@
 #include "PrivacyUpdateDialog.hpp"
 #include "HintNotification.hpp"
 
-#include "slic3r/Utils/NetworkAgentFactory.hpp"
 #include "slic3r/Utils/bambu_networking.hpp"
 
 #include "PluginsDialog.hpp"
@@ -985,22 +980,9 @@ void GUI_App::post_init()
     }
 
     if (m_agent) {
-        m_agent->set_on_ssdp_msg_fn(
-            [this](std::string json_str) {
-                if (is_closing()) {
-                    return;
-                }
-                GUI::wxGetApp().CallAfter([this, json_str] {
-                    if (m_device_manager) {
-                        m_device_manager->on_machine_alive(json_str);
-                    }
-                    });
-            }
-        );
         m_agent->set_on_http_error_fn([this](CloudEvent event, unsigned int status, std::string body) {
             this->handle_http_error(status, body, event.provider);
         });
-        m_agent->start_discovery(true, false);
     }
 
     // remove old log files over LOG_FILES_MAX_NUM
@@ -1048,7 +1030,6 @@ void GUI_App::post_init()
 wxDEFINE_EVENT(EVT_ENTER_FORCE_UPGRADE, wxCommandEvent);
 wxDEFINE_EVENT(EVT_SHOW_NO_NEW_VERSION, wxCommandEvent);
 wxDEFINE_EVENT(EVT_SHOW_DIALOG, wxCommandEvent);
-wxDEFINE_EVENT(EVT_CONNECT_LAN_MODE_PRINT, wxCommandEvent);
 wxDEFINE_EVENT(EVT_UPDATE_PRESET_BUNDLE, wxCommandEvent);
 wxDEFINE_EVENT(EVT_UPDATE_BUNDLE_COMPLETE, wxCommandEvent);
 
@@ -1099,10 +1080,6 @@ void GUI_App::shutdown()
     set_closing(true);
     Slic3r::PluginManager::instance().set_shutting_down();
 
-    if (m_agent)
-        m_agent->set_printer_agent(nullptr);
-    NetworkAgentFactory::clear_printer_agent_cache();
-
     BOOST_LOG_TRIVIAL(info) << "GUI_App::shutdown exit";
 }
 
@@ -1138,33 +1115,6 @@ void GUI_App::init_networking_callbacks()
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": enter, m_agent=%1%")%m_agent;
     if (m_agent) {
         //set callbacks
-        m_agent->set_server_callback([](std::string url, int status) {
-            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(": server_callback, url=%1%, status=%2%") % url % status;
-            //CallAfter([this]() {
-            //    if (!m_server_error_dialog) {
-            //        /*m_server_error_dialog->EndModal(wxCLOSE);
-            //        m_server_error_dialog->Destroy();
-            //        m_server_error_dialog = nullptr;*/
-            //        m_server_error_dialog = new NetworkErrorDialog(mainframe);
-            //    }
-            //
-            //    if(plater()->get_select_machine_dialog() && plater()->get_select_machine_dialog()->IsShown()){
-            //        return;
-            //    }
-            //
-            //    if (m_server_error_dialog->m_show_again) {
-            //        return;
-            //    }
-            //
-            //    if (m_server_error_dialog->IsShown()) {
-            //        return;
-            //    }
-            //
-            //    m_server_error_dialog->ShowModal();
-            //});
-        });
-
-
         m_agent->set_on_server_connected_fn([this](CloudEvent event, int return_code, int reason_code) {
             if (is_closing()) {
                 return;
@@ -1183,29 +1133,6 @@ void GUI_App::init_networking_callbacks()
             BOOST_LOG_TRIVIAL(trace) << "static: server connected, provider=" << event.provider;
         });
 
-        m_agent->set_on_printer_connected_fn([this](std::string dev_id) {
-            if (is_closing()) {
-                return;
-            }
-            GUI::wxGetApp().CallAfter([this, dev_id] {
-                if (is_closing())
-                    return;
-                bool tunnel = boost::algorithm::starts_with(dev_id, "tunnel/");
-                /* request_pushing */
-                MachineObject* obj = m_device_manager->get_my_machine(tunnel ? dev_id.substr(7) : dev_id);
-                if (obj) {
-                    obj->is_tunnel_mqtt = tunnel;
-                    obj->command_request_push_all(true);
-                    obj->command_get_version();
-                    obj->command_get_access_code();
-                    if (m_agent)
-                        m_agent->install_device_cert(obj->get_dev_id(), obj->is_lan_mode_printer());
-
-                    obj->set_online_state(true);
-                }
-                });
-            });
-
         m_agent->set_get_country_code_fn([this]() {
             if (app_config)
                 return app_config->get_country_code();
@@ -1213,127 +1140,6 @@ void GUI_App::init_networking_callbacks()
             }
         );
 
-        m_agent->set_on_subscribe_failure_fn([this](std::string dev_id) {
-            CallAfter([this, dev_id] {
-                on_start_subscribe_again(dev_id);
-            });
-        });
-
-        m_agent->set_on_local_connect_fn(
-            [this](int state, std::string dev_id, std::string msg) {
-                if (is_closing()) {
-                    return;
-                }
-                CallAfter([this, state, dev_id, msg] {
-                    if (is_closing()) {
-                        return;
-                    }
-                    /* request_pushing */
-                    MachineObject* obj = m_device_manager->get_my_machine(dev_id);
-                    wxCommandEvent event(EVT_CONNECT_LAN_MODE_PRINT);
-
-                    if (obj) {
-
-                        if (obj->is_lan_mode_printer()) {
-                            if (state == ConnectStatus::ConnectStatusOk) {
-                                obj->command_request_push_all(true);
-                                obj->command_get_version();
-                                event.SetInt(0);
-                                event.SetString(obj->get_dev_id());
-
-                                obj->set_online_state(true);
-                            } else if (state == ConnectStatus::ConnectStatusFailed) {
-                                // Orca: only update status if same device id
-                                if (m_device_manager->selected_machine != dev_id) return;
-
-                                m_device_manager->set_selected_machine("");
-                                wxString text;
-                                if (msg == "5") {
-                                    obj->set_access_code("");
-                                    text = wxString::Format(_L("Incorrect password"));
-                                    wxGetApp().show_dialog(text);
-                                } else {
-                                text = wxString::Format(_L("Connect %s failed! [SN:%s, code=%s]"), from_u8(obj->get_dev_name()), obj->get_dev_id(), msg);
-                                    wxGetApp().show_dialog(text);
-                                }
-                                event.SetInt(-1);
-
-                                obj->set_online_state(false);
-                            } else if (state == ConnectStatus::ConnectStatusLost) {
-                                m_device_manager->set_selected_machine("");
-                                event.SetInt(-1);
-                                BOOST_LOG_TRIVIAL(info) << "set_on_local_connect_fn: state = lost";
-
-                                obj->set_online_state(false);
-                            } else {
-                                event.SetInt(-1);
-                                BOOST_LOG_TRIVIAL(info) << "set_on_local_connect_fn: state = " << state;
-                            }
-
-                            obj->set_lan_mode_connection_state(false);
-                        }
-                        else {
-                            if (state == ConnectStatus::ConnectStatusOk) {
-                                event.SetInt(1);
-                                event.SetString(obj->get_dev_id());
-                            }
-                            else if(msg == "5") {
-                                event.SetInt(5);
-                                event.SetString(obj->get_dev_id());
-                            }
-                            else {
-                                event.SetInt(-2);
-                                event.SetString(obj->get_dev_id());
-                            }
-                        }
-                    }
-                    if (wxGetApp().plater()->get_select_machine_dialog()) {
-                        wxPostEvent(wxGetApp().plater()->get_select_machine_dialog(), event);
-                    }
-                });
-            }
-        );
-
-        auto message_arrive_fn = [this](std::string dev_id, std::string msg) {
-            if (is_closing()) {
-                return;
-            }
-            CallAfter([this, dev_id, msg] {
-                if (is_closing())
-                    return;
-
-                if (process_network_msg(dev_id, msg)) {
-                    return;
-                }
-
-                if (GUI::wxGetApp().plater())
-                    GUI::wxGetApp().plater()->update_machine_sync_status();
-            });
-        };
-
-        m_agent->set_on_message_fn(message_arrive_fn);
-
-
-        auto lan_message_arrive_fn = [this](std::string dev_id, std::string msg) {
-            if (is_closing()) {
-                return;
-            }
-            CallAfter([this, dev_id, msg] {
-                if (is_closing())
-                    return;
-
-                if (this->process_network_msg(dev_id, msg)) {
-                    return;
-                }
-
-                if (MachineObject* obj = m_device_manager->get_my_machine(dev_id))
-                    obj->parse_json("lan", msg);
-
-                if (GUI::wxGetApp().plater())
-                    GUI::wxGetApp().plater()->update_machine_sync_status();
-                });
-        };
-        m_agent->set_on_local_message_fn(lan_message_arrive_fn);
         m_agent->set_queue_on_main_fn([this](std::function<void()> callback) {
             CallAfter(callback);
         });
@@ -1344,10 +1150,6 @@ void GUI_App::init_networking_callbacks()
 GUI_App::~GUI_App()
 {
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": enter");
-
-    if (m_agent)
-        m_agent->set_printer_agent(nullptr);
-    NetworkAgentFactory::clear_printer_agent_cache();
 
     Slic3r::PluginManager::instance().shutdown();
     Slic3r::PythonInterpreter::instance().shutdown();
@@ -1370,38 +1172,6 @@ GUI_App::~GUI_App()
 
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": exit");
     shutdown_console_logging();
-}
-
-bool GUI_App::is_blocking_printing(MachineObject *obj_)
-{
-    DeviceManager *dev = Slic3r::GUI::wxGetApp().getDeviceManager();
-    if (!dev) return true;
-    std::string target_model;
-    if (obj_ == nullptr) {
-        obj_ = dev->get_selected_machine();
-        if (obj_) {
-            target_model = obj_->printer_type;
-        }
-    } else {
-        target_model = obj_->printer_type;
-    }
-
-    if (!obj_)
-    {
-        return false;
-    }
-
-    PresetBundle *preset_bundle = wxGetApp().preset_bundle;
-    std::string    source_model  = preset_bundle->printers.get_edited_preset().get_printer_type(preset_bundle);
-
-    if (source_model != target_model) {
-        std::vector<std::string>      compatible_machine = obj_->get_compatible_machine();
-        vector<std::string>::iterator it                 = find(compatible_machine.begin(), compatible_machine.end(), source_model);
-        if (it == compatible_machine.end()) {
-            return true;
-        }
-    }
-    return false;
 }
 
 // If formatted for github, plaintext with OpenGL extensions enclosed into <details>.
@@ -1639,24 +1409,6 @@ std::string GUI_App::get_bbl_client_version()
     return VersionInfo::convert_full_version(SLIC3R_VERSION);
 }
 
-void GUI_App::on_start_subscribe_again(std::string dev_id)
-{
-    auto start_subscribe_timer = new wxTimer(this, wxID_ANY);
-    Bind(wxEVT_TIMER, [start_subscribe_timer, dev_id](auto& e) {
-        start_subscribe_timer->Stop();
-        Slic3r::DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
-        if (!dev) return;
-        MachineObject* obj = dev->get_selected_machine();
-        if (!obj) return;
-
-        if ( (dev_id == obj->get_dev_id()) && obj->is_connecting() && obj->subscribe_counter > 0) {
-            obj->subscribe_counter--;
-            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": dev_id=" << obj->get_dev_id();
-        }
-    });
-    start_subscribe_timer->Start(5000, wxTIMER_ONE_SHOT);
-}
-
 std::string GUI_App::get_local_models_path()
 {
     std::string local_path = "";
@@ -1698,21 +1450,7 @@ int GUI_App::OnExit()
     stop_http_server();
     stop_sync_user_preset();
 
-    if (m_device_manager) {
-        delete m_device_manager;
-        m_device_manager = nullptr;
-    }
-
-    // Clear the printer agent cache before destroying the NetworkAgent.
-    // This disconnects all cached agents and releases their shared_ptrs,
-    // ensuring clean thread shutdown before the agent is deleted.
-    NetworkAgentFactory::clear_printer_agent_cache();
-
     if (m_agent) {
-        // BBS avoid a crash on mac platform
-#ifdef __WINDOWS__
-        m_agent->start_discovery(false, false);
-#endif
         delete m_agent;
         m_agent = nullptr;
     }
@@ -1803,50 +1541,9 @@ void GUI_App::init_plugin_gui_wiring()
         });
     };
 
-    // why: a newly loaded plugin only adds a selectable agent
-    // refresh the dropdown and leave the live agent alone
-    auto refresh_printer_agent_dropdown_after_load = [](const std::string&)
-    {
-        if (!wxTheApp)
-            return;
-
-        GUI_App* app = &GUI::wxGetApp();
-        if (app->is_closing())
-            return;
-
-        app->CallAfter([app]
-        {
-            if (!app->is_closing())
-                app->refresh_printer_agent_dropdown();
-        });
-    };
-
-    // why: the unloaded plugin may have been the provider of the live agent
-    // re-run selection, where a now-missing agent will be cleared
-    // refresh dropdown after
-    auto switch_printer_agent_after_unload = [](const std::string&)
-    {
-        if (!wxTheApp)
-            return;
-
-        GUI_App* app = &GUI::wxGetApp();
-        if (app->is_closing())
-            return;
-
-        app->CallAfter([app] {
-            if (app->is_closing())
-                return;
-
-            app->switch_printer_agent();
-            app->refresh_printer_agent_dropdown();
-        });
-    };
-
     plugin_mgr.subscribe_on_unload_callback(PluginHostUi::close_windows_for_plugin);
     plugin_mgr.subscribe_on_load_callback([refresh_plugins_dialog](const std::string&) { refresh_plugins_dialog(); });
     plugin_mgr.subscribe_on_unload_callback([refresh_plugins_dialog](const std::string&) { refresh_plugins_dialog(); });
-    plugin_mgr.subscribe_on_load_callback(NetworkAgentFactory::register_python_plugin);
-    plugin_mgr.subscribe_on_unload_callback(NetworkAgentFactory::deregister_python_plugin);
     plugin_mgr.subscribe_on_load_callback([](const std::string& plugin_key) {
         if (wxTheApp == nullptr || wxGetApp().is_closing() || wxGetApp().mainframe == nullptr)
             return;
@@ -1857,14 +1554,9 @@ void GUI_App::init_plugin_gui_wiring()
             return;
         wxGetApp().mainframe->plugin_pages().on_plugin_deregister(plugin_key);
     });
-    plugin_mgr.subscribe_on_load_callback(refresh_printer_agent_dropdown_after_load);
-    plugin_mgr.subscribe_on_unload_callback(switch_printer_agent_after_unload);
     plugin_mgr.subscribe_on_capability_load_callback(
-        [refresh_plugins_dialog, refresh_printer_agent_dropdown_after_load](const PluginCapabilityId& capability) {
-            if (capability.type == PluginCapabilityType::PrinterConnection)
-                NetworkAgentFactory::register_python_printer_agent(capability.plugin_key, capability.name);
+        [refresh_plugins_dialog](const PluginCapabilityId& capability) {
             refresh_plugins_dialog();
-            refresh_printer_agent_dropdown_after_load(capability.plugin_key);
             // A newly loaded capability may satisfy a missing-plugin notification; re-validate the
             // current plate (on the UI thread) so the notification clears once its plugin is available.
             if (wxTheApp && !wxGetApp().is_closing())
@@ -1876,13 +1568,10 @@ void GUI_App::init_plugin_gui_wiring()
                 wxGetApp().mainframe->plugin_pages().on_cap_register(capability);
         });
     plugin_mgr.subscribe_on_capability_unload_callback(
-        [refresh_plugins_dialog, switch_printer_agent_after_unload](const PluginCapabilityId& capability) {
-            if (capability.type == PluginCapabilityType::PrinterConnection)
-                NetworkAgentFactory::deregister_python_printer_agent(capability.plugin_key, capability.name);
+        [refresh_plugins_dialog](const PluginCapabilityId& capability) {
             if (capability.type == PluginCapabilityType::Pages && wxTheApp && !wxGetApp().is_closing() && wxGetApp().mainframe)
                 wxGetApp().mainframe->plugin_pages().on_cap_deregister(capability);
             refresh_plugins_dialog();
-            switch_printer_agent_after_unload(capability.plugin_key);
         });
 }
 
@@ -2262,7 +1951,6 @@ bool GUI_App::on_init_inner()
 
     preset_bundle->backup_user_folder();
 
-    Bind(EVT_UPDATE_MACHINE_LIST, &GUI_App::on_update_machine_list, this);
     Bind(EVT_USER_LOGIN, &GUI_App::on_user_login, this);
     Bind(EVT_USER_LOGIN_HANDLE, &GUI_App::on_user_login_handle, this);
     Bind(EVT_CHECK_PRIVACY_VER, &GUI_App::on_check_privacy_update, this);
@@ -2460,25 +2148,6 @@ bool GUI_App::on_init_inner()
 
     Bind(wxEVT_IDLE, [this](wxIdleEvent& event)
     {
-        bool curr_studio_active = this->is_studio_active();
-        if (m_studio_active != curr_studio_active) {
-            if (curr_studio_active) {
-                BOOST_LOG_TRIVIAL(info) << "studio is active, start to subscribe";
-                if (m_agent) {
-                    json j = json::object();
-                    m_agent->start_subscribe("app");
-                }
-            } else {
-                BOOST_LOG_TRIVIAL(info) << "studio is inactive, stop to subscribe";
-                if (m_agent) {
-                    json j = json::object();
-                    m_agent->stop_subscribe("app");
-                }
-            }
-            m_studio_active = curr_studio_active;
-        }
-
-
         if (! plater_)
             return;
 
@@ -2529,28 +2198,9 @@ bool GUI_App::on_init_network()
     //std::string data_dir = wxStandardPaths::Get().GetUserDataDir().ToUTF8().data();
     std::string data_directory = data_dir();
 
-    // Register all printer agents before creating the network agent
-    Slic3r::NetworkAgentFactory::register_all_agents();
-
     // m_agent = new Slic3r::NetworkAgent(data_directory);
     std::unique_ptr<Slic3r::NetworkAgent> agent_ptr = Slic3r::create_agent_from_config(data_directory, app_config);
     m_agent = agent_ptr.release();
-
-    if (!m_device_manager)
-        m_device_manager = new Slic3r::DeviceManager(m_agent);
-    else
-        m_device_manager->set_agent(m_agent);
-
-    if (this->is_enable_multi_machine()) {
-        if (!m_task_manager) {
-            m_task_manager = new Slic3r::TaskManager(m_agent);
-            m_task_manager->start();
-        }
-
-        m_device_manager->EnableMultiMachine(true);
-    } else {
-        m_device_manager->EnableMultiMachine(false);
-    }
 
     //BBS set config dir
     if (m_agent) {
@@ -2586,192 +2236,6 @@ unsigned GUI_App::get_colour_approx_luma(const wxColour &colour)
         g * g * .691 +
         b * b * .068
         ));
-}
-
-void GUI_App::refresh_printer_agent_dropdown()
-{
-    if (Tab* tab = get_tab(Preset::TYPE_PRINTER))
-    {
-        if (auto* printer_tab = dynamic_cast<TabPrinter*>(tab))
-            printer_tab->refresh_printer_agent_dropdown();
-    }
-}
-
-void GUI_App::set_live_printer_agent(std::shared_ptr<IPrinterAgent> agent)
-{
-    if (!m_agent)
-        return;
-
-    // why: tearing down the old machine selection is only ever the prefix of setting the live
-    // agent (to a new one, or to null when the selection is missing) - so it lives here, not as
-    // a standalone helper. Pass nullptr to clear the selection.
-    if (DeviceManager* dev = getDeviceManager())
-    {
-        dev->set_selected_machine(""); // why: empty id disconnects and deselects the current machine
-        m_agent->set_user_selected_machine("");
-        // note: belt-and-suspenders (precedent: DeviceManagerRefresher::on_timer)
-        dev->OnSelectedMachineLost(); // why: clear stale sidebar sync-status / AMS
-        // why: drop stale LAN discoveries; keep My Devices, but only those belonging to the
-        // agent we're about to swap to, so a device stamped by the outgoing agent doesn't
-        // linger hidden - the new agent's start_discovery re-inserts and re-stamps it fresh.
-        // agent is null when clearing the live agent entirely (e.g. plugin unload); there's no
-        // target to filter against then, so fall back to the original "keep all My Devices"
-        // behavior rather than guessing.
-        dev->clear_other_devices(agent ? agent->get_agent_info().id : std::string());
-    }
-
-    m_agent->set_printer_agent(agent);
-    sidebar().update_all_preset_comboboxes();
-}
-
-std::string GUI_App::resolve_printer_agent_id(const std::string& stored_id)
-{
-    if (!stored_id.empty())
-        return stored_id;
-    // KLIPSLICE: every printer is Klipper, so an unset printer_agent means Moonraker.
-    return MOONRAKER_PRINTER_AGENT_ID;
-}
-
-std::string GUI_App::canonical_printer_agent_id(const std::string& picked_id)
-{
-    return picked_id == resolve_printer_agent_id("") ? std::string() : picked_id;
-}
-
-void GUI_App::switch_printer_agent()
-{
-    if (!m_agent) {
-        BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": no agent exists";
-        return;
-    }
-
-    const DynamicPrintConfig& config = preset_bundle->printers.get_edited_preset().config;
-    const std::string effective_agent_id = resolve_printer_agent_id(config.opt_string("printer_agent"));
-
-    // Check if agent is registered
-    const PrinterAgentInfo* agent_info_ptr = NetworkAgentFactory::get_printer_agent_info(effective_agent_id);
-    if (!agent_info_ptr) {
-        // why: the selected agent's provider is gone (e.g. plugin unloaded); leaving the old
-        // live agent up would keep talking to a machine the user can no longer select.
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": agent ID '" << effective_agent_id
-                                << "' is unregistered; clearing live printer agent";
-        set_live_printer_agent(nullptr);
-        return;
-    }
-    std::string log_dir        = data_dir();
-    std::shared_ptr<ICloudServiceAgent> cloud_agent = m_agent->get_cloud_agent(ORCA_CLOUD_PROVIDER);
-
-    // Create new printer agent via registry
-    std::shared_ptr<IPrinterAgent> new_printer_agent =
-        NetworkAgentFactory::create_printer_agent_by_id(effective_agent_id, cloud_agent, log_dir);
-
-    if (!new_printer_agent) {
-        BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": failed to create agent '" << effective_agent_id
-                                   << "'; clearing live printer agent";
-        set_live_printer_agent(nullptr);
-        return;
-    }
-
-    // The factory caches agents per ID, so an identical pointer means the agent type is unchanged.
-    if (m_agent->get_printer_agent() == new_printer_agent) {
-        // Orca: the agent type is unchanged (e.g. switching between two Moonraker/Klipper
-        // printer presets), so the selected machine and the agent's cached device_info still
-        // point at the previously active printer preset. Re-select the machine when the new
-        // preset targets a different host, otherwise filament sync keeps hitting the old
-        // printer. (#12506)
-        if (m_device_manager && preset_bundle) {
-            const std::string print_host = config.opt_string("print_host");
-            if (!print_host.empty()) {
-                const std::string dev_id = MachineObject::dev_id_from_address(print_host, config.opt_string("printhost_port"));
-                MachineObject*    sel    = m_device_manager->get_selected_machine();
-                if (!sel || sel->get_dev_id() != dev_id)
-                    select_machine(effective_agent_id);
-            }
-        }
-        return;
-    }
-
-    // Swap the agent; set_live_printer_agent resets the device selection so the new
-    // agent starts clean (#124).
-    set_live_printer_agent(new_printer_agent);
-
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": printer agent switched to " << effective_agent_id;
-
-    // Start discovery so Python agents can populate the device list via SSDP callback
-    m_agent->start_discovery(true, false);
-
-    // Auto-switch MachineObject (new agent has empty device_info, so always re-select)
-    select_machine(effective_agent_id);
-}
-
-void GUI_App::select_machine(const std::string& agent_id)
-{
-    if (!m_device_manager || !preset_bundle) {
-        BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": no device manager or preset bundle";
-        return;
-    }
-
-    // Get config source (preset or physical printer)
-    const auto& preset = preset_bundle->printers.get_edited_preset();
-    const DynamicPrintConfig* host_cfg = &preset.config;
-
-    std::string print_host = host_cfg->opt_string("print_host");
-    if (print_host.empty()) {
-        return;
-    }
-    std::string port = host_cfg->opt_string("printhost_port");
-
-    // Generate dev_id from host and port
-    std::string dev_id = MachineObject::dev_id_from_address(print_host, port);
-
-    // Check if already exists by dev_id
-    MachineObject* existing = m_device_manager->get_local_machine(dev_id);
-
-    // If not found by dev_id, search by full_addr
-    if (!existing) {
-        auto local_machines = m_device_manager->get_local_machinelist();
-        for (auto& [id, machine] : local_machines) {
-            if (machine && machine->get_dev_ip() == dev_id) {
-                existing = machine;
-                break;
-            }
-        }
-    }
-
-    // If machine doesn't exist, create it first
-    if (!existing) {
-        BBLocalMachine machine;
-        machine.dev_id = dev_id;
-        // We use dev_id as dev_ip to store the address (host:port)
-        machine.dev_ip = dev_id;
-        machine.dev_name = dev_id;
-        machine.printer_type = preset.config.opt_string("printer_model");
-        auto access_code = preset.config.opt_string("printhost_apikey");
-        // Orca expect non empty access code
-        if (access_code.empty()) {
-            access_code = "88888888";
-        }
-
-        existing = m_device_manager->insert_local_device(
-            machine, "lan", "free", "", access_code);
-
-        if (!existing) {
-            BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": failed to create machine dev_id=" << dev_id;
-            return;
-        }
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": created new machine dev_id=" << dev_id;
-    }
-    existing->local_use_ssl = boost::istarts_with(print_host, "https://");
-
-    // Use MonitorPanel::select_machine() to trigger full selection flow
-    // This reuses existing logic for machine switching (UI updates, callbacks, etc.)
-    if (MonitorPanel* monitor = MonitorPanel::if_built()) {
-        monitor->select_machine(dev_id);
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": triggered select_machine for dev_id=" << dev_id;
-    } else if (m_device_manager->set_selected_machine(dev_id)) {
-        // The Device tab's own state is set when the tab is built.
-        MonitorPanel::on_machine_selected(m_device_manager->get_selected_machine());
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": set_selected_machine dev_id=" << dev_id;
-    }
 }
 
 bool GUI_App::dark_mode()
@@ -3694,17 +3158,6 @@ void GUI_App::request_user_logout(const std::string& provider/* = ORCA_CLOUD_PRO
     }
 }
 
-int GUI_App::request_user_unbind(std::string dev_id, const std::string& provider/* = ORCA_CLOUD_PROVIDER*/)
-{
-    int result = -1;
-    if (m_agent) {
-        result = m_agent->unbind(dev_id);
-        BOOST_LOG_TRIVIAL(info) << "request_user_unbind, dev_id = " << dev_id << ", result = " << result;
-        return result;
-    }
-    return result;
-}
-
 std::string GUI_App::handle_web_request(std::string cmd)
 {
     try {
@@ -4172,14 +3625,6 @@ void GUI_App::enable_user_preset_folder(bool enable)
         GUI::wxGetApp().preset_bundle->update_user_presets_directory(DEFAULT_USER_FOLDER_NAME);
         PluginManager::instance().set_cloud_user("");
     }
-}
-
-void GUI_App::on_update_machine_list(wxCommandEvent &evt)
-{
-    /* DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
-     if (dev) {
-         dev->add_user_subscribe();
-     }*/
 }
 
 void GUI_App::on_user_login_handle(wxCommandEvent &evt)
@@ -4743,120 +4188,6 @@ void GUI_App::check_new_version_sf(bool show_tips, int by_user)
     http.perform();
 }
 
-// return true if handled
-bool GUI_App::process_network_msg(std::string dev_id, std::string msg)
-{
-    if (dev_id.empty()) {
-        if (msg == "wait_info") {
-            BOOST_LOG_TRIVIAL(info) << "process_network_msg, wait_info";
-            Slic3r::DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
-            if (!dev)
-                return true;
-            MachineObject* obj = dev->get_selected_machine();
-            if (obj && m_agent)
-                m_agent->install_device_cert(obj->get_dev_id(), obj->is_lan_mode_printer());
-            if (!m_show_error_msgdlg) {
-                MessageDialog msg_dlg(nullptr, _L("Retrieving printer information, please try again later."), "", wxAPPLY | wxOK);
-                m_show_error_msgdlg = true;
-                msg_dlg.ShowModal();
-                m_show_error_msgdlg = false;
-            }
-            return true;
-        }
-        else if (msg == "update_studio") {
-            BOOST_LOG_TRIVIAL(info) << "process_network_msg, update_studio";
-            if (!m_show_error_msgdlg) {
-                MessageDialog msg_dlg(nullptr, _L("Please try updating KLIPSLICE and then try again."), "", wxAPPLY | wxOK);
-                m_show_error_msgdlg = true;
-                msg_dlg.ShowModal();
-                m_show_error_msgdlg = false;
-            }
-            return true;
-        }
-        else if (msg == "update_fixed_studio") {
-            BOOST_LOG_TRIVIAL(info) << "process_network_msg, update_fixed_studio";
-            if (!m_show_error_msgdlg) {
-                MessageDialog msg_dlg(nullptr, _L("Please try updating KLIPSLICE and then try again."), "", wxAPPLY | wxOK);
-                m_show_error_msgdlg = true;
-                msg_dlg.ShowModal();
-                m_show_error_msgdlg = false;
-            }
-            return true;
-        }
-        else if (msg == "cert_expired") {
-            BOOST_LOG_TRIVIAL(info) << "process_network_msg, cert_expired";
-            if (!m_show_error_msgdlg) {
-                MessageDialog msg_dlg(nullptr, _L("The certificate has expired. Please check the time settings or update KLIPSLICE and try again."), "", wxAPPLY | wxOK);
-                m_show_error_msgdlg = true;
-                msg_dlg.ShowModal();
-                m_show_error_msgdlg = false;
-            }
-            return true;
-        }
-        else if (msg == "cert_revoked") {
-            BOOST_LOG_TRIVIAL(info) << "process_network_msg, cert_revoked";
-            if (!m_show_error_msgdlg) {
-                MessageDialog msg_dlg(nullptr, _L("The certificate is no longer valid and the printing functions are unavailable."), "", wxAPPLY | wxOK);
-                m_show_error_msgdlg = true;
-                msg_dlg.ShowModal();
-                m_show_error_msgdlg = false;
-            }
-            return true;
-        }
-        else if (msg == "update_firmware_studio") {
-            BOOST_LOG_TRIVIAL(info) << "process_network_msg, firmware internal error";
-            if (!m_show_error_msgdlg) {
-                MessageDialog msg_dlg(nullptr, _L("Internal error. Please try upgrading the firmware and KLIPSLICE version. If the issue persists, contact support."), "", wxAPPLY | wxOK);
-                m_show_error_msgdlg = true;
-                msg_dlg.ShowModal();
-                m_show_error_msgdlg = false;
-            }
-            return true;
-        }
-        else if (msg == "unsigned_studio") {
-            BOOST_LOG_TRIVIAL(info) << "process_network_msg, unsigned_studio";
-            // Plugin re-emits this on every subscribe retry; latch it so it shows
-            // once per connection episode.
-            if (!m_show_error_msgdlg && !m_unsigned_plugin_warning_shown) {
-                m_unsigned_plugin_warning_shown = true;
-                MessageDialog
-                    msg_dlg(nullptr,
-                            _L("To use KLIPSLICE with Bambu Lab printers, you need to enable LAN mode and Developer mode on your printer.\n\n"
-                               "Please go to your printer's settings and:\n"
-                               "1. Turn on LAN mode\n"
-                               "2. Enable Developer mode\n\n"
-                               "Developer mode allows the printer to work exclusively through local network access, "
-                               "enabling full functionality with KLIPSLICE."),
-                            _L("Network Plug-in Restriction"), wxAPPLY | wxOK);
-                m_show_error_msgdlg = true;
-                msg_dlg.ShowModal();
-                m_show_error_msgdlg = false;
-            }
-            return true;
-        }
-    }
-    else if (msg == "device_cert_installed") {
-        BOOST_LOG_TRIVIAL(info) << "process_network_msg, device_cert_installed";
-        if (Slic3r::DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager()) {
-            if (MachineObject* obj = dev->get_my_machine(dev_id)) {
-                obj->update_device_cert_state(true);
-            }
-        }
-        return true;
-    }
-    else if (msg == "device_cert_uninstalled") {
-        BOOST_LOG_TRIVIAL(info) << "process_network_msg, device_cert_uninstalled";
-        if (Slic3r::DeviceManager *dev = Slic3r::GUI::wxGetApp().getDeviceManager()) {
-            if (MachineObject* obj = dev->get_my_machine(dev_id)){
-                obj->update_device_cert_state(false);
-            }
-        }
-        return true;
-    }
-
-    return false;
-}
-
 //BBS pop up a dialog and download files
 void GUI_App::request_new_version(int by_user)
 {
@@ -5039,36 +4370,6 @@ void GUI_App::show_dialog(wxString msg)
         evt->SetString(msg);
         GUI::wxGetApp().QueueEvent(evt);
         m_info_dialog_content = msg;
-    }
-}
-
-void  GUI_App::push_notification(const MachineObject* obj, wxString msg, wxString title, UserNotificationStyle style)
-{
-    if (this->is_enable_multi_machine())
-    {
-        if (m_device_manager && (obj != m_device_manager->get_selected_machine()))
-        {
-            return;
-        }
-    }
-
-    if (style == UserNotificationStyle::UNS_NORMAL)
-    {
-        if (m_info_dialog_content.empty())
-        {
-            wxCommandEvent* evt = new wxCommandEvent(EVT_SHOW_DIALOG);
-            evt->SetString(msg);
-            GUI::wxGetApp().QueueEvent(evt);
-            m_info_dialog_content = msg;
-        }
-    }
-    else if (style == UserNotificationStyle::UNS_WARNING_CONFIRM)
-    {
-        GUI::wxGetApp().CallAfter([msg, title]
-            {
-                GUI::MessageDialog msg_dlg(nullptr, msg, title, wxICON_WARNING | wxOK);
-                msg_dlg.ShowModal();
-            });
     }
 }
 

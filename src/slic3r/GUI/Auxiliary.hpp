@@ -34,17 +34,18 @@
 #include <wx/spinctrl.h>
 #include <wx/artprov.h>
 #include <wx/webrequest.h>
+#include <wx/wrapsizer.h>
 #include <map>
 #include <vector>
 #include <memory>
 #include "Event.hpp"
 #include "libslic3r/ProjectTask.hpp"
 #include "wxExtensions.hpp"
-#include "slic3r/GUI/DeviceManager.hpp"
-#include "slic3r/GUI/MonitorBasePanel.h"
-#include "slic3r/GUI/StatusPanel.hpp"
-#include "slic3r/GUI/AmsWidgets.hpp"
-#include "Widgets/SideTools.hpp"
+#include "nlohmann/json.hpp"
+#include "slic3r/Utils/json_diff.hpp"
+#include "Widgets/Button.hpp"
+#include "Widgets/ComboBox.hpp"
+#include "Widgets/TextInput.hpp"
 #include "StagedBuild.hpp"
 
 #define AUFILE_GREY700 wxColour(107, 107, 107)

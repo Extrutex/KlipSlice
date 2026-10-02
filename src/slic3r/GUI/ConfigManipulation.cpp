@@ -2,7 +2,6 @@
 #include "ConfigManipulation.hpp"
 #include "I18N.hpp"
 #include "GUI_App.hpp"
-#include "DeviceCore/DevConfigUtil.h"
 #include "format.hpp"
 #include "libslic3r/Config.hpp"
 #include "libslic3r/Model.hpp"
@@ -406,12 +405,9 @@ void ConfigManipulation::update_print_fff_config(DynamicPrintConfig* config, con
     }
 
     if (config->option<ConfigOptionBool>("enable_wrapping_detection")->value) {
-        std::string printer_type = wxGetApp().preset_bundle->printers.get_edited_preset().get_printer_type(wxGetApp().preset_bundle);
-        if (!DevPrinterConfigUtil::support_wrapping_detection(printer_type)) {
-            DynamicPrintConfig new_conf = *config;
-            new_conf.set_key_value("enable_wrapping_detection", new ConfigOptionBool(false));
-            apply(config, &new_conf);
-        }
+        DynamicPrintConfig new_conf = *config;
+        new_conf.set_key_value("enable_wrapping_detection", new ConfigOptionBool(false));
+        apply(config, &new_conf);
     }
 
     double sparse_infill_density = config->option<ConfigOptionPercent>("sparse_infill_density")->value;
@@ -1185,8 +1181,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, in
     
     toggle_line("infill_overhang_angle", config->opt_enum<InfillPattern>("sparse_infill_pattern") == InfillPattern::ipLateralHoneycomb);
 
-    std::string printer_type = wxGetApp().preset_bundle->printers.get_edited_preset().get_printer_type(wxGetApp().preset_bundle);
-    toggle_line("enable_wrapping_detection", DevPrinterConfigUtil::support_wrapping_detection(printer_type));
+    toggle_line("enable_wrapping_detection", false);
 }
 
 void ConfigManipulation::update_print_sla_config(DynamicPrintConfig* config, const bool is_global_config/* = false*/)

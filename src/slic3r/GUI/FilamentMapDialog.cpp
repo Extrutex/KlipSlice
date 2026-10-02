@@ -114,7 +114,7 @@ FilamentMapDialog::FilamentMapDialog(wxWindow                       *parent,
     // Match/Convenience sub-mode is dropped and Auto is presented purely as a filament-saving mode.
     // Orca has no fmmAutoForQuality, so "only saving" collapses to "switch ready" and the remaining
     // auto mode set is { fmmAutoForFlush }.
-    m_fila_switch_ready              = wxGetApp().sidebar().is_fila_switch_ready();
+    m_fila_switch_ready              = false;
     const bool only_saving_mode     = m_fila_switch_ready;
     const bool auto_match_available = machine_synced && !m_fila_switch_ready;
 

@@ -2,7 +2,7 @@
 #define slic3r_GUI_CommonDialogs_hpp_
 
 // Dialogs used outside the device/monitor code (version check, preferences,
-// main frame). Kept free of DeviceManager/AMS headers on purpose.
+// main frame).
 
 #include <string>
 #include <vector>

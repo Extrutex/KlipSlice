@@ -24,6 +24,7 @@
 #include <boost/log/trivial.hpp>
 
 #include "wxExtensions.hpp"
+#include "GUI.hpp"
 #include "GUI_App.hpp"
 #include "GUI_ObjectList.hpp"
 #include "MainFrame.hpp"
@@ -610,11 +611,6 @@ AuFolderPanel::AuFolderPanel(wxWindow *parent, AuxiliaryFolderType type, wxWindo
     wxBoxSizer *sizer_body = new wxBoxSizer(wxVERTICAL);
     wxBoxSizer *sizer_top  = new wxBoxSizer(wxHORIZONTAL);
 
-    StateColor btn_bg_white(std::pair<wxColour, int>(AMS_CONTROL_DISABLE_COLOUR, StateColor::Disabled), std::pair<wxColour, int>(AMS_CONTROL_DISABLE_COLOUR, StateColor::Pressed),
-                            std::pair<wxColour, int>(AMS_CONTROL_DEF_BLOCK_BK_COLOUR, StateColor::Hovered),
-                            std::pair<wxColour, int>(AMS_CONTROL_WHITE_COLOUR, StateColor::Normal));
-
-    StateColor btn_bd_white(std::pair<wxColour, int>(AMS_CONTROL_WHITE_COLOUR, StateColor::Disabled), std::pair<wxColour, int>(wxColour(38, 46, 48), StateColor::Enabled));
     //m_button_add = new AuFile(m_scrolledWindow, fs::path(), "", AddFileButton, -1);
     /*m_button_add->SetBackgroundColor(btn_bg_white);
     m_button_add->SetBorderColor(btn_bd_white);

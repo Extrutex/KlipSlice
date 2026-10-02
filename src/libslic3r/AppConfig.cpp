@@ -357,9 +357,6 @@ void AppConfig::set_defaults()
     if (get("show_hints").empty())
         set_bool("show_hints", false);
 //#endif
-    if (get("enable_multi_machine").empty())
-        set_bool("enable_multi_machine", false);
-
     if (get("drc_bits").empty())
         set("drc_bits", DRC_BITS_DEFAULT_STR);
 
@@ -672,12 +669,6 @@ void AppConfig::set_defaults()
         set_bool("window_buttons_on_left", false);
 #endif
 
-    if (get("use_printer_agents").empty())
-    {
-        // false = legacy behavior using print hosts
-        set_bool("use_printer_agents", false);
-    }
-
     if (get("enable_ota").empty())
     {
         set_bool("enable_ota", false);
@@ -894,22 +885,7 @@ std::string AppConfig::load()
                     m_printer_settings[j_model["machine"].get<std::string>()] = j_model;
                 }
             } else if (it.key() == "local_machines") {
-                for (auto m = it.value().begin(); m != it.value().end(); ++m) {
-                    const auto&    p = m.value();
-                    BBLocalMachine local_machine;
-                    local_machine.dev_id = m.key();
-                    if (p.contains("dev_name"))
-                        local_machine.dev_name = p["dev_name"].get<std::string>();
-                    if (p.contains("dev_ip"))
-                        local_machine.dev_ip = p["dev_ip"].get<std::string>();
-                    if (p.contains("printer_type"))
-                        local_machine.printer_type = p["printer_type"].get<std::string>();
-                    if (p.contains("printer_agent_id"))
-                        local_machine.printer_agent_id = p["printer_agent_id"].get<std::string>();
-                    if (p.contains("access_code"))
-                        local_machine.access_code = p["access_code"].get<std::string>();
-                    m_local_machines[local_machine.dev_id] = local_machine;
-                }
+                // Bambu LAN printers of earlier versions; nothing reads them any more.
             } else {
                 if (it.value().is_object()) {
                     for (auto iter = it.value().begin(); iter != it.value().end(); iter++) {
@@ -1114,16 +1090,6 @@ void AppConfig::save()
     // write machine settings
     for (const auto& preset : m_printer_settings) {
         j["orca_presets"].push_back(preset.second);
-    }
-    for (const auto& local_machine : m_local_machines) {
-        json m_json;
-        m_json["dev_name"]         = local_machine.second.dev_name;
-        m_json["dev_ip"]           = local_machine.second.dev_ip;
-        m_json["printer_type"]     = local_machine.second.printer_type;
-        m_json["printer_agent_id"] = local_machine.second.printer_agent_id;
-        m_json["access_code"]      = local_machine.second.access_code;
-
-        j["local_machines"][local_machine.first] = m_json;
     }
     boost::nowide::ofstream c;
     c.open(path_pid, std::ios::out | std::ios::trunc);

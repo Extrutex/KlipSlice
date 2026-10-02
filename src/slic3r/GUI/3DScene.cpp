@@ -70,7 +70,7 @@ float FullTransparentModdifiedToFixAlpha = 0.3f;
 // Be careful changing this value because it could break thumbnail color due to rounding error!
 // The color rendering on BambuLab's "send to printer" screen relies on the assumption that this color can be accurately rendered by OpenGL,
 // value like 0.18f could not because in C++ (int)(0.18f * 255) == 45 however in OpenGL it renders this as 46
-// which breaks the `SelectMachineDialog::record_edge_pixels_data()` function!
+// which breaks edge pixel readback of the thumbnail!
 float FULL_BLACK_THRESHOLD = 0.2f;
 // Keep depth_tex away from texture unit 0 to avoid sampler-type aliasing with
 // shadow/environment samplers when realistic view is disabled.

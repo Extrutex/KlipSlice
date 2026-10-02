@@ -1,7 +1,6 @@
 get_filename_component(_TEST_NAME ${CMAKE_CURRENT_LIST_DIR} NAME)
 add_executable(${_TEST_NAME}_tests
     ${_TEST_NAME}_tests_main.cpp
-    test_dev_mapping.cpp
     test_filament_bitmap_utils.cpp
     test_scene_raycaster.cpp
     test_lazy.cpp
@@ -17,7 +16,6 @@ add_executable(${_TEST_NAME}_tests
     test_plugin_capabilities_in_use.cpp
     test_plugin_install.cpp
     test_plugin_lifecycle.cpp
-    test_plugin_printer_agent.cpp
     test_printhost.cpp
     test_moonraker_filaments.cpp
     test_slicing_pipeline_bindings.cpp

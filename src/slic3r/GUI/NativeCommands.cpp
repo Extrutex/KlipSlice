@@ -18,7 +18,6 @@
 #include "Plater.hpp"
 #include "PluginsDialog.hpp"
 #include "PlateSettingsDialog.hpp"
-#include "DeviceCore/DevManager.h"
 
 #include <libslic3r/Model.hpp>
 #include <libslic3r/Utils.hpp>

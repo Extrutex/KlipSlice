@@ -46,8 +46,6 @@
 #include "FilamentPickerDialog.hpp"
 #include "wxExtensions.hpp"
 
-#include "DeviceCore/DevManager.h"
-
 // A workaround for a set of issues related to text fitting into gtk widgets:
 #if defined(__WXGTK20__) || defined(__WXGTK3__)
     #include <glib-2.0/glib-object.h>
@@ -347,40 +345,6 @@ wxString PresetComboBox::get_tooltip(const Preset &preset)
 
 wxString PresetComboBox::get_preset_item_name(unsigned int index)
 {
-    if (m_type == Preset::TYPE_PRINTER) {
-        int idx = selected_connected_printer();
-        if (idx < 0) {
-            m_selected_dev_id.clear();
-            return GetString(index);
-        }
-        else {
-            DeviceManager *dev = Slic3r::GUI::wxGetApp().getDeviceManager();
-            if (!dev) {
-                assert(false);
-                m_selected_dev_id.clear();
-                return GetString(index);
-            }
-
-            std::map<std::string, MachineObject *> machine_list = dev->get_my_machine_list();
-            if (machine_list.empty()) {
-                assert(false);
-                m_selected_dev_id.clear();
-                return GetString(index);
-            }
-
-            auto iter = machine_list.begin();
-            std::advance(iter, idx);
-            if (iter != machine_list.end()) {
-                m_selected_dev_id = iter->first;
-                Preset* machine_preset = get_printer_preset(iter->second);
-                if (machine_preset) {
-                    return from_u8(machine_preset->name);
-                }
-            }
-        }
-    }
-
-    m_selected_dev_id.clear();
     return GetString(index);
 }
 
@@ -471,40 +435,6 @@ void PresetComboBox::update()
 void PresetComboBox::update_from_bundle()
 {
     this->update(m_collection->get_selected_preset().name);
-}
-
-void PresetComboBox::add_connected_printers(std::string selected, bool alias_name)
-{
-    DeviceManager *dev = Slic3r::GUI::wxGetApp().getDeviceManager();
-    if (!dev)
-        return;
-
-    std::map<std::string, MachineObject *> machine_list = dev->get_my_machine_list();
-    if (machine_list.empty())
-        return;
-
-    set_label_marker(Append(_L("My Printer"), wxNullBitmap, DD_ITEM_STYLE_SPLIT_ITEM));
-    m_first_printer_idx = GetCount();
-    for (auto iter = machine_list.begin(); iter != machine_list.end(); ++iter) {
-        Preset* printer_preset = get_printer_preset(iter->second);
-        if (!printer_preset)
-            continue;
-        printer_preset->is_visible = true;
-        auto printer_model = printer_preset->config.opt_string("printer_model");
-        boost::replace_all(printer_model, "Bambu Lab ", "");
-        auto text = iter->second->get_dev_name() + " (" + printer_model + ")";
-        int  item_id = Append(from_u8(text), wxNullBitmap, &m_first_printer_idx + std::distance(machine_list.begin(), iter));
-        validate_selection(m_selected_dev_id == iter->first);
-    }
-    m_last_printer_idx = GetCount();
-}
-
-int PresetComboBox::selected_connected_printer() const
-{
-    if (m_first_printer_idx && m_last_selected >= m_first_printer_idx && m_last_selected < m_last_printer_idx) {
-        return reinterpret_cast<int *>(GetClientData(m_last_selected)) - &m_first_printer_idx;
-    }
-    return -1;
 }
 
 int PresetComboBox::selected_ams_filament() const
@@ -786,15 +716,12 @@ PlaterPresetComboBox::PlaterPresetComboBox(wxWindow *parent, Preset::Type preset
             auto fila_type = Preset::remove_suffix_modified(GetValue().ToUTF8().data());
             bool is_official = boost::algorithm::starts_with(fila_type, "Bambu");
             if (is_official) {
-                // Get filament_id from filament_presets. FilamentPickerDialog looks up
-                // filaments_color_codes.json, which is downloaded from Bambu and keyed by the
-                // printer's own ids, so translate our OF id (the "GFA00" fallback is already one).
+                // Get filament_id from filament_presets
                 const std::string& preset_name = m_preset_bundle->filament_presets[m_filament_idx];
                 const Preset* selected_preset = m_collection->find_preset(preset_name);
-                auto* agent = wxGetApp().getAgent();
                 wxString fila_id = "GFA00";
                 if (selected_preset)
-                    fila_id = wxString::FromUTF8(agent ? agent->from_orca_filament_id(selected_preset->filament_id) : selected_preset->filament_id);
+                    fila_id = wxString::FromUTF8(selected_preset->filament_id);
                 FilamentColor fila_color = get_cur_color_info();
 
                 // Show filament picker dialog
@@ -1242,8 +1169,6 @@ void PlaterPresetComboBox::update()
         //if (i + 1 == m_collection->num_default_presets())
         //    set_label_marker(Append(separator(L("System presets")), wxNullBitmap));
     }
-    //if (m_type == Preset::TYPE_PRINTER)
-    //    add_connected_printers("", true);
     // The AMS tray group that Bambu printers add to this list is gone with the Bambu vendor.
     const bool selected_in_ams = false;
     if (m_type == Preset::TYPE_FILAMENT)
@@ -1407,11 +1332,8 @@ void PlaterPresetComboBox::update()
     }
 
     update_selection();
-    if (m_type == Preset::TYPE_FILAMENT) {
-        if (wxGetApp().plater()->is_same_printer_for_connected_and_selected(false)) {
-            update_badge_according_flag();
-        }
-    }
+    if (m_type == Preset::TYPE_FILAMENT)
+        update_badge_according_flag();
     Thaw();
 
     if (!tooltip.IsEmpty()) {

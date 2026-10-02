@@ -34,7 +34,6 @@
 
 #include "GUI_App.hpp"
 #include "GUI_ObjectList.hpp"
-#include "slic3r/Utils/NetworkAgentFactory.hpp"
 #include "slic3r/Utils/PresetUpdater.hpp"
 #include "slic3r/plugin/PluginConfig.hpp"
 #include "slic3r/plugin/PluginManager.hpp"
@@ -50,7 +49,6 @@
 
 #include "Widgets/ComboBox.hpp"
 #include "Widgets/Label.hpp"
-#include "Widgets/MultiNozzleSync.hpp"
 #include "Widgets/SwitchButton.hpp"
 #include "Widgets/TabCtrl.hpp"
 #include "Widgets/ComboBox.hpp"
@@ -60,10 +58,11 @@
 #include "libslic3r/GCode/Thumbnails.hpp"
 #include "WipeTowerDialog.hpp"
 
-#include "DeviceCore/DevManager.h"
+#include "ToolheadNames.hpp"
+#include "NozzleStats.hpp"
 
 #ifdef WIN32
-	#include <Windows.h> // commctrl.h needs it; no longer reached via NetworkAgentFactory.hpp
+	#include <Windows.h> // commctrl.h needs it
 	#include <commctrl.h>
 #endif // WIN32
 
@@ -2464,10 +2463,7 @@ void Tab::on_presets_changed()
     // Instead of PostEvent (EVT_TAB_PRESETS_CHANGED) just call update_presets
     wxGetApp().plater()->sidebar().update_presets(m_type);
 
-    // Check if printer agent needs switching
     if (m_type == Preset::TYPE_PRINTER) {
-        wxGetApp().switch_printer_agent();
-
         // Trigger per-vendor preset update check
         const Preset& printer_preset = m_preset_bundle->printers.get_edited_preset();
         if (printer_preset.vendor) {
@@ -5040,23 +5036,6 @@ void TabPrinter::build_fff()
         optgroup->append_single_option_line("gcode_skip_config_block", "printer_basic_information_advanced#skip-g-code-config-block");
         optgroup->append_single_option_line("pellet_modded_printer", "printer_basic_information_advanced#pellet-modded-printer");
 
-        // "Printer Agent" dropdown - printer_agent is a coString; gui_type routes it to
-        // PrinterAgentChoice instead of a TextCtrl. Rows and values come from the live agent
-        // registry, and the value is stored as the agent-id string.
-        if (wxGetApp().getAgent() != nullptr)
-        {
-            auto registered_printer_agents = NetworkAgentFactory::get_registered_printer_agents();
-            if (!registered_printer_agents.empty())
-            {
-                option = optgroup->get_option("printer_agent");
-                option.opt.gui_type = ConfigOptionDef::GUIType::printer_agent_select;
-                option.opt.width = 3 * Field::def_width_wider() / 2;
-                option.opt.tooltip = L("Select the network agent implementation for printer communication. "
-                    "Available agents are registered at startup.");
-                optgroup->append_single_option_line(option);
-            }
-        }
-
         optgroup->append_single_option_line("use_3mf");
         optgroup->append_single_option_line("enable_power_loss_recovery", "printer_basic_information_advanced#power-loss-recovery");
         //option  = optgroup->get_option("wrapping_exclude_area");
@@ -5821,16 +5800,12 @@ void TabPrinter::on_preset_loaded()
         }
 
         // Changing printer model drops any Filament Track Switch context from the previous
-        // printer; clear both device-derived flags so a switch-less printer never inherits a
-        // stale installed/active state (re-derived by device sync when a printer is connected).
+        // printer; clear both flags so a switch-less printer never inherits a stale
+        // installed/active state.
         if (auto* has_switcher = m_preset_bundle->project_config.opt<ConfigOptionBool>("has_filament_switcher"))
             has_switcher->value = false;
         if (auto* dynamic_map = m_preset_bundle->project_config.opt<ConfigOptionBool>("enable_filament_dynamic_map"))
             dynamic_map->value = false;
-        // Orca: also clear the sidebar switcher status icon on printer-model change (mirrors BBS's
-        // reset_fila_switch on machine change); it re-derives from device sync once a printer connects.
-        if (wxGetApp().plater())
-            wxGetApp().plater()->sidebar().reset_fila_switch();
     }
 
     // Purge mode selection is only meaningful for printers with multiple sub-nozzles per
@@ -5858,8 +5833,6 @@ void TabPrinter::on_preset_loaded()
     // saved presets never carry it, so any preset switch rebuilds the edited config without it — so
     // re-baseline it whenever it is missing (each extruder gets extruder_max_nozzle_count nozzles of its
     // selected volume type), then refresh the badges. Idempotent, so run on every preset load.
-    if (wxGetApp().plater())
-        wxGetApp().plater()->sidebar().enable_nozzle_count_edit(has_multiple_nozzle);
     const auto *nozzle_stats = m_preset_bundle->printers.get_edited_preset().config.option<ConfigOptionStrings>("extruder_nozzle_stats");
     if (nozzle_stats == nullptr || nozzle_stats->values.empty())
         seedExtruderNozzleStats(m_preset_bundle);
@@ -6081,11 +6054,8 @@ void TabPrinter::toggle_options()
     }
 
 
-    if (m_active_page->title() == L("Machine G-code")) {
-        PresetBundle *preset_bundle = wxGetApp().preset_bundle;
-        std::string   printer_type  = preset_bundle->printers.get_edited_preset().get_printer_type(preset_bundle);
-        toggle_line("wrapping_detection_gcode", DevPrinterConfigUtil::support_wrapping_detection(printer_type));
-    }
+    if (m_active_page->title() == L("Machine G-code"))
+        toggle_line("wrapping_detection_gcode", false);
 
     if (m_active_page->title() == L("Multimaterial")) {
         const bool supports_wipe_tower_2 = m_config->opt_enum<WipeTowerType>("wipe_tower_type") == WipeTowerType::Type2;
@@ -7914,24 +7884,6 @@ bool TabPrinter::apply_extruder_cnt_from_cache()
     return false;
 }
 
-void TabPrinter::refresh_printer_agent_dropdown() const
-{
-    auto* choice = dynamic_cast<PrinterAgentChoice*>(get_field("printer_agent"));
-    if (!choice || !choice->getWindow())
-        return;
-
-    const auto agents = NetworkAgentFactory::get_registered_printer_agents();
-    if (agents.empty())
-        return;
-
-    // why: rows live on PrinterAgentChoice now; rebuild them from the live registry and re-select the stored id.
-    const std::string selected_agent = wxGetApp().preset_bundle->printers.get_edited_preset()
-                                                 .config.opt_string("printer_agent");
-    choice->reload_rows();
-    choice->set_value(selected_agent, false);
-    this->GetParent()->Layout();
-}
-
 bool Tab::validate_custom_gcodes()
 {
     if (m_type != Preset::TYPE_FILAMENT &&
@@ -8210,15 +8162,13 @@ std::vector<wxString> Tab::generate_extruder_options()
         return options;
     }
 
-    std::string pt = m_preset_bundle->printers.get_edited_preset().get_printer_type(m_preset_bundle);
     // Orca: the main/deputy toolhead names describe a dual-nozzle printer, where extruder 0 is the
     // left (deputy) and extruder 1 the right (main) nozzle. From three extruders on the tools are
     // interchangeable, so name them by index instead of repeating one side.
     for (int i = 0; i < extruder_nums; ++i) {
         wxString extruder_name = extruder_nums > 2 ? wxString::Format("T%d", i + 1) :
-                                                     _L(DevPrinterConfigUtil::get_toolhead_display_name(
-                                                         pt, (i == 0) ? DEPUTY_EXTRUDER_ID : MAIN_EXTRUDER_ID,
-                                                         ToolHeadComponent::Nozzle, ToolHeadNameCase::TitleCase, true));
+                                                     _L(toolhead_display_name((i == 0) ? DEPUTY_EXTRUDER_ID : MAIN_EXTRUDER_ID,
+                                                                              ToolHeadComponent::Nozzle, ToolHeadNameCase::TitleCase, true));
         NozzleVolumeType volume_type = NozzleVolumeType(nozzle_volumes->values[i]);
 
         if (volume_type == NozzleVolumeType::nvtHybrid) {
@@ -8451,9 +8401,8 @@ void Tab::sync_excluder()
         return;
     }
 
-    std::string pt = m_preset_bundle->printers.get_edited_preset().get_printer_type(m_preset_bundle);
-    std::string active_nozzle_name = DevPrinterConfigUtil::get_toolhead_display_name(pt, active_index, ToolHeadComponent::Nozzle, ToolHeadNameCase::LowerCase);
-    std::string other_nozzle_name  = DevPrinterConfigUtil::get_toolhead_display_name(pt, 1 - active_index, ToolHeadComponent::Nozzle, ToolHeadNameCase::LowerCase);
+    std::string active_nozzle_name = toolhead_display_name(active_index, ToolHeadComponent::Nozzle, ToolHeadNameCase::LowerCase);
+    std::string other_nozzle_name  = toolhead_display_name(1 - active_index, ToolHeadComponent::Nozzle, ToolHeadNameCase::LowerCase);
     wxString title  = wxString::Format(_L("Modify parameters of %s"), _L(active_nozzle_name));
     wxString header = wxString::Format(_L("Do you want to modify the following parameters of the %s to that of the %s?"),
                                        _L(active_nozzle_name), _L(other_nozzle_name));

@@ -63,11 +63,7 @@ class PresetBundle;
 class PresetUpdater;
 class ModelObject;
 class Model;
-class DeviceManager;
-class MachineObject;
 class NetworkAgent;
-class IPrinterAgent;
-class TaskManager;
 
 // Same typedef as in bambu_networking.hpp, so this header need not include it.
 typedef std::function<bool()> WasCancelledFn;
@@ -303,8 +299,6 @@ private:
 
     //BBS
     std::atomic<bool> m_is_closing {false};
-    Slic3r::DeviceManager* m_device_manager { nullptr };
-    Slic3r::TaskManager* m_task_manager { nullptr };
     NetworkAgent* m_agent { nullptr };
     std::map<std::string, std::string> need_delete_presets;   // store setting ids of preset
     std::vector<bool> m_create_preset_blocked { false, false, false, false, false, false }; // excceed limit
@@ -343,14 +337,11 @@ private:
     bool             m_show_gcode_window{true};
     boost::thread    m_check_network_thread;
 public:
-    //try again when subscription fails
-    void            on_start_subscribe_again(std::string dev_id);
     void            reset_unsigned_plugin_warning() { m_unsigned_plugin_warning_shown = false; }
     std::string     get_local_models_path();
     bool            OnInit() override;
     int             OnExit() override;
     bool            initialized() const { return m_initialized; }
-    inline bool     is_enable_multi_machine() { return this->app_config&& this->app_config->get("enable_multi_machine") == "true"; }
 #ifdef SLIC3R_CAD
     inline bool     is_enable_cad_feature() { return this->app_config && this->app_config->get_bool("enable_cad_feature"); }
     inline bool     is_auto_close_sketch_loops() { return !this->app_config
@@ -366,18 +357,7 @@ public:
 
     void show_message_box(std::string msg) { wxMessageBox(msg); }
     EAppMode get_app_mode() const { return m_app_mode; }
-    Slic3r::DeviceManager* getDeviceManager() { return m_device_manager; }
-    bool                   is_blocking_printing(MachineObject *obj_ = nullptr);
-    Slic3r::TaskManager*   getTaskManager() { return m_task_manager; }
     NetworkAgent* getAgent() { return m_agent; }
-
-    // Reconcile the live printer agent with the stored preset selection.
-    void switch_printer_agent();
-
-    std::string resolve_printer_agent_id(const std::string& stored_id);
-    // ORCA TODO: in the future, bbl presets should specify "bbl" printer agent id
-    // then, all resolve and canonical would just be ORCA<->""
-    std::string canonical_printer_agent_id(const std::string& picked_id);
 
     FilamentColorCodeQuery* get_filament_color_code_query();
     bool is_editor() const { return m_app_mode == EAppMode::Editor; }
@@ -511,7 +491,6 @@ public:
     void            request_user_handle(int online_login = 0, const std::string& provider = ORCA_CLOUD_PROVIDER);
     void            request_user_logout(const std::string& provider = ORCA_CLOUD_PROVIDER);
     void            post_logout_to_webview(const std::string& provider);
-    int             request_user_unbind(std::string dev_id, const std::string& provider = ORCA_CLOUD_PROVIDER);
     std::string     handle_web_request(std::string cmd);
     void            handle_script_message(std::string msg, const std::string& provider = ORCA_CLOUD_PROVIDER);
     void            download_project(std::string project_id);
@@ -521,7 +500,6 @@ public:
 
     void            handle_http_error(unsigned int status, std::string body, const std::string& provider = "");
     void            on_http_error(wxCommandEvent &evt);
-    void            on_update_machine_list(wxCommandEvent& evt);
     void            on_user_login(wxCommandEvent &evt);
     void            on_user_login_handle(wxCommandEvent& evt);
     void            enable_user_preset_folder(bool enable);
@@ -529,13 +507,11 @@ public:
     // BBS
     bool            is_studio_active();
     void            reset_to_active();
-    bool            m_studio_active = true;
     std::chrono::system_clock::time_point  last_active_point;
 
     void            check_update(bool show_tips, int by_user);
     void            check_new_version(bool show_tips = false, int by_user = 0);
     void            check_new_version_sf(bool show_tips = false, int by_user = 0);
-    bool            process_network_msg(std::string dev_id, std::string msg);
     void            request_new_version(int by_user);
     void            enter_force_upgrade();
     void            set_skip_version(bool skip = true);
@@ -543,7 +519,6 @@ public:
     static std::string format_display_version();
     std::string     format_IP(const std::string& ip);
     void            show_dialog(wxString msg);
-    void            push_notification(const MachineObject* obj, wxString msg, wxString title = wxEmptyString, UserNotificationStyle style = UserNotificationStyle::UNS_NORMAL);
     void            reload_settings();
     void            remove_user_presets();
 
@@ -780,16 +755,8 @@ private:
     void            window_pos_sanitize(wxTopLevelWindow* window);
     void            window_pos_center(wxTopLevelWindow *window);
 
-    // Dynamic printer agent selection - internal helpers for switch_printer_agent
-    // and the plugin load/unload callbacks (init_plugin_gui_wiring).
-    void refresh_printer_agent_dropdown();
-    void set_live_printer_agent(std::shared_ptr<IPrinterAgent> agent); // null clears the selection
-
     bool            config_wizard_startup();
 	void            check_updates(const bool verbose);
-
-    // select or add MachineObject
-    void            select_machine(const std::string& agent_id);
 
     bool                    m_init_app_config_from_older { false };
     bool                    m_datadir_redefined { false };
@@ -801,7 +768,6 @@ private:
 };
 
 DECLARE_APP(GUI_App)
-wxDECLARE_EVENT(EVT_CONNECT_LAN_MODE_PRINT, wxCommandEvent);
 wxDECLARE_EVENT(EVT_UPDATE_PRESET_BUNDLE, wxCommandEvent);
 wxDECLARE_EVENT(EVT_UPDATE_BUNDLE_COMPLETE, wxCommandEvent);
 

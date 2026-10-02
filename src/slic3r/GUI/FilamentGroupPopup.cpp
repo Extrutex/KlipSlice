@@ -265,18 +265,14 @@ void FilamentGroupPopup::Init()
 void FilamentGroupPopup::tryPopup(Plater* plater,PartPlate* partplate,bool slice_all)
 {
     if (should_pop_up()) {
-        bool connect_status = plater->get_machine_sync_status();
         this->partplate_ref = partplate;
         this->plater_ref = plater;
         this->m_sync_plate = true;
         this->m_slice_all = slice_all;
         if (m_active) {
-            if (m_connected != connect_status) { Init(); }
-            m_connected = connect_status;
             ResetTimer();
         }
         else {
-            m_connected = connect_status;
             m_active = true;
             Init();
             ResetTimer();
@@ -459,15 +455,8 @@ void FilamentGroupPopup::OnSmartFilamentToggle(wxCommandEvent &event)
 
 void FilamentGroupPopup::UpdateSmartFilamentSection()
 {
-    bool show = wxGetApp().sidebar().is_fila_switch_ready();
-    m_smart_filament_panel->Show(show);
-    m_smart_filament_spacer->Show(show);
-
-    if (show) {
-        auto &config           = wxGetApp().preset_bundle->project_config;
-        auto *dynamic_filament = dynamic_cast<ConfigOptionBool *>(config.option("enable_filament_dynamic_map"));
-        if (dynamic_filament) { m_smart_filament_switch->SetValue(dynamic_filament->value); }
-    }
+    m_smart_filament_panel->Show(false);
+    m_smart_filament_spacer->Show(false);
 }
 
 }} // namespace Slic3r::GUI
