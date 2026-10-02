@@ -349,6 +349,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/PresetComboBoxes.hpp
     GUI/PresetHints.cpp
     GUI/PresetHints.hpp
+    GUI/PrinterStatusStrip.cpp
+    GUI/PrinterStatusStrip.hpp
     GUI/PrinterWebView.cpp
     GUI/PrinterWebViewHandler.cpp
     GUI/PrinterWebViewHandler.hpp
@@ -586,6 +588,8 @@ set(SLIC3R_GUI_SOURCES
     Utils/Moonraker.hpp
     Utils/MoonrakerFilaments.cpp
     Utils/MoonrakerFilaments.hpp
+    Utils/MoonrakerStatus.cpp
+    Utils/MoonrakerStatus.hpp
     Utils/PresetUpdater.cpp
     Utils/PresetUpdater.hpp
     Utils/PrintHost.cpp
