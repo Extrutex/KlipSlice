@@ -192,6 +192,7 @@ std::string BackgroundSlicingProcess::output_filepath_for_project(const boost::f
 void BackgroundSlicingProcess::process_fff()
 {
     assert(m_print == m_fff_print);
+    PresetBundle& preset_bundle   = *wxGetApp().preset_bundle;
     m_fff_print->is_BBL_printer() = false;
     // BBS: add the logic to process from an existed gcode file
     if (m_print->finished()) {
