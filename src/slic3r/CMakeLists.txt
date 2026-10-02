@@ -664,8 +664,6 @@ set(SLIC3R_GUI_SOURCES
     Utils/FileHelp.hpp
     Utils/FixModelByCgal.cpp
     Utils/FixModelByCgal.hpp
-    Utils/Flashforge.cpp
-    Utils/Flashforge.hpp
     Utils/FontConfigHelp.cpp
     Utils/FontConfigHelp.hpp
     Utils/HexFile.cpp
@@ -708,12 +706,6 @@ set(SLIC3R_GUI_SOURCES
     Utils/Profile.hpp
     Utils/RaycastManager.cpp
     Utils/RaycastManager.hpp
-    Utils/Serial.cpp
-    Utils/Serial.hpp
-    Utils/SerialMessage.hpp
-    Utils/SerialMessageType.hpp
-    Utils/TCPConsole.cpp
-    Utils/TCPConsole.hpp
     Utils/UndoRedo.cpp
     Utils/UndoRedo.hpp
     Utils/WebSocketClient.hpp

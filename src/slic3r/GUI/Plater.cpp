@@ -19934,15 +19934,10 @@ void Plater::send_gcode_legacy(int plate_idx, Export3mfProgressFn proFn)
     }
 
     {
-        auto        preset_bundle = wxGetApp().preset_bundle;
         auto        config        = get_app_config();
 
         const auto host_type_opt        = physical_printer_config->option<ConfigOptionEnum<PrintHostType>>("host_type");
-        const auto host_type            = host_type_opt != nullptr ? host_type_opt->value : htElegooLink;
-        const auto* ff_serial_opt       = physical_printer_config->option<ConfigOptionString>("flashforge_serial_number");
-        const auto* ff_code_opt         = physical_printer_config->option<ConfigOptionString>("printhost_apikey");
-        const bool flashforge_local_api = host_type == htFlashforge && ff_serial_opt != nullptr && !ff_serial_opt->value.empty() &&
-                                          ff_code_opt != nullptr && !ff_code_opt->value.empty();
+        const auto host_type            = host_type_opt != nullptr ? host_type_opt->value : htMoonraker;
 
         std::unique_ptr<PrintHostSendDialog> pDlg;
         if (host_type == htElegooLink) {
@@ -19954,76 +19949,6 @@ void Plater::send_gcode_legacy(int plate_idx, Export3mfProgressFn proFn)
                                                                  storage_paths, storage_names,
                                                                  config->get_bool("open_device_tab_post_upload"),
                                                                  upload_job.printhost.get());
-        } else if (flashforge_local_api) {
-            auto* flashforge_host = dynamic_cast<Flashforge*>(upload_job.printhost.get());
-            if (flashforge_host == nullptr) {
-                show_error(this, _L("Flashforge host is not available."), false);
-                return;
-            }
-
-            std::vector<FlashforgeMaterialSlot> slots;
-            bool                                supports_material_station = false;
-            {
-                wxBusyCursor wait;
-                wxString     msg;
-                if (!flashforge_host->fetch_material_slots(slots, &supports_material_station, msg)) {
-                    show_error(this, msg.empty() ? _L("Unable to log in to the Flashforge printer.") : msg, false);
-                    return;
-                }
-            }
-
-            std::vector<FilamentInfo> project_filaments;
-            PlateDataPtrs               plate_data_list;
-            DynamicPrintConfig          cfg                 = wxGetApp().preset_bundle->full_config();
-            const auto*                 filament_color      = dynamic_cast<const ConfigOptionStrings*>(cfg.option("filament_colour"));
-            const auto*                 filament_id_opt     = dynamic_cast<const ConfigOptionStrings*>(cfg.option("filament_ids"));
-            auto enrich_project_filaments = [&](std::vector<FilamentInfo>& filaments) {
-                for (auto& filament : filaments) {
-                    if (filament.id < 0)
-                        continue;
-
-                    std::string display_filament_type;
-                    try {
-                        filament.type = cfg.get_filament_type(display_filament_type, filament.id);
-                    } catch (...) {
-                    }
-
-                    if (filament.type.empty())
-                        filament.type = display_filament_type;
-                    if (filament.type.empty())
-                        filament.type = "Unknown";
-
-                    filament.filament_id = filament_id_opt ? filament_id_opt->get_at(static_cast<size_t>(filament.id)) : "";
-                    filament.color       = filament_color ? filament_color->get_at(static_cast<size_t>(filament.id)) : "#FFFFFF";
-                    if (filament.color.empty())
-                        filament.color = "#FFFFFF";
-                }
-            };
-
-            p->partplate_list.store_to_3mf_structure(plate_data_list, true, plate_idx);
-            PlateData* selected_plate_data = (resolved_plate_idx >= 0 && resolved_plate_idx < static_cast<int>(plate_data_list.size())) ? plate_data_list[resolved_plate_idx] : nullptr;
-            if (selected_plate_data == nullptr && !plate_data_list.empty())
-                selected_plate_data = plate_data_list.front();
-
-            if (selected_plate_data != nullptr)
-                project_filaments = selected_plate_data->slice_filaments_info;
-
-            if (project_filaments.empty()) {
-                if (PartPlate* plate = get_partplate_list().get_plate(resolved_plate_idx); plate != nullptr)
-                    project_filaments = plate->get_slice_filaments_info();
-            }
-
-            if (!project_filaments.empty())
-                enrich_project_filaments(project_filaments);
-            release_PlateData_list(plate_data_list);
-
-            pDlg = std::make_unique<FlashforgePrintHostSendDialog>(default_output_file, upload_job.printhost->get_post_upload_actions(), groups,
-                                                                   storage_paths, storage_names,
-                                                                   config->get_bool("open_device_tab_post_upload"),
-                                                                   flashforge_host,
-                                                                   supports_material_station,
-                                                                   std::move(slots),
-                                                                   project_filaments);
         } else {
             pDlg = std::make_unique<PrintHostSendDialog>(default_output_file, upload_job.printhost->get_post_upload_actions(), groups,
                                                          storage_paths, storage_names, config->get_bool("open_device_tab_post_upload"));

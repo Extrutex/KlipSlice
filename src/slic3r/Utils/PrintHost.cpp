@@ -22,7 +22,6 @@
 #include "../GUI/PrintHostDialogs.hpp"
 #include "../GUI/MainFrame.hpp"
 #include "slic3r/plugin/PluginManager.hpp"
-#include "Flashforge.hpp"
 #include "ElegooLink.hpp"
 #include "Moonraker.hpp"
 
@@ -55,7 +54,6 @@ PrintHost* PrintHost::get_print_host(DynamicPrintConfig *config)
             case htPrusaLink: return new PrusaLink(config);
             case htPrusaConnect: return new PrusaConnect(config);
             case htCrealityPrint:    return new CrealityPrint(config);
-            case htFlashforge: return new Flashforge(config);
             case htElegooLink: return new ElegooLink(config);
             case htMoonraker: return new Moonraker(config);
             default:          return nullptr;

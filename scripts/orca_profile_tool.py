@@ -152,7 +152,7 @@ NON_PROFILE_FILES = {
 # checks parity. Used by normalize and check. Active options and
 # legacy aliases that the loader migrates do not belong here.
 OBSOLETE_KEYS = {
-    "scan_first_layer", "bbl_calib_mark_logo",
+    "scan_first_layer", "bbl_calib_mark_logo", "flashforge_serial_number",
     "acceleration", "scale", "rotate", "duplicate", "duplicate_grid",
     "bed_size", "print_center", "g0", "wipe_tower_per_color_wipe",
     "support_sharp_tails", "support_remove_small_overhangs", "support_with_sheath",
