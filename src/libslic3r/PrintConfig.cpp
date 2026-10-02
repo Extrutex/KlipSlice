@@ -696,6 +696,28 @@ std::set<NozzleVolumeType> get_extruder_supported_nozzle_volume_types(const Dyna
     return supported_types;
 }
 
+BedType default_bed_type_from_config(const ConfigBase &config)
+{
+    const ConfigOption *opt = config.option("default_bed_type");
+    if (opt == nullptr || opt->type() != coString)
+        return btPEI;
+    const std::string &str_bed_type = static_cast<const ConfigOptionString*>(opt)->value;
+    if (str_bed_type.empty())
+        return btPEI;
+
+    BedType bed_type;
+    if (ConfigOptionEnum<BedType>::from_string(str_bed_type, bed_type) && bed_type > btDefault && bed_type < btCount)
+        return bed_type;
+
+    // Legacy numeric format.
+    const int bed_type_value = atoi(str_bed_type.c_str());
+    if (bed_type_value > 0 && bed_type_value < btCount)
+        return BedType(bed_type_value);
+
+    BOOST_LOG_TRIVIAL(error) << "default_bed_type: invalid bed type: " << str_bed_type;
+    return btPEI;
+}
+
 std::string get_nozzle_volume_type_string(NozzleVolumeType nozzle_volume_type)
 {
     if (nozzle_volume_type > nvtMaxNozzleVolumeType) {

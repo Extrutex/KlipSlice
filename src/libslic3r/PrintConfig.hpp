@@ -621,6 +621,12 @@ static std::string bed_type_to_gcode_string(const BedType type)
     return type_str;
 }
 
+// The plate a printer profile prints on when nothing selects one: its default_bed_type, given either
+// as a BedType key ("Textured PEI Plate") or as the legacy numeric value. Missing or invalid gives
+// the high temp plate (btPEI), as the GUI falls back to. This is the string half of Preset::get_default_bed_type, shared with the
+// CLI so a headless run resolves the same plate the GUI shows for the same printer profile.
+BedType default_bed_type_from_config(const ConfigBase &config);
+
 static std::string get_bed_temp_key(const BedType type)
 {
     if (type == btSuperTack)

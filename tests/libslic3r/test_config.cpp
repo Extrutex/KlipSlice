@@ -1341,3 +1341,33 @@ TEST_CASE("A stored print host type loads as Moonraker", "[Config]")
     config.set_deserialize_strict("host_type", stored);
     CHECK(config.opt_enum<PrintHostType>("host_type") == htMoonraker);
 }
+
+TEST_CASE("The default bed type of a printer profile resolves the way the GUI selects it", "[Config][BedType]")
+{
+    DynamicPrintConfig config;
+
+    SECTION("a bed type key") {
+        config.set_key_value("default_bed_type", new ConfigOptionString("Textured PEI Plate"));
+        CHECK(default_bed_type_from_config(config) == btPTE);
+    }
+    SECTION("the legacy numeric form") {
+        config.set_key_value("default_bed_type", new ConfigOptionString(std::to_string(int(btEP))));
+        CHECK(default_bed_type_from_config(config) == btEP);
+    }
+    SECTION("no default at all falls back to the high temp plate, not the option's Cool Plate default") {
+        CHECK(default_bed_type_from_config(config) == btPEI);
+        config.set_key_value("default_bed_type", new ConfigOptionString(""));
+        CHECK(default_bed_type_from_config(config) == btPEI);
+    }
+    SECTION("an invalid value falls back to the high temp plate") {
+        config.set_key_value("default_bed_type", new ConfigOptionString("Lava Plate"));
+        CHECK(default_bed_type_from_config(config) == btPEI);
+        config.set_key_value("default_bed_type", new ConfigOptionString("99"));
+        CHECK(default_bed_type_from_config(config) == btPEI);
+    }
+    SECTION("the value is never the Cool Plate the curr_bed_type option defaults to, unless the profile says so") {
+        CHECK(print_config_def.get("curr_bed_type")->default_value->getInt() == int(btPC));
+        config.set_key_value("default_bed_type", new ConfigOptionString("Cool Plate"));
+        CHECK(default_bed_type_from_config(config) == btPC);
+    }
+}

@@ -4061,6 +4061,16 @@ int CLI::run(int argc, char **argv)
     // (command line options override --load files)
     m_print_config.apply(m_extra_config, true);
 
+    // No bed type from the project or the command line: take the printer profile's default, as the
+    // GUI does when it selects a printer (Preset::get_default_bed_type). The option's own default is
+    // the Cool Plate, which would print with that plate's bed temperature on whatever plate the
+    // printer really has.
+    if (!m_print_config.has("curr_bed_type")) {
+        const BedType bed_type = default_bed_type_from_config(m_print_config);
+        m_print_config.set_key_value("curr_bed_type", new ConfigOptionEnum<BedType>(bed_type));
+        BOOST_LOG_TRIVIAL(info) << "no bed type given, using the printer profile's default: " << bed_type_to_gcode_string(bed_type);
+    }
+
     if (!cli_override_before.empty()) {
         std::vector<std::string> &columns = m_print_config.option<ConfigOptionStrings>("different_settings_to_system", true)->values;
         auto owned_by = [](const std::vector<std::string> &options, const std::string &key) {
