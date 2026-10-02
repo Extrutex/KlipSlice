@@ -6598,7 +6598,7 @@ int CLI::run(int argc, char **argv)
                                                 std::vector<int> result_filaments;
                                                 //result_filaments.reserve(conflict_filaments.size());
                                                 std::set_intersection(conflict_filament_vector.begin(), conflict_filament_vector.end(), unprintable_filament_vec[index].begin(),
-                                                    unprintable_filament_vec[index].end(), insert_iterator<vector<int>>(result_filaments, result_filaments.begin()));
+                                                    unprintable_filament_vec[index].end(), std::insert_iterator<std::vector<int>>(result_filaments, result_filaments.begin()));
                                                 conflict_filament_vector = result_filaments;
                                             }
                                         }

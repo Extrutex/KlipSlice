@@ -3023,34 +3023,6 @@ void GUI_App::load_gcode(wxWindow* parent, wxString& input_file) const
         input_file = dialog.GetPath();
 }
 
-wxString GUI_App::transition_tridid(int trid_id) const
-{
-    if (trid_id == VIRTUAL_TRAY_MAIN_ID || trid_id == VIRTUAL_TRAY_DEPUTY_ID)
-    {
-        assert(0);
-        return _L("Ext");
-    }
-
-    wxString maping_dict[] = { "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z" };
-
-    if (trid_id >= 128 * 4) {
-        trid_id -= 128 * 4;
-        int id_index = trid_id / 4;
-        return wxString::Format("%s", maping_dict[id_index]);
-    }
-    else if (trid_id >= 0x80 && trid_id <= 0x87) { // n3s
-        const char base = 'A' + (trid_id - 128);
-        wxString prefix("HT-");
-        prefix.append(base);
-        return prefix;
-    }
-    else {
-        int id_index = std::clamp((int)ceil(trid_id / 4), 0, 25);
-        int id_suffix = trid_id % 4 + 1;
-        return wxString::Format("%s%d", maping_dict[id_index], id_suffix);
-    }
-}
-
 //BBS
 void GUI_App::request_login(bool show_user_info, const std::string& provider/* = ORCA_CLOUD_PROVIDER*/)
 {

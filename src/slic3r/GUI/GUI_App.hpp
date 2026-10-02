@@ -477,7 +477,6 @@ public:
     void            import_zip(wxWindow* parent, wxString& input_file) const;
     void            load_gcode(wxWindow* parent, wxString& input_file) const;
 
-    wxString        transition_tridid(int trid_id) const;
     void            ShowUserGuide();
     void            ShowUserLogin(bool show = true, const std::string& provider = ORCA_CLOUD_PROVIDER);
     void            ShowOnlyFilament();
