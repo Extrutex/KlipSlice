@@ -2,15 +2,51 @@
   <img src="docs/images/hero.svg" alt="KLIPSLICE: a slicer for Klipper printers, and only for Klipper printers." width="100%">
 </p>
 
+<p align="center">
+  <a href="https://github.com/Extrutex/KlipSlice/actions/workflows/build_all.yml?query=branch%3Adev"><img src="https://github.com/Extrutex/KlipSlice/actions/workflows/build_all.yml/badge.svg?branch=dev" alt="Build all on dev"></a>
+  <a href="LICENSE.txt"><img src="https://img.shields.io/badge/license-AGPL--3.0-4db9ff?labelColor=0f1317" alt="License AGPL-3.0"></a>
+  <img src="https://img.shields.io/badge/G--code-klipper-eef3f6?labelColor=0f1317" alt="G-code flavor: klipper">
+  <img src="https://img.shields.io/badge/print%20host-moonraker-eef3f6?labelColor=0f1317" alt="Print host: Moonraker">
+  <img src="https://img.shields.io/badge/status-pre--alpha-ffc56a?labelColor=0f1317" alt="Status: pre-alpha">
+</p>
+
 KLIPSLICE is an open-source 3D printing slicer built exclusively for printers that
 run real [Klipper](https://www.klipper3d.org/). It is a hard fork of OrcaSlicer with
 every path that does not lead to a Klipper machine removed: one G-code flavor, one
 print host, and printer profiles only for machines that verifiably run Klipper.
 
-**Documentation:** <https://extrutex.github.io/KlipSlice-Wiki/> (English and German)
+**Documentation:** <https://extrutex.github.io/KlipSlice-Wiki/> (English and German) ·
+in-repo design notes in [`docs/`](docs/)
 
 > KLIPSLICE is an independent project and is not affiliated with or
 > endorsed by the Klipper project.
+
+## At a glance
+
+<table>
+  <tr>
+    <th align="left" width="33%">Machine</th>
+    <th align="left" width="33%">Printer side</th>
+    <th align="left" width="34%">Slicing</th>
+  </tr>
+  <tr valign="top">
+    <td>
+      G-code flavor is always <code>klipper</code>; other flavors are converted on load.<br><br>
+      174 printer models with a system profile, each backed by evidence that the machine runs Klipper.<br><br>
+      Self-built and converted printers start from <b>Generic Klipper Printer</b> or the <b>Create printer</b> dialog.
+    </td>
+    <td>
+      <a href="https://moonraker.readthedocs.io/">Moonraker</a> is the only print host: upload, print start, discovery on the LAN.<br><br>
+      The Device tab is the printer's own Mainsail or Fluidd, with a live status line above it.<br><br>
+      <b>Sync filaments</b> reads the filament changer: AFC, Happy Hare, Qidi box, Snapmaker.
+    </td>
+    <td>
+      The OrcaSlicer engine: Arachne walls, tree and normal supports, multi-material, calibration prints.<br><br>
+      Precise outer wall as a <b>toolpath shift</b>, so thin features keep their thickness.<br><br>
+      Layer progress reported to Klipper's <code>print_stats</code>, no Bambu branches in the G-code path.
+    </td>
+  </tr>
+</table>
 
 ## Why a Klipper-only slicer
 
@@ -25,36 +61,46 @@ checked against.
   <img src="docs/images/envelope.svg" alt="Velocity over time for one move: the profile printer.cfg allows at 10000 mm/s², the profile the G-code requested with M204 S20000, and the hatched region above max_velocity that Klipper executes unchanged." width="100%">
 </p>
 
-## Where the G-code goes
+## The printer side
 
-Moonraker is the only print host. G-code upload, print start and printer
-discovery on the LAN all go through Moonraker's own API and its
-`_moonraker._tcp` Bonjour announcement; there are no vendor protocols and no cloud.
+There is no device model inside the slicer and no agent mirroring the printer. Each
+view asks Moonraker when it needs an answer, and the printer's own web UI does
+everything richer than a status line. The full design is in
+[`docs/HLSD/moonraker-device.md`](docs/HLSD/moonraker-device.md); the user-facing
+setup is in [`docs/klipslice/printer-connection.md`](docs/klipslice/printer-connection.md).
+
+<p align="center">
+  <img src="docs/images/device.svg" alt="KLIPSLICE talks to the printer only through Moonraker's HTTP API: the Device tab shows the printer's own web UI, the status strip polls the printer objects, the sidebar reads the filament changer, and print or send upload the G-code and start the print." width="100%">
+</p>
+
+- **Device tab.** Mainsail or Fluidd, loaded from the printer host with the API key
+  injected. Above it one line: link state, what the printer is doing, nozzle and bed
+  temperatures, polled every 2 s.
+- **Sync filaments.** The sidebar button reads the changer the printer actually has
+  (found through `/printer/objects/list`), maps every loaded slot to a filament
+  preset by vendor, material and closest colour, and asks before it replaces the
+  project's filament list.
+- **Print and Send.** One upload, one print start. On Windows a `.local` host name is
+  resolved once through mDNS and reused for the whole upload.
 
 <p align="center">
   <img src="docs/images/pipeline.svg" alt="Data flow from KLIPSLICE through the .gcode file and Moonraker's HTTP API to Klipper and the steppers, with discovery and the planned printer.cfg sync drawn as return paths." width="100%">
 </p>
 
-## What KLIPSLICE is
+## Walls that keep thin features
 
-- **Klipper only.** The G-code flavor is always `klipper`. Older projects and
-  presets with another flavor are converted when they load.
-- **Moonraker is the only print host.** Upload and print start go through
-  [Moonraker](https://moonraker.readthedocs.io/). The host protocols inherited
-  from OrcaSlicer (OctoPrint, PrusaLink, Duet, Creality, Elegoo, Flashforge and
-  the cloud services) are removed, and so are the Bambu network plug-in, login,
-  cloud provider, model mall and telemetry.
-- **Profiles only for printers that verifiably run Klipper.** 174 printer models
-  ship with a system profile, each one backed by per-model evidence (stock
-  Klipper, Klipper via an established community mod, or a self-built Klipper
-  machine) in
-  [`docs/klipslice/printer-firmware.json`](docs/klipslice/printer-firmware.json).
-- **Your own printer is first-class.** Self-built and converted machines (for
-  example a Marlin printer converted to Klipper) are set up with the
-  **Generic Klipper Printer** profile or through the **Create printer** dialog.
-  The flavor is always Klipper, the host always Moonraker.
-- **Side by side with OrcaSlicer.** KLIPSLICE uses its own binaries and its own
-  data directory and never reads or changes an installed OrcaSlicer.
+OrcaSlicer's precise outer wall shrinks the outline before the walls are generated, so
+every thin feature loses that width and features just above the minimum feature size
+are not printed at all. KLIPSLICE adds a second method, `toolpath_shift`: the walls
+are generated on the true outline and only the walls behind the outer wall move
+inwards, as far as the wall has room. Thick walls come out the same with both methods.
+
+<p align="center">
+  <img src="docs/images/precise-wall.svg" alt="Cross-sections of a wall with room behind its beads and of a thin rib, each with the outline-shrink and the toolpath-shift method of the precise outer wall: the thick wall comes out the same, the rib is dropped by outline shrink and printed at true thickness by toolpath shift." width="100%">
+</p>
+
+The setting is **Quality › Precise wall method**. The default stays `outline_shrink`,
+so existing projects slice as before.
 
 ## The kinematics KLIPSLICE knows
 
@@ -89,10 +135,26 @@ what moves, what stands still and which motors share a move; the full notes are 
   </tr>
 </table>
 
-## Vision
+## What left with the fork
 
-KLIPSLICE aims at machine-aware slicing: a slicer that knows the machine it
-slices for. The following is **roadmap, not implemented yet**:
+| Gone | Stays |
+|---|---|
+| OctoPrint, PrusaLink, Duet, Creality, Elegoo, Flashforge and the cloud print hosts | Moonraker, with Bonjour discovery |
+| The Bambu device model, printer agents, AMS mapping and the multi-machine pages | One status line and the printer's own web UI |
+| Bambu network plug-in, login, model mall, telemetry, FFmpeg camera streams | The slicing engine, presets and calibration prints |
+| Profiles for printers that do not run Klipper | 174 profiles with per-model evidence in [`printer-firmware.json`](docs/klipslice/printer-firmware.json) |
+
+KLIPSLICE uses its own binaries and its own data directory and never reads or
+changes an installed OrcaSlicer.
+
+## Status and roadmap
+
+**Pre-alpha.** There are no releases and no installers yet. Settings, profiles
+and file formats can still change without migration. Do not rely on KLIPSLICE for
+prints that matter. Every push is built for Windows, macOS and Linux and runs the
+unit tests.
+
+Planned, not implemented:
 
 - **Machine sync.** Read the live Klipper configuration through Moonraker
   (`max_accel`, `max_velocity`, `square_corner_velocity`,
@@ -102,14 +164,6 @@ slices for. The following is **roadmap, not implemented yet**:
   model instead of a generic approximation.
 - **Native adaptive mesh.** Probe only the area that is actually printed, without
   separate macro packages.
-
-## Status
-
-**Pre-alpha.** There are no releases and no installers yet. Settings, profiles
-and file formats can still change without migration. Do not rely on KLIPSLICE for
-prints that matter.
-
-Every push is built and tested automatically for Windows, macOS and Linux.
 
 ## Build from source
 
@@ -122,9 +176,8 @@ git clone https://github.com/Extrutex/KlipSlice.git
 cd KlipSlice
 ```
 
-### Windows
-
-Requires Visual Studio 2019, 2022 or 2026, CMake, Perl and Git.
+<details>
+<summary><b>Windows</b> · Visual Studio 2019, 2022 or 2026, CMake, Perl, Git</summary>
 
 ```bat
 build_win.bat -d
@@ -132,13 +185,13 @@ build_win.bat -s
 ```
 
 Output: `build\src\Release\klipslice.exe`
+</details>
 
-### macOS
+<details>
+<summary><b>macOS</b> · Xcode or the Command Line Tools, CMake 3.31, gettext</summary>
 
-Requires Xcode or the Command Line Tools, CMake 3.31 and gettext.
-CMake 4.x currently breaks the dependency build; use CMake 3.31.
-
-With the Command Line Tools only (no full Xcode), export the SDK path first:
+CMake 4.x currently breaks the dependency build; use CMake 3.31. With the Command
+Line Tools only (no full Xcode), export the SDK path first:
 
 ```bash
 export SDKROOT=$(xcrun --show-sdk-path)
@@ -152,10 +205,10 @@ Then build the dependencies and the slicer with the Ninja generator:
 ```
 
 Output: `build/<arch>/OrcaSlicer/KLIPSLICE.app` (`<arch>` is `arm64` or `x86_64`)
+</details>
 
-### Linux
-
-Requires more than 10 GiB of available memory and free disk space.
+<details>
+<summary><b>Linux</b> · more than 10 GiB of memory and free disk space</summary>
 
 ```bash
 ./build_linux.sh -u      # install system dependencies (asks for sudo)
@@ -163,6 +216,10 @@ Requires more than 10 GiB of available memory and free disk space.
 ```
 
 Output: `build/package/bin/klipslice` and `build/KLIPSLICE_Linux_V<version>.AppImage`
+</details>
+
+Tests are built with `-t` (Linux), `-T` (macOS) or `--run-tests` (Windows); see
+[`tests/AGENTS.md`](tests/AGENTS.md) for the suites.
 
 ## Contributing
 

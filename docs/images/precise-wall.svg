@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 460" width="1000" height="460" role="img" aria-label="Cross-sections of a wall with room behind its beads and of a thin rib, each with the outline-shrink and the toolpath-shift method of the precise outer wall: the thick wall comes out the same, the rib is dropped by outline shrink and printed at true thickness by toolpath shift.">
+  <title>Precise outer wall: outline shrink pays for the gap behind the outer wall with model thickness, toolpath shift pays with the room behind the walls.</title>
+  <defs>
+    <pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="8" stroke="#ffc56a" stroke-width="1.5"/>
+    </pattern>
+    <marker id="dim" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M0 5 L10 5 M5 0 L5 10" stroke="#b4c0c9" stroke-width="1" fill="none"/>
+    </marker>
+  </defs>
+
+  <!-- ground and frame -->
+  <rect x="0" y="0" width="1000" height="460" fill="#0b0e11"/>
+  <rect x="0.5" y="0.5" width="999" height="459" fill="none" stroke="#262f37" stroke-width="1"/>
+
+  <!-- title block -->
+  <text x="40" y="44" font-family="Inter, 'Segoe UI', system-ui, -apple-system, sans-serif" font-size="18" font-weight="600" letter-spacing="2" fill="#eef3f6">PRECISE OUTER WALL</text>
+  <text x="40" y="66" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="13" fill="#8b99a4">precise_outer_wall_method: outline_shrink | toolpath_shift&#160;&#160;&#160;&#160;g = (outer wall width - spacing) / 2</text>
+
+  <!-- column headers -->
+  <text x="40" y="104" font-family="Inter, 'Segoe UI', system-ui, -apple-system, sans-serif" font-size="14" font-weight="600" letter-spacing="1" fill="#eef3f6">OUTLINE SHRINK</text>
+  <text x="40" y="122" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#8b99a4">outline shrunk by 2g, outer wall moved back out by g</text>
+  <text x="520" y="104" font-family="Inter, 'Segoe UI', system-ui, -apple-system, sans-serif" font-size="14" font-weight="600" letter-spacing="1" fill="#eef3f6">TOOLPATH SHIFT</text>
+  <text x="520" y="122" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#8b99a4">true outline, walls behind the outer wall moved in by up to g</text>
+  <line x1="500" y1="92" x2="500" y2="416" stroke="#262f37" stroke-width="1"/>
+
+  <!-- row labels -->
+  <text x="40" y="150" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="12" fill="#b4c0c9">A&#160; wall with room behind the beads</text>
+  <text x="520" y="150" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="12" fill="#b4c0c9">A&#160; same wall</text>
+  <text x="40" y="300" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="12" fill="#b4c0c9">B&#160; thin rib, two beads thick</text>
+  <text x="520" y="300" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="12" fill="#b4c0c9">B&#160; same rib</text>
+
+  <!-- ===== A left: outline shrink, thick wall ===== -->
+  <!-- model material -->
+  <rect x="60" y="162" width="360" height="96" fill="#141a1f"/>
+  <!-- shrunk outline the beads were planned on -->
+  <!-- beads: outer (back out on the surface), gap g, inner beads -->
+  <rect x="60" y="162" width="360" height="22" fill="#4db9ff" fill-opacity="0.9"/>
+  <rect x="60" y="192" width="360" height="22" fill="#8b99a4"/>
+  <rect x="60" y="218" width="360" height="22" fill="#8b99a4"/>
+  <!-- model surface -->
+  <line x1="60" y1="162" x2="420" y2="162" stroke="#eef3f6" stroke-width="2"/>
+  <line x1="60" y1="258" x2="420" y2="258" stroke="#5c6b77" stroke-width="1"/>
+  <rect x="60" y="178" width="360" height="64" fill="none" stroke="#ffc56a" stroke-width="1" stroke-dasharray="4 3"/>
+  <!-- labels -->
+  <text x="430" y="177" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#4db9ff">outer wall</text>
+  <text x="430" y="207" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#8b99a4">gap g</text>
+  <text x="430" y="247" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#ffc56a">shrunk</text>
+  <text x="430" y="261" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#ffc56a">outline</text>
+  <text x="60" y="276" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#8b99a4">surface exact, beads planned on an outline 2g smaller per side</text>
+
+  <!-- ===== A right: toolpath shift, thick wall ===== -->
+  <rect x="540" y="162" width="360" height="96" fill="#141a1f"/>
+  <rect x="540" y="162" width="360" height="22" fill="#4db9ff" fill-opacity="0.9"/>
+  <!-- beads behind the outer wall, shifted in by g; ghost of the unshifted position -->
+  <rect x="540" y="184" width="360" height="22" fill="none" stroke="#5c6b77" stroke-width="1" stroke-dasharray="3 3"/>
+  <rect x="540" y="192" width="360" height="22" fill="#8b99a4"/>
+  <rect x="540" y="218" width="360" height="22" fill="#8b99a4"/>
+  <line x1="540" y1="162" x2="900" y2="162" stroke="#eef3f6" stroke-width="2"/>
+  <line x1="540" y1="258" x2="900" y2="258" stroke="#5c6b77" stroke-width="1"/>
+  <text x="910" y="177" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#4db9ff">outer wall</text>
+  <text x="910" y="207" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#8b99a4">shift g</text>
+  <text x="540" y="276" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#8b99a4">planned on the true outline, moved in by g: same result</text>
+
+  <!-- ===== B left: outline shrink, thin rib ===== -->
+  <rect x="60" y="312" width="360" height="52" fill="#141a1f"/>
+  <line x1="60" y1="312" x2="420" y2="312" stroke="#eef3f6" stroke-width="2"/>
+  <line x1="60" y1="364" x2="420" y2="364" stroke="#eef3f6" stroke-width="2"/>
+  <!-- what is left to plan on after shrinking 2g per side: too thin for a bead -->
+  <rect x="60" y="328" width="360" height="20" fill="url(#hatch)" stroke="#ffc56a" stroke-width="1" stroke-dasharray="4 3"/>
+  <text x="430" y="332" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#ffc56a">T - 4g</text>
+  <text x="430" y="346" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#ffc56a">under one</text>
+  <text x="430" y="360" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#ffc56a">bead: gone</text>
+  <text x="60" y="384" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#ffc56a">rib dropped, or printed as one thin bead</text>
+
+  <!-- ===== B right: toolpath shift, thin rib ===== -->
+  <rect x="540" y="312" width="360" height="52" fill="#141a1f"/>
+  <rect x="540" y="312" width="360" height="22" fill="#4db9ff" fill-opacity="0.9"/>
+  <rect x="540" y="342" width="360" height="22" fill="#8b99a4"/>
+  <line x1="540" y1="312" x2="900" y2="312" stroke="#eef3f6" stroke-width="2"/>
+  <line x1="540" y1="364" x2="900" y2="364" stroke="#eef3f6" stroke-width="2"/>
+  <text x="910" y="327" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#4db9ff">outer wall</text>
+  <text x="910" y="357" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#8b99a4">no room,</text>
+  <text x="910" y="371" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#8b99a4">no shift</text>
+  <text x="540" y="384" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#74f0a7">rib printed at its true thickness</text>
+
+  <!-- legend -->
+  <rect x="40" y="404" width="14" height="10" fill="#4db9ff" fill-opacity="0.9"/>
+  <text x="60" y="413" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#8b99a4">outer wall</text>
+  <rect x="150" y="404" width="14" height="10" fill="#8b99a4"/>
+  <text x="170" y="413" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#8b99a4">walls behind it</text>
+  <line x1="290" y1="409" x2="304" y2="409" stroke="#eef3f6" stroke-width="2"/>
+  <text x="310" y="413" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#8b99a4">model surface</text>
+  <rect x="430" y="404" width="14" height="10" fill="url(#hatch)" stroke="#ffc56a" stroke-width="1"/>
+  <text x="450" y="413" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#8b99a4">thickness taken from the model</text>
+
+  <!-- caption -->
+  <text x="40" y="444" font-family="Inter, 'Segoe UI', system-ui, -apple-system, sans-serif" font-size="13" fill="#b4c0c9">Both put the same gap behind the outer wall. Outline shrink takes it from the model, toolpath shift from the room behind the walls.</text>
+</svg>

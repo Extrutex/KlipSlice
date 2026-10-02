@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 420" width="1000" height="420" role="img" aria-label="KLIPSLICE talks to the printer only through Moonraker's HTTP API: the Device tab shows the printer's own web UI, the status strip polls the printer objects, the sidebar reads the filament changer, and print or send upload the G-code and start the print.">
+  <title>The printer side: four views in KLIPSLICE, each one HTTP request to Moonraker, nothing mirrored in between.</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#d8e0e6"/>
+    </marker>
+    <marker id="arrow-path" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#4db9ff"/>
+    </marker>
+    <marker id="arrow-muted" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#8b99a4"/>
+    </marker>
+  </defs>
+
+  <!-- ground and frame -->
+  <rect x="0" y="0" width="1000" height="420" fill="#0b0e11"/>
+  <rect x="0.5" y="0.5" width="999" height="419" fill="none" stroke="#262f37" stroke-width="1"/>
+
+  <!-- title block -->
+  <text x="40" y="44" font-family="Inter, 'Segoe UI', system-ui, -apple-system, sans-serif" font-size="18" font-weight="600" letter-spacing="2" fill="#eef3f6">THE PRINTER SIDE</text>
+  <text x="40" y="66" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="13" fill="#8b99a4">one HTTP request per view, no device model in between</text>
+
+  <!-- KLIPSLICE column -->
+  <rect x="40" y="96" width="200" height="248" fill="#0f1317" stroke="#3d4953" stroke-width="2"/>
+  <text x="140" y="120" text-anchor="middle" font-family="Inter, 'Segoe UI', system-ui, -apple-system, sans-serif" font-size="14" font-weight="600" fill="#eef3f6">KLIPSLICE</text>
+  <g fill="#141a1f" stroke="#2e3840" stroke-width="1">
+    <rect x="56" y="136" width="168" height="36"/>
+    <rect x="56" y="188" width="168" height="36"/>
+    <rect x="56" y="240" width="168" height="36"/>
+    <rect x="56" y="292" width="168" height="36"/>
+  </g>
+  <g font-family="Inter, 'Segoe UI', system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" fill="#eef3f6" text-anchor="middle">
+    <text x="140" y="151">Device tab</text>
+    <text x="140" y="203">Status strip</text>
+    <text x="140" y="255">Sync filaments</text>
+    <text x="140" y="307">Print / Send</text>
+  </g>
+  <g font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#8b99a4" text-anchor="middle">
+    <text x="140" y="166">PrinterWebView</text>
+    <text x="140" y="218">MoonrakerStatus</text>
+    <text x="140" y="270">MoonrakerFilaments</text>
+    <text x="140" y="322">PrintHost: Moonraker</text>
+  </g>
+
+  <!-- Moonraker column -->
+  <rect x="440" y="96" width="140" height="248" fill="#0f1317" stroke="#3d4953" stroke-width="2"/>
+  <text x="510" y="120" text-anchor="middle" font-family="Inter, 'Segoe UI', system-ui, -apple-system, sans-serif" font-size="14" font-weight="600" fill="#eef3f6">Moonraker</text>
+  <g font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#8b99a4" text-anchor="middle">
+    <text x="510" y="138">HTTP API, port 7125</text>
+    <text x="510" y="158">Mainsail / Fluidd</text>
+    <text x="510" y="210">printer objects</text>
+    <text x="510" y="262">database, objects</text>
+    <text x="510" y="314">files, print queue</text>
+  </g>
+
+  <!-- Klipper column -->
+  <rect x="780" y="96" width="180" height="248" fill="#0f1317" stroke="#3d4953" stroke-width="2"/>
+  <text x="870" y="120" text-anchor="middle" font-family="Inter, 'Segoe UI', system-ui, -apple-system, sans-serif" font-size="14" font-weight="600" fill="#eef3f6">Klipper</text>
+  <g fill="#141a1f" stroke="#2e3840" stroke-width="1">
+    <rect x="796" y="188" width="148" height="36"/>
+    <rect x="796" y="240" width="148" height="36"/>
+    <rect x="796" y="292" width="148" height="36"/>
+  </g>
+  <g font-family="Inter, 'Segoe UI', system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" fill="#eef3f6" text-anchor="middle">
+    <text x="870" y="203">Printer state</text>
+    <text x="870" y="255">Filament changer</text>
+    <text x="870" y="307">Print</text>
+  </g>
+  <g font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#8b99a4" text-anchor="middle">
+    <text x="870" y="218">print_stats, heaters</text>
+    <text x="870" y="270">AFC, Happy Hare, Qidi</text>
+    <text x="870" y="322">virtual_sdcard</text>
+  </g>
+
+  <!-- Device tab: the web UI, both ways -->
+  <path d="M224 150 H440" fill="none" stroke="#d8e0e6" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M440 158 H224" fill="none" stroke="#d8e0e6" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="332" y="140" text-anchor="middle" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#b4c0c9">the printer's own web UI</text>
+  <text x="332" y="172" text-anchor="middle" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#8b99a4">API key injected into fetch</text>
+
+  <!-- Status strip: polled -->
+  <path d="M440 206 H224" fill="none" stroke="#4db9ff" stroke-width="2" marker-end="url(#arrow-path)"/>
+  <text x="332" y="194" text-anchor="middle" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#4db9ff">GET /printer/objects/query</text>
+  <text x="332" y="222" text-anchor="middle" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#8b99a4">every 2 s, 5 s while offline</text>
+  <path d="M796 206 H580" fill="none" stroke="#8b99a4" stroke-width="2" marker-end="url(#arrow-muted)"/>
+  <text x="688" y="194" text-anchor="middle" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#8b99a4">webhooks, print_stats,</text>
+  <text x="688" y="222" text-anchor="middle" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#8b99a4">extruder, heater_bed</text>
+
+  <!-- Sync filaments: read on click -->
+  <path d="M440 258 H224" fill="none" stroke="#4db9ff" stroke-width="2" marker-end="url(#arrow-path)"/>
+  <text x="332" y="246" text-anchor="middle" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#4db9ff">GET lane_data | mmu, on click</text>
+  <text x="332" y="274" text-anchor="middle" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#8b99a4">changer type from objects/list</text>
+  <path d="M796 258 H580" fill="none" stroke="#8b99a4" stroke-width="2" marker-end="url(#arrow-muted)"/>
+  <text x="688" y="246" text-anchor="middle" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#8b99a4">slot, material, colour,</text>
+  <text x="688" y="274" text-anchor="middle" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#8b99a4">vendor, temperatures</text>
+
+  <!-- Print / Send: upload then start -->
+  <path d="M224 310 H440" fill="none" stroke="#d8e0e6" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="332" y="298" text-anchor="middle" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#b4c0c9">POST /server/files/upload</text>
+  <text x="332" y="326" text-anchor="middle" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#b4c0c9">POST /printer/print/start</text>
+  <path d="M580 310 H796" fill="none" stroke="#d8e0e6" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="688" y="298" text-anchor="middle" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#b4c0c9">unix socket</text>
+
+  <!-- discovery, below the row -->
+  <path d="M510 344 V372 H140 V346" fill="none" stroke="#8b99a4" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arrow-muted)"/>
+  <text x="325" y="386" text-anchor="middle" font-family="'IBM Plex Mono', 'JetBrains Mono', Menlo, Consolas, monospace" font-size="11" fill="#8b99a4">mDNS _moonraker._tcp: the physical printer dialog lists every Moonraker on the LAN</text>
+
+  <!-- caption -->
+  <text x="40" y="408" font-family="Inter, 'Segoe UI', system-ui, -apple-system, sans-serif" font-size="13" fill="#b4c0c9">Three reads and one write. The slicer never mirrors the printer; each view asks Moonraker when it needs the answer.</text>
+</svg>
