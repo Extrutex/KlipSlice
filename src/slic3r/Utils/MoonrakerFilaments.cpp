@@ -29,6 +29,29 @@ bool is_numeric(const std::string &value)
     return !value.empty() && std::all_of(value.begin(), value.end(), [](unsigned char c) { return std::isdigit(c) != 0; });
 }
 
+// A decimal slot or lane number; `fallback` for anything else, including a number too long for an int.
+int to_int(const std::string &value, int fallback)
+{
+    if (!is_numeric(value) || value.size() > 9)
+        return fallback;
+    return std::stoi(value);
+}
+
+// The RRGGBB prefix of a hex colour as a number; 0 when the string has no six hex digits in front.
+unsigned hex_rgb(const std::string &value)
+{
+    if (value.size() < 6)
+        return 0u;
+    unsigned rgb = 0;
+    for (size_t i = 0; i < 6; ++i) {
+        const unsigned char c = static_cast<unsigned char>(value[i]);
+        if (!std::isxdigit(c))
+            return 0u;
+        rgb = rgb * 16 + unsigned(std::isdigit(c) ? c - '0' : std::tolower(c) - 'a' + 10);
+    }
+    return rgb;
+}
+
 std::string json_string(const nlohmann::json &obj, const char *key)
 {
     auto it = obj.find(key);
@@ -42,8 +65,8 @@ int json_int(const nlohmann::json &obj, const char *key)
         return 0;
     if (it->is_number())
         return it->get<int>();
-    if (it->is_string() && is_numeric(it->get<std::string>()))
-        return std::stoi(it->get<std::string>());
+    if (it->is_string())
+        return to_int(it->get<std::string>(), 0);
     return 0;
 }
 
@@ -134,7 +157,7 @@ void parse_qidi_filament_list(const std::string &content, std::map<int, std::str
             fila_index   = -1;
             if (boost::starts_with(line, "[fila") && line.back() == ']') {
                 const std::string num = line.substr(5, line.size() - 6);
-                fila_index            = is_numeric(num) ? std::stoi(num) : -1;
+                fila_index            = to_int(num, -1);
             }
             continue;
         }
@@ -145,8 +168,8 @@ void parse_qidi_filament_list(const std::string &content, std::map<int, std::str
         std::string value = line.substr(pos + 1);
         boost::trim(key);
         boost::trim(value);
-        if (in_colordict && is_numeric(key))
-            colors[std::stoi(key)] = value;
+        if (in_colordict && to_int(key, -1) >= 0)
+            colors[to_int(key, -1)] = value;
         else if (fila_index > 0 && key == "filament")
             filaments[fila_index] = value;
     }
@@ -187,7 +210,7 @@ std::string id_by_vendor_and_color(const PresetCollection &filaments, const std:
 {
     if (vendor.empty() || color_rrggbbaa.size() != 8)
         return {};
-    const unsigned target = std::stoul(color_rrggbbaa.substr(0, 6), nullptr, 16);
+    const unsigned target = hex_rgb(color_rrggbbaa);
     std::string    best;
     unsigned       best_distance = ~0u;
     for (const Preset &p : filaments.get_presets()) {
@@ -199,7 +222,7 @@ std::string id_by_vendor_and_color(const PresetCollection &filaments, const std:
         std::string preset_color = p.config.opt_string("default_filament_colour", 0u);
         if (!preset_color.empty() && preset_color[0] == '#')
             preset_color.erase(0, 1);
-        const unsigned value = preset_color.size() >= 6 ? std::stoul(preset_color.substr(0, 6), nullptr, 16) : 0u;
+        const unsigned value = hex_rgb(preset_color);
         const int dr = int((target >> 16) & 0xff) - int((value >> 16) & 0xff);
         const int dg = int((target >> 8) & 0xff) - int((value >> 8) & 0xff);
         const int db = int(target & 0xff) - int(value & 0xff);
@@ -277,10 +300,8 @@ bool parse_lane_data(const nlohmann::json &reply, MoonrakerFilamentState &out)
         if (!lane.is_object())
             continue;
         const std::string lane_str = json_string(lane, "lane");
-        int index = -1;
-        if (is_numeric(lane_str))
-            index = std::stoi(lane_str);
-        else if (lane.contains("lane") && lane["lane"].is_number())
+        int index = to_int(lane_str, -1);
+        if (index < 0 && lane.contains("lane") && lane["lane"].is_number())
             index = lane["lane"].get<int>();
         if (index < 0)
             continue;
