@@ -3573,7 +3573,7 @@ int CLI::run(int argc, char **argv)
             ConfigOptionStrings *curr_variant_opt = m_print_config.option<ConfigOptionStrings>("filament_extruder_variant");
             if (!curr_variant_opt) {
                 curr_variant_opt = m_print_config.option<ConfigOptionStrings>("filament_extruder_variant", true);
-                std::vector<string>& filament_variants = curr_variant_opt->values;
+                std::vector<std::string>& filament_variants = curr_variant_opt->values;
                 filament_variants.resize(filament_count, get_extruder_variant_string(etDirectDrive, nvtStandard));
             }
             const ConfigOptionStrings *new_variant_opt = dynamic_cast<const ConfigOptionStrings*>(config.option("filament_extruder_variant", true));
