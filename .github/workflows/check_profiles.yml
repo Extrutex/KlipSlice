@@ -6,6 +6,7 @@ on:
     # into a release branch would run no profile validation at all.
     branches:
     - main
+    - dev
     paths:
     - 'resources/profiles/**'
     # orca_profile_tool.py also validates resources/printers/bambu_filament_ids.json, and
