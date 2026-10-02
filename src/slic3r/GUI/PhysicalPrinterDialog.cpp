@@ -425,15 +425,14 @@ void PhysicalPrinterDialog::update(bool printer_change)
     this->Layout();
 }
 
-void PhysicalPrinterDialog::update_host_type(bool printer_change)
+void PhysicalPrinterDialog::update_host_type(bool /*printer_change*/)
 {
     if (m_config == nullptr)
         return;
     Field* ht = m_optgroup->get_field("host_type");
     wxArrayString types;
-    int last_in_conf = m_config->option("host_type")->getInt(); //  this is real position in last choice
 
-    // Append localized enum_labels
+    // Append localized enum_labels. Moonraker is the only entry, so the choice index is the enum value.
     assert(ht->m_opt.enum_labels.size() == ht->m_opt.enum_values.size());
     for (size_t i = 0; i < ht->m_opt.enum_labels.size(); ++ i) {
         wxString label = _(ht->m_opt.enum_labels[i]);
@@ -442,13 +441,8 @@ void PhysicalPrinterDialog::update_host_type(bool printer_change)
 
     Choice* choice = dynamic_cast<Choice*>(ht);
     choice->set_values(types);
-    int index_in_choice = (printer_change ? std::clamp(last_in_conf - ((int)ht->m_opt.enum_values.size() - (int)types.size()), 0, (int)ht->m_opt.enum_values.size() - 1) : last_in_conf);
-    choice->set_value(index_in_choice);
-    {
-        int host_type = std::clamp(index_in_choice + ((int)ht->m_opt.enum_values.size() - (int)types.size()), 0, (int)ht->m_opt.enum_values.size() - 1);
-        PrintHostType type = static_cast<PrintHostType>(host_type);
-        m_config->set_key_value("host_type", new ConfigOptionEnum<PrintHostType>(type));
-    }
+    choice->set_value(int(htMoonraker));
+    m_config->set_key_value("host_type", new ConfigOptionEnum<PrintHostType>(htMoonraker));
 }
 
 void PhysicalPrinterDialog::on_dpi_changed(const wxRect& suggested_rect)

@@ -1323,6 +1323,15 @@ TEST_CASE("The print host type defaults to Moonraker", "[Config]")
     CHECK(def->default_value.get()->getInt() == int(htMoonraker));
 }
 
+TEST_CASE("Moonraker is the only print host type offered", "[Config]")
+{
+    const ConfigOptionDef *def = print_config_def.get("host_type");
+    REQUIRE(def != nullptr);
+    CHECK(def->enum_values == std::vector<std::string>{"moonraker"});
+    CHECK(ConfigOptionEnum<PrintHostType>::get_enum_values().size() == 1);
+    CHECK(ConfigOptionEnum<PrintHostType>::get_enum_values().at("moonraker") == int(htMoonraker));
+}
+
 TEST_CASE("A stored print host type loads as Moonraker", "[Config]")
 {
     const char *stored = GENERATE("octoprint", "crealityprint", "elegoolink", "flashforge", "prusalink", "duet",

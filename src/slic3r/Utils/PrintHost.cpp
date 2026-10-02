@@ -42,18 +42,8 @@ PrintHost* PrintHost::get_print_host(DynamicPrintConfig *config)
         }
     }
 
-    if (tech == ptFFF) {
-        const auto opt = config->option<ConfigOptionEnum<PrintHostType>>("host_type");
-        const auto host_type = opt != nullptr ? opt->value : htMoonraker;
-
-        switch (host_type) {
-            case htMoonraker: return new Moonraker(config);
-            default:          return nullptr;
-        }
-    } else {
-        // KLIPSLICE has no SLA print host.
-        return nullptr;
-    }
+    // KLIPSLICE: Moonraker is the only print host, and there is no SLA host.
+    return tech == ptFFF ? new Moonraker(config) : nullptr;
 }
 
 std::string PrintHost::get_print_host_webui(DynamicPrintConfig* config)

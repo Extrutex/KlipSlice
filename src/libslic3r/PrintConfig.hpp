@@ -99,8 +99,10 @@ enum class WipeTowerType {
     Type2,
 };
 
+// KLIPSLICE: Moonraker is the only print host. Other values a project or preset may still carry
+// are rewritten by PrintConfigDef::handle_legacy().
 enum PrintHostType {
-    htPrusaLink, htPrusaConnect, htOctoPrint, htDuet, htUltiMaker, htFlashAir, htAstroBox, htRepetier, htMKS, htESP3D, htCrealityPrint, htObico, htFlashforge, htSimplyPrint, htElegooLink, ht3DPrinterOS, htMoonraker
+    htMoonraker
 };
 
 enum AuthorizationType {

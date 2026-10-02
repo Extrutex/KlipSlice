@@ -147,22 +147,6 @@ static t_config_enum_values s_keys_map_PrinterTechnology {
 CONFIG_OPTION_ENUM_DEFINE_STATIC_MAPS(PrinterTechnology)
 
 static t_config_enum_values s_keys_map_PrintHostType {
-    { "prusalink",      htPrusaLink },
-    { "prusaconnect",   htPrusaConnect },
-    { "octoprint",      htOctoPrint },
-    { "crealityprint",  htCrealityPrint },
-    { "duet",           htDuet },
-    { "ultimaker",      htUltiMaker },
-    { "flashair",       htFlashAir },
-    { "astrobox",       htAstroBox },
-    { "repetier",       htRepetier },
-    { "mks",            htMKS },
-    { "esp3d",          htESP3D },
-    { "obico",          htObico },
-    { "flashforge",     htFlashforge },
-    { "simplyprint",    htSimplyPrint },
-    { "elegoolink",     htElegooLink },
-    { "3dprinteros",    ht3DPrinterOS },
     { "moonraker",      htMoonraker }
 };
 CONFIG_OPTION_ENUM_DEFINE_STATIC_MAPS(PrintHostType)
@@ -5414,43 +5398,10 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Host Type");
     def->tooltip = L("KLIPSLICE uploads G-code files to a Klipper printer through Moonraker. "
                    "Projects and presets that name any other host type load as Moonraker.");
-    // KLIPSLICE routes every printer through Moonraker. The PrintHostType enum, its key map and
-    // the choice list below stay complete for now because the host dialog maps choice indices to
-    // enum values; PrintConfigDef::handle_legacy() rewrites any other stored host to "moonraker".
+    // KLIPSLICE routes every printer through Moonraker; PrintConfigDef::handle_legacy() rewrites
+    // any other stored host to "moonraker".
     def->enum_keys_map = &ConfigOptionEnum<PrintHostType>::get_enum_values();
-    def->enum_values.push_back("prusalink");
-    def->enum_values.push_back("prusaconnect");
-    def->enum_values.push_back("octoprint");
-    def->enum_values.push_back("duet");
-    def->enum_values.push_back("ultimaker");
-    def->enum_values.push_back("flashair");
-    def->enum_values.push_back("astrobox");
-    def->enum_values.push_back("repetier");
-    def->enum_values.push_back("mks");
-    def->enum_values.push_back("esp3d");
-    def->enum_values.push_back("crealityprint");
-    def->enum_values.push_back("obico");
-    def->enum_values.push_back("flashforge");
-    def->enum_values.push_back("simplyprint");
-    def->enum_values.push_back("elegoolink");
-    def->enum_values.push_back("3dprinteros");
     def->enum_values.push_back("moonraker");
-    def->enum_labels.push_back("PrusaLink");
-    def->enum_labels.push_back("PrusaConnect");
-    def->enum_labels.push_back("Octo/Klipper");
-    def->enum_labels.push_back("Duet");
-    def->enum_labels.push_back("UltiMaker");
-    def->enum_labels.push_back("FlashAir");
-    def->enum_labels.push_back("AstroBox");
-    def->enum_labels.push_back("Repetier");
-    def->enum_labels.push_back("MKS");
-    def->enum_labels.push_back("ESP3D");
-    def->enum_labels.push_back("CrealityPrint");
-    def->enum_labels.push_back("Obico");
-    def->enum_labels.push_back("Flashforge");
-    def->enum_labels.push_back("SimplyPrint");
-    def->enum_labels.push_back("Elegoo Link");
-    def->enum_labels.push_back("3DPrinterOS");
     def->enum_labels.push_back("Moonraker (Klipper)");
     def->mode = comAdvanced;
     def->cli = ConfigOptionDef::nocli;
