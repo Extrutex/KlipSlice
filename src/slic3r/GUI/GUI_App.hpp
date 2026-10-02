@@ -7,7 +7,8 @@
 #include <string>
 #include "ActionRegistry.hpp"
 #include "ImGuiWrapper.hpp"
-#include "ConfigWizard.hpp"
+#include "WizardTypes.hpp"
+#include "GUI_Utils.hpp"
 #include "OpenGLManager.hpp"
 #include "libslic3r/Preset.hpp"
 #include "libslic3r/PresetBundle.hpp"
@@ -153,7 +154,6 @@ enum CameraMenuIDs {
 
 
 class Tab;
-class ConfigWizard;
 class GizmoObjectManipulation;
 
 static wxString dots("...", wxConvUTF8);
@@ -733,7 +733,7 @@ public:
 
     void            open_web_page_localized(const std::string &http_address);
     bool            may_switch_to_SLA_preset(const wxString& caption);
-    bool            run_wizard(ConfigWizard::RunReason reason, ConfigWizard::StartPage start_page = ConfigWizard::SP_WELCOME);
+    bool            run_wizard(Wizard::RunReason reason, Wizard::StartPage start_page = Wizard::SP_WELCOME);
     void            show_desktop_integration_dialog();
 
 #if ENABLE_THUMBNAIL_GENERATOR_DEBUG

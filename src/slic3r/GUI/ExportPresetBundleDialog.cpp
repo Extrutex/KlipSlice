@@ -2,7 +2,6 @@
 #include "slic3r/Utils/NetworkAgent.hpp"
 #include "libslic3r_version.h"
 #include "GUI_App.hpp"
-#include "ConfigWizard.hpp"
 #include "I18N.hpp"
 #include "GUI_App.hpp"
 #include <libslic3r/Config.hpp>

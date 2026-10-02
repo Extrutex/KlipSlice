@@ -83,9 +83,7 @@ set(SLIC3R_GUI_SOURCES
     GUI/ConfigManipulation.hpp
     GUI/ConfigValueFormatter.cpp
     GUI/ConfigValueFormatter.hpp
-    GUI/ConfigWizard.cpp
-    GUI/ConfigWizard.hpp
-    GUI/ConfigWizard_private.hpp
+    GUI/WizardTypes.hpp
     GUI/ConnectPrinter.cpp
     GUI/ConnectPrinter.hpp
     GUI/CreatePresetsDialog.cpp

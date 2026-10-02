@@ -1,5 +1,4 @@
 #include "WebGuideDialog.hpp"
-#include "ConfigWizard.hpp"
 
 #include <boost/algorithm/string/join.hpp>
 #include <boost/filesystem/operations.hpp>
