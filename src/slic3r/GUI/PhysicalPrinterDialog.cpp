@@ -441,7 +441,9 @@ void PhysicalPrinterDialog::update_host_type(bool /*printer_change*/)
 
     Choice* choice = dynamic_cast<Choice*>(ht);
     choice->set_values(types);
-    choice->set_value(int(htMoonraker));
+    // Wrapped explicitly: clang-cl treats a constant zero as a null pointer constant, which makes
+    // a bare int(htMoonraker) ambiguous between the std::string and boost::any overloads.
+    choice->set_value(boost::any(int(htMoonraker)));
     m_config->set_key_value("host_type", new ConfigOptionEnum<PrintHostType>(htMoonraker));
 }
 
