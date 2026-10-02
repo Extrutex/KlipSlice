@@ -18,7 +18,10 @@
 //   (b) volume: deposited cross-section over the middle of a fin lies between the dimension-exact beads
 //       (outer bead edges on the model surface, neighbours overlapping by c) and the volume-exact beads
 //       (total spacing = thickness), never below the generator's widening floor.
-//   (c) single bead: its width lies in the same band, and it is centred on the fin.
+//   (c) single bead: it is centred on the fin. Arachne's width is criterion Q1 of the wall analysis,
+//       max(t, widened floor) +- 0.005 mm; classic's lies in the volume band of (b).
+//   (c') precise parity: an Arachne single bead is as wide with precise_outer_wall on as with it off,
+//       +- 0.005 mm (the second half of Q1). This compares two cells, so it is its own test case.
 //   (d) outer bead: its centerline is w/2 from the model edge, i.e. its outer edge is on the surface.
 //   (e) holes: the clear diameter of every hole is the model diameter within the slice resolution.
 //   (f) runs: n beads across a feature need at most ceil(n/2) wall runs (loops pair the beads, an odd
@@ -80,6 +83,16 @@ const double corner = layer_height * (1. - 0.25 * PI);
 
 // Tolerance on one bead's width or position (criterion Q1 of the wall analysis).
 constexpr double bead_tolerance = 0.005;
+
+// Target width of an Arachne single bead. The wall analysis is not consistent here: Q1 asks for
+// max(t, floor) +- 0.005 mm, while the WALL-1 fix it plans (Option B: beading on the true thickness) and its
+// geometric reference (classic + detect_thin_wall) put the bead on spacing t, i.e. width t + c. The oracle
+// follows the written criterion, Q1. Switching to the band [max(t, floor), max(t + c, floor)] needs an
+// explicit decision recorded in the analysis before the WALL-1 fix, not after it. The precise parity check
+// below holds either way.
+enum class ArachneSingleBead { q1_model_thickness, bead_model_band };
+constexpr ArachneSingleBead arachne_single_bead = ArachneSingleBead::q1_model_thickness;
+
 // Allowance on the wedge cutoff (criterion Q2: cutoff <= minimum feature + 0.05 mm).
 constexpr double wedge_cutoff_allowance = 0.05;
 
@@ -392,6 +405,15 @@ std::pair<double, double> footprint(const Cell &cell, double t)
     return { std::max(t, floor), std::max(t + corner, floor) };
 }
 
+// Allowed width of a single bead across a fin of thickness t.
+std::pair<double, double> single_bead_width(const Cell &cell, double t)
+{
+    const auto [lo, hi] = footprint(cell, t);
+    if (is_arachne(cell) && arachne_single_bead == ArachneSingleBead::q1_model_thickness)
+        return { lo - bead_tolerance, lo + bead_tolerance };
+    return { lo - bead_tolerance, hi + bead_tolerance };
+}
+
 // Thinnest feature the cell's generator promises to print.
 double presence_threshold(const Cell &cell)
 {
@@ -453,7 +475,8 @@ void check_fins(const Cell &cell, const ProbeLayer &layer, std::vector<Check> &o
 
         // (c)
         if (xs.size() == 1) {
-            out.push_back({ feature, "bead_width", xs.front().width, w_lo - bead_tolerance, w_hi + bead_tolerance, {} });
+            const auto [b_lo, b_hi] = single_bead_width(cell, t);
+            out.push_back({ feature, "bead_width", xs.front().width, b_lo, b_hi, {} });
             out.push_back({ feature, "bead_center", std::abs(xs.front().pos - 0.5 * (r.x0 + r.x1)), 0., bead_tolerance, {} });
         }
         // (d)
@@ -538,6 +561,42 @@ std::vector<Check> evaluate(const Cell &cell)
     return out;
 }
 
+// (c') The pseudo cell comparing the two Arachne cells. Every fin that precise_outer_wall=0 prints as one
+// bead must come out as one bead of the same width with precise_outer_wall=1; a missing or split bead
+// counts as an unbounded difference.
+const char *const precise_parity = "arachne/precise=1 vs 0";
+
+std::vector<Crossing> fin_crossings(const ProbeLayer &layer, size_t i)
+{
+    const Rect  f = fin_rects()[i];
+    const Vec2d o = layer.offset;
+    const Rect  r { f.x0 + o.x(), f.y0 + o.y(), f.x1 + o.x(), f.y1 + o.y() };
+    return cross_section(beads_in(layer, around(r)), 1, 0.5 * (r.y0 + r.y1));
+}
+
+std::vector<Check> evaluate_precise_parity()
+{
+    const ProbeLayer off = slice_probe_layer(cell_named("arachne/precise=0"));
+    const ProbeLayer on  = slice_probe_layer(cell_named("arachne/precise=1"));
+    std::vector<Check> out;
+    for (size_t i = 0; i < fin_thicknesses.size(); ++ i) {
+        const std::vector<Crossing> a = fin_crossings(off, i);
+        if (a.size() != 1)
+            continue;
+        const std::vector<Crossing> b = fin_crossings(on, i);
+        const double diff = b.size() == 1 ? std::abs(b.front().width - a.front().width) : unbounded;
+        out.push_back({ format("fin %.2f", fin_thicknesses[i]), "precise_parity", diff, 0., bead_tolerance,
+                        format("off %.4f", a.front().width) + (b.size() == 1 ? format(" on %.4f", b.front().width) :
+                                                                               format(" on: %.0f beads", double(b.size()))) });
+    }
+    return out;
+}
+
+std::vector<Check> evaluate_named(const std::string &name)
+{
+    return name == precise_parity ? evaluate_precise_parity() : evaluate(cell_named(name));
+}
+
 // ---- Known defects ----
 
 struct KnownFailure {
@@ -575,6 +634,11 @@ const std::vector<KnownFailure> &known_failures()
         { "WALL-1 width", "arachne/precise=1", "fin 0.90", "volume_ratio" },
         { "WALL-1 width", "arachne/precise=1", "fin 1.00", "volume_ratio" },
         { "WALL-1 width", "arachne/precise=1", "fin 1.20", "volume_ratio" },
+        { "WALL-1 presence", precise_parity, "fin 0.15", "precise_parity" },
+        { "WALL-1 width", precise_parity, "fin 0.40", "precise_parity" },
+        { "WALL-1 width", precise_parity, "fin 0.45", "precise_parity" },
+        { "WALL-1 width", precise_parity, "fin 0.50", "precise_parity" },
+        { "WALL-1 width", precise_parity, "fin 0.60", "precise_parity" },
 
         { "WALL-3", "classic/precise=0", "fin 0.45", "volume_ratio" },
         { "WALL-3", "classic/precise=0", "fin 0.50", "volume_ratio" },
@@ -609,27 +673,26 @@ const std::vector<KnownFailure> &known_failures()
     return list;
 }
 
-const KnownFailure *known_failure(const Cell &cell, const Check &check)
+const KnownFailure *known_failure(const std::string &cell_name, const Check &check)
 {
     for (const KnownFailure &k : known_failures())
-        if (check.feature == k.feature && check.kind == k.kind && std::string(cell.name) == k.cell)
+        if (check.feature == k.feature && check.kind == k.kind && cell_name == k.cell)
             return &k;
     return nullptr;
 }
 
 // Every check of the cell agrees with the bead model, except the known defects, which must still disagree.
-void require_bead_model(const char *cell_name)
+void require_bead_model(const std::string &cell_name)
 {
-    const Cell &cell = cell_named(cell_name);
-    const std::vector<Check> checks = evaluate(cell);
+    const std::vector<Check> checks = evaluate_named(cell_name);
     for (const KnownFailure &k : known_failures())
-        if (std::string(k.cell) == cell.name) {
+        if (cell_name == k.cell) {
             INFO("known failure " << k.feature << " " << k.kind << " (" << k.defect << ") matches no check");
             CHECK(std::any_of(checks.begin(), checks.end(), [&k](const Check &c) { return c.feature == k.feature && c.kind == k.kind; }));
         }
     for (const Check &c : checks) {
-        INFO(cell.name << ": " << c.describe());
-        if (const KnownFailure *k = known_failure(cell, c)) {
+        INFO(cell_name << ": " << c.describe());
+        if (const KnownFailure *k = known_failure(cell_name, c)) {
             INFO("listed as a known " << k->defect << " failure but agrees with the bead model now: "
                  "remove it from known_failures() and check the defect's [!shouldfail] test case");
             CHECK_FALSE(c.pass());
@@ -647,10 +710,9 @@ void require_defect_fixed(const char *defect)
             cell_names.emplace_back(k.cell);
     REQUIRE_FALSE(cell_names.empty());
     for (const std::string &name : cell_names) {
-        const Cell &cell = cell_named(name);
-        for (const Check &c : evaluate(cell))
-            if (const KnownFailure *k = known_failure(cell, c); k != nullptr && std::string(k->defect) == defect) {
-                INFO(cell.name << ": " << c.describe());
+        for (const Check &c : evaluate_named(name))
+            if (const KnownFailure *k = known_failure(name, c); k != nullptr && std::string(k->defect) == defect) {
+                INFO(name << ": " << c.describe());
                 CHECK(c.pass());
             }
     }
@@ -666,6 +728,12 @@ TEST_CASE("Arachne walls without precise outer wall match the bead model", "[Wal
 TEST_CASE("Arachne walls with precise outer wall match the bead model", "[WallGeometry]")
 {
     require_bead_model("arachne/precise=1");
+}
+
+// Criterion Q1: precise_outer_wall must not change the width of an Arachne single bead.
+TEST_CASE("Arachne single beads are as wide with precise outer wall as without", "[WallGeometry]")
+{
+    require_bead_model(precise_parity);
 }
 
 TEST_CASE("Classic walls without precise outer wall match the bead model", "[WallGeometry]")
@@ -726,11 +794,15 @@ TEST_CASE("Arachne keeps hole diameters within the slice resolution", "[WallGeom
 // Prints every measurement of every cell, for comparing two builds. Hidden: it asserts nothing.
 TEST_CASE("Wall geometry report", "[.][WallGeometryReport]")
 {
-    for (const Cell &cell : cells) {
-        std::string s = std::string("== ") + cell.name + "\n";
-        for (const Check &c : evaluate(cell)) {
+    std::vector<std::string> names;
+    for (const Cell &cell : cells)
+        names.emplace_back(cell.name);
+    names.emplace_back(precise_parity);
+    for (const std::string &name : names) {
+        std::string s = "== " + name + "\n";
+        for (const Check &c : evaluate_named(name)) {
             s += "  " + c.describe();
-            if (const KnownFailure *k = known_failure(cell, c))
+            if (const KnownFailure *k = known_failure(name, c))
                 s += std::string("  [known ") + k->defect + "]";
             s += "\n";
         }

@@ -6,8 +6,10 @@
 # shipped default) and once off, and reads the G-code of the layer at Z=1.0 (WIDTH and E per move).
 # The bands come from the rounded-rectangle bead model, not from earlier output:
 #   - every fin at least min_feature_size thick is extruded;
-#   - a single-bead fin is max(t, min_bead_width + c) to max(t + c, min_bead_width + c) wide, +-0.005 mm,
-#     where c = layer_height * (1 - pi/4);
+#   - a single-bead fin is max(t, min_bead_width + c) wide, +-0.005 mm, where c = layer_height * (1 - pi/4)
+#     (criterion Q1 of the wall analysis; the shipped process uses Arachne);
+#   - a fin printed as one bead with precise_outer_wall off is one bead of the same width, +-0.005 mm, with
+#     it on (the second half of Q1);
 #   - the wedge is extruded down to min_feature_size + 0.05 mm.
 # Checks that fail on the current code for a known defect are listed in KNOWN below. They are expected to
 # fail; if one passes, the script fails too, so the fixing commit has to remove it from the list.
@@ -25,8 +27,9 @@ PROFILES="${3:-}"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/orca-cli-wall-geometry.XXXXXX")" || exit 1
 trap 'rm -rf "$WORK"' EXIT
 
-# Known defects: "<variant> <check>" (WALL-1: precise outer wall shrinks the outline before beading).
-KNOWN="precise1:presence:0.15 precise1:width:0.40 precise1:width:0.45 precise1:width:0.50 precise1:width:0.60 precise1:wedge"
+# Known defects: "<variant>:<check>" (WALL-1: precise outer wall shrinks the outline before beading).
+KNOWN="precise1:presence:0.15 precise1:width:0.40 precise1:width:0.45 precise1:width:0.50 precise1:width:0.60 precise1:wedge
+parity:0.15 parity:0.40 parity:0.45 parity:0.50 parity:0.60"
 
 # Fins along X at Y 0..12, the wedge along X at Y 20..22 (thin end at X=0).
 "$PY" - "$WORK/walls.stl" <<'EOF' || exit 1
@@ -103,10 +106,10 @@ for precise in 0 1; do
     gcode="$(ls "$out"/*.gcode 2>/dev/null | head -n 1)"
     [ -n "$gcode" ] || { echo "FAIL: precise=$precise: no G-code"; exit 1; }
 
-    "$PY" - "$gcode" "precise$precise" "$WORK/process$precise.json" "$KNOWN" <<'EOF'
+    "$PY" - "$gcode" "precise$precise" "$WORK/process$precise.json" "$KNOWN" "$WORK/widths$precise.json" <<'EOF'
 import json, math, sys
 
-gcode, variant, process, known = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4].split()
+gcode, variant, process, known, widths_out = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4].split(), sys.argv[5]
 FINS = [0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2]
 PROBE_Z, TOL, WEDGE_ALLOWANCE = 1.0, 0.005, 0.05
 
@@ -153,6 +156,7 @@ for t in FINS:
 ymid = (min(min(s[1], s[3]) for s in fins) + max(max(s[1], s[3]) for s in fins)) / 2
 
 results = []  # (check id, pass, message)
+widths = {}   # fin -> widths of the beads crossing its middle, for the parity check
 for t, (a, b) in zip(FINS, edges):
     mine = [s for s in fins if a - 1.0 < (s[0] + s[2]) / 2 < b + 1.0]
     if t >= min_feature:
@@ -161,8 +165,9 @@ for t, (a, b) in zip(FINS, edges):
     for s in mine:
         if (s[1] <= ymid < s[3]) or (s[3] <= ymid < s[1]):
             cross.append(s[4])
+    widths["%.2f" % t] = cross
     if len(cross) == 1:
-        lo, hi = max(t, floor) - TOL, max(t + c, floor) + TOL
+        lo, hi = max(t, floor) - TOL, max(t, floor) + TOL
         results.append(("width:%.2f" % t, lo <= cross[0] <= hi,
                         "fin %.2f single bead width %.3f in [%.3f, %.3f]" % (t, cross[0], lo, hi)))
 
@@ -174,6 +179,9 @@ else:
     cutoff = 2.0
 limit = min_feature + WEDGE_ALLOWANCE
 results.append(("wedge", cutoff <= limit, "wedge extruded down to %.3f mm, limit %.3f" % (cutoff, limit)))
+
+with open(widths_out, "w") as f:
+    json.dump(widths, f)
 
 failed = 0
 for cid, ok, msg in results:
@@ -198,6 +206,44 @@ sys.exit(1 if failed else 0)
 EOF
     [ $? -eq 0 ] || fails=$((fails + 1))
 done
+
+# Parity: precise_outer_wall must not change a single bead.
+"$PY" - "$WORK/widths0.json" "$WORK/widths1.json" "$KNOWN" <<'EOF' || fails=$((fails + 1))
+import json, sys
+
+TOL = 0.005
+with open(sys.argv[1]) as f:
+    off = json.load(f)
+with open(sys.argv[2]) as f:
+    on = json.load(f)
+known = sys.argv[3].split()
+
+failed, checked = 0, []
+for fin, a in off.items():
+    if len(a) != 1:
+        continue
+    b = on.get(fin, [])
+    cid = "parity:" + fin
+    checked.append(cid)
+    ok = len(b) == 1 and abs(b[0] - a[0]) <= TOL
+    msg = "fin %s single bead %.3f off, %s on" % (fin, a[0], "%.3f" % b[0] if len(b) == 1 else "%d beads" % len(b))
+    if cid in known:
+        if ok:
+            print("FAIL: parity: %s, but it is listed as a known failure; remove it from KNOWN" % msg)
+            failed += 1
+        else:
+            print("XFAIL: parity: %s" % msg)
+    elif ok:
+        print("ok: parity: %s" % msg)
+    else:
+        print("FAIL: parity: %s" % msg)
+        failed += 1
+for k in known:
+    if k.startswith("parity:") and k not in checked:
+        print("FAIL: known failure %s matches no check" % k)
+        failed += 1
+sys.exit(1 if failed else 0)
+EOF
 
 [ "$fails" -eq 0 ] || exit 1
 echo "PASS"
