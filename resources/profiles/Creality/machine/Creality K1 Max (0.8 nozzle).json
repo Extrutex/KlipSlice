@@ -131,7 +131,6 @@
 		"300x300/PNG"
 	],
 	"adaptive_bed_mesh_margin": "0",
-	"bbl_use_printhost": "0",
 	"bed_exclude_area": "0x0",
 	"bed_mesh_max": "99999,99999",
 	"bed_mesh_min": "-99999,-99999",
@@ -151,7 +150,7 @@
 	"fan_speedup_overhangs": "1",
 	"fan_speedup_time": "0",
 	"high_current_on_filament_swap": "0",
-	"host_type": "octoprint",
+	"host_type": "moonraker",
 	"layer_change_gcode": ";AFTER_LAYER_CHANGE\n;[layer_z]",
 	"machine_LED_light_exist": "1",
 	"machine_load_filament_time": "119",

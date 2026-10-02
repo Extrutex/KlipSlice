@@ -8,7 +8,7 @@
 	"nozzle_diameter": [
 		"0.4"
 	],
-	"host_type": "elegoolink",
+	"host_type": "moonraker",
 	"printer_model": "Elegoo Centauri Carbon",
 	"printer_variant": "0.4",
 	"auxiliary_fan": "1",
