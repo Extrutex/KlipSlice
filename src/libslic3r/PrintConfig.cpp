@@ -1061,7 +1061,7 @@ void PrintConfigDef::init_common_params()
 
     def = this->add("printhost_cafile", coString);
     def->label = L("HTTPS CA File");
-    def->tooltip = L("Custom CA certificate file can be specified for HTTPS OctoPrint connections, in crt/pem format. "
+    def->tooltip = L("Custom CA certificate file can be specified for HTTPS Moonraker connections, in crt/pem format. "
         "If left blank, the default OS CA certificate repository is used.");
     def->mode = comAdvanced;
     def->cli = ConfigOptionDef::nocli;

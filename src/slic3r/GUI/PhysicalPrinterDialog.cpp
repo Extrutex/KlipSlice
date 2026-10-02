@@ -409,7 +409,6 @@ void PhysicalPrinterDialog::update(bool printer_change)
     // Only offer the host type selection for FFF, for SLA it's always the SL1 printer (at the moment)
     if (tech == ptFFF) {
         update_host_type(printer_change);
-        const auto opt = m_config->option<ConfigOptionEnum<PrintHostType>>("host_type");
         m_optgroup->show_field("host_type");
 
         m_optgroup->enable_field("print_host");
@@ -418,41 +417,14 @@ void PhysicalPrinterDialog::update(bool printer_change)
         m_optgroup->enable_field("printhost_ssl_ignore_revoke");
         if (m_printhost_cafile_browse_btn) { m_printhost_cafile_browse_btn->Enable(); }
 
-        // hide pre-configured address, in case user switched to a different host type
-        if (Field* printhost_field = m_optgroup->get_field("print_host"); printhost_field) {
-            if (wxTextCtrl* temp = dynamic_cast<TextCtrl*>(printhost_field)->text_ctrl(); temp) {
-                const auto current_host = temp->GetValue();
-                if (current_host == L"https://connect.prusa3d.com") {
-                    temp->SetValue(wxString());
-                    m_config->opt_string("print_host") = "";
-                }
-            }
-        }
-        if (opt->value == htPrusaLink) { // PrusaConnect does NOT allow http digest
-            m_optgroup->show_field("printhost_authorization_type");
-            AuthorizationType auth_type = m_config->option<ConfigOptionEnum<AuthorizationType>>("printhost_authorization_type")->value;
-            m_optgroup->show_field("printhost_apikey", auth_type == AuthorizationType::atKeyPassword);
-            for (const char* opt_key : { "printhost_user", "printhost_password" })
-                m_optgroup->show_field(opt_key, auth_type == AuthorizationType::atUserPassword); 
-        } else {
-            m_optgroup->hide_field("printhost_authorization_type");
-            m_optgroup->show_field("printhost_apikey", true);
-            for (const std::string& opt_key : std::vector<std::string>{ "printhost_user", "printhost_password" })
-                m_optgroup->hide_field(opt_key);
-
-            if (opt->value == htPrusaConnect) { // automatically show default prusaconnect address
-                if (Field* printhost_field = m_optgroup->get_field("print_host"); printhost_field) {
-                    if (wxTextCtrl* temp = dynamic_cast<TextCtrl*>(printhost_field)->text_ctrl(); temp && temp->GetValue().IsEmpty()) {
-                        temp->SetValue(L"https://connect.prusa3d.com");
-                        m_config->opt_string("print_host") = "https://connect.prusa3d.com";
-                    }
-                }
-            }
-        }
-
+        // Moonraker authenticates with an API key only; HTTP digest is a PrusaLink convention.
+        m_optgroup->hide_field("printhost_authorization_type");
+        m_optgroup->show_field("printhost_apikey", true);
+        for (const std::string& opt_key : std::vector<std::string>{ "printhost_user", "printhost_password" })
+            m_optgroup->hide_field(opt_key);
     }
     else {
-        m_optgroup->set_value("host_type", int(PrintHostType::htOctoPrint), false);
+        m_optgroup->set_value("host_type", int(PrintHostType::htMoonraker), false);
         m_optgroup->hide_field("host_type");
 
         m_optgroup->show_field("printhost_authorization_type");
@@ -491,11 +463,7 @@ void PhysicalPrinterDialog::update_host_type(bool printer_change)
     choice->set_values(types);
     int index_in_choice = (printer_change ? std::clamp(last_in_conf - ((int)ht->m_opt.enum_values.size() - (int)types.size()), 0, (int)ht->m_opt.enum_values.size() - 1) : last_in_conf);
     choice->set_value(index_in_choice);
-    if ("prusalink" == ht->m_opt.enum_values.at(index_in_choice))
-        m_config->set_key_value("host_type", new ConfigOptionEnum<PrintHostType>(htPrusaLink));
-    else if ("prusaconnect" == ht->m_opt.enum_values.at(index_in_choice))
-        m_config->set_key_value("host_type", new ConfigOptionEnum<PrintHostType>(htPrusaConnect));
-    else {
+    {
         int host_type = std::clamp(index_in_choice + ((int)ht->m_opt.enum_values.size() - (int)types.size()), 0, (int)ht->m_opt.enum_values.size() - 1);
         PrintHostType type = static_cast<PrintHostType>(host_type);
         m_config->set_key_value("host_type", new ConfigOptionEnum<PrintHostType>(type));

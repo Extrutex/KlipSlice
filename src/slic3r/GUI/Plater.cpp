@@ -19940,11 +19940,7 @@ void Plater::send_gcode_legacy(int plate_idx, Export3mfProgressFn proFn)
         const auto host_type            = host_type_opt != nullptr ? host_type_opt->value : htMoonraker;
 
         std::unique_ptr<PrintHostSendDialog> pDlg;
-        if (host_type == htElegooLink) {
-            pDlg = std::make_unique<ElegooPrintHostSendDialog>(default_output_file, upload_job.printhost->get_post_upload_actions(), groups,
-                                                               storage_paths, storage_names,
-                                                               config->get_bool("open_device_tab_post_upload"));
-        } else if (host_type == htCrealityPrint) {
+        if (host_type == htCrealityPrint) {
             pDlg = std::make_unique<CrealityPrintHostSendDialog>(default_output_file, upload_job.printhost->get_post_upload_actions(), groups,
                                                                  storage_paths, storage_names,
                                                                  config->get_bool("open_device_tab_post_upload"),
@@ -19976,13 +19972,6 @@ void Plater::send_gcode_legacy(int plate_idx, Export3mfProgressFn proFn)
             const int plateindex = (plate_idx == PLATE_ALL_IDX ? get_partplate_list().get_curr_plate_index() : resolved_plate_idx) + 1;
             upload_job.upload_data.extended_info["plateindex"] = std::to_string(plateindex);
         }
-    }
-
-    // Show "Is printer clean" dialog for PrusaConnect - Upload and print.
-    if (std::string(upload_job.printhost->get_name()) == "PrusaConnect" && upload_job.upload_data.post_action == PrintHostPostUploadAction::StartPrint) {
-        GUI::MessageDialog dlg(nullptr, _L("Is the printer ready? Is the print sheet in place, empty and clean?"), _L("Upload and Print"), wxOK | wxCANCEL);
-        if (dlg.ShowModal() != wxID_OK)
-            return;
     }
 
     if (use_3mf) {

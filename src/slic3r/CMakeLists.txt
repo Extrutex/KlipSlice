@@ -656,8 +656,6 @@ set(SLIC3R_GUI_SOURCES
     Utils/CrealityPrintAgent.hpp
     Utils/CrealityHostDiscovery.cpp
     Utils/CrealityHostDiscovery.hpp
-    Utils/ElegooLink.cpp
-    Utils/ElegooLink.hpp
     Utils/EmbossStyleManager.cpp
     Utils/EmbossStyleManager.hpp
     Utils/FileHelp.cpp
@@ -694,8 +692,6 @@ set(SLIC3R_GUI_SOURCES
     Utils/MoonrakerPrinterAgent.hpp
     Utils/Moonraker.cpp
     Utils/Moonraker.hpp
-    Utils/OctoPrint.cpp
-    Utils/OctoPrint.hpp
     Utils/PresetUpdater.cpp
     Utils/PresetUpdater.hpp
     Utils/PrintHost.cpp
@@ -708,7 +704,6 @@ set(SLIC3R_GUI_SOURCES
     Utils/RaycastManager.hpp
     Utils/UndoRedo.cpp
     Utils/UndoRedo.hpp
-    Utils/WebSocketClient.hpp
     Utils/WxFontUtils.cpp
     Utils/WxFontUtils.hpp
     Utils/FileTransferUtils.cpp

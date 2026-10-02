@@ -17,12 +17,10 @@
 
 #include "libslic3r/PrintConfig.hpp"
 #include "libslic3r/Channel.hpp"
-#include "OctoPrint.hpp"
 #include "CrealityPrint.hpp"
 #include "../GUI/PrintHostDialogs.hpp"
 #include "../GUI/MainFrame.hpp"
 #include "slic3r/plugin/PluginManager.hpp"
-#include "ElegooLink.hpp"
 #include "Moonraker.hpp"
 
 namespace fs = boost::filesystem;
@@ -47,19 +45,16 @@ PrintHost* PrintHost::get_print_host(DynamicPrintConfig *config)
 
     if (tech == ptFFF) {
         const auto opt = config->option<ConfigOptionEnum<PrintHostType>>("host_type");
-        const auto host_type = opt != nullptr ? opt->value : htOctoPrint;
+        const auto host_type = opt != nullptr ? opt->value : htMoonraker;
 
         switch (host_type) {
-            case htOctoPrint: return new OctoPrint(config);
-            case htPrusaLink: return new PrusaLink(config);
-            case htPrusaConnect: return new PrusaConnect(config);
             case htCrealityPrint:    return new CrealityPrint(config);
-            case htElegooLink: return new ElegooLink(config);
             case htMoonraker: return new Moonraker(config);
             default:          return nullptr;
         }
     } else {
-        return new SL1Host(config);
+        // KLIPSLICE has no SLA print host.
+        return nullptr;
     }
 }
 
@@ -68,25 +63,11 @@ std::string PrintHost::get_print_host_webui(DynamicPrintConfig* config)
     if (config == nullptr)
         return {};
 
-    std::string webui_url;
-    const auto* host_type_opt = config->option<ConfigOptionEnum<PrintHostType>>("host_type");
-    const auto  host_type     = host_type_opt != nullptr ? host_type_opt->value : htOctoPrint;
-
-    switch (host_type) {
-    case htElegooLink: {
-        webui_url = ElegooLink::get_print_host_webui(config);
-        break;
-    }
-    default: break;
-    }
-
-    if (webui_url.empty()) {
-        webui_url = config->opt_string("print_host_webui");
-        if (webui_url.empty())
-            webui_url = config->opt_string("print_host");
-        if (webui_url.empty())
-            return webui_url;
-    }
+    std::string webui_url = config->opt_string("print_host_webui");
+    if (webui_url.empty())
+        webui_url = config->opt_string("print_host");
+    if (webui_url.empty())
+        return webui_url;
 
     const bool has_http_scheme = boost::algorithm::istarts_with(webui_url, "http");
     const bool has_file_scheme = boost::algorithm::istarts_with(webui_url, "file:");
