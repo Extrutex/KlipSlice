@@ -678,3 +678,62 @@ TEST_CASE("The post-slice layer-count gate keeps a wide margin", "[PrintObject]"
     CHECK(PrintObject::layer_count_covers_object_height(1, 0.6, 0.3));
     CHECK(PrintObject::layer_count_covers_object_height(0, 0.2, 0.3));
 }
+
+TEST_CASE("Changing a motion-only setting on a sliced print invalidates only the G-code export", "[PrintObject][Regression]")
+{
+    // Each of these is read by the G-code generator alone. Before they were classified, any of them
+    // fell through to invalidate_all_steps() and cost a full re-slice.
+    const std::string key = GENERATE(as<std::string>{},
+        "outer_wall_acceleration", "inner_wall_acceleration", "top_surface_acceleration", "bridge_acceleration",
+        "sparse_infill_acceleration", "internal_solid_infill_acceleration",
+        "default_jerk", "outer_wall_jerk", "inner_wall_jerk", "infill_jerk", "top_surface_jerk", "initial_layer_jerk",
+        "travel_jerk", "default_junction_deviation");
+
+    DynamicPrintConfig config = DynamicPrintConfig::full_print_config();
+    config.set_deserialize_strict({{ "layer_height", 0.2 }, { key, 1000 }});
+    Slic3r::Print print;
+    Slic3r::Model model;
+    init_print({cube(20)}, print, model, config);
+    print.set_status_silent();
+    Slic3r::Test::gcode(print); // process and export, so the G-code step is done too
+    const PrintObject *object = print.objects().front();
+    REQUIRE(object->is_step_done(posSlice));
+    REQUIRE(print.is_step_done(psGCodeExport));
+
+    config.set_deserialize_strict({{ key, 2000 }});
+    print.apply(model, config);
+
+    INFO("key = " << key);
+    CHECK(object->is_step_done(posSlice));
+    CHECK(object->is_step_done(posPerimeters));
+    CHECK(object->is_step_done(posPrepareInfill));
+    CHECK(object->is_step_done(posInfill));
+    CHECK(object->is_step_done(posSupportMaterial));
+    CHECK_FALSE(print.is_step_done(psGCodeExport));
+}
+
+TEST_CASE("Changing an acceleration the wipe tower bakes in regenerates the tower but not the objects", "[PrintObject][Regression]")
+{
+    const std::string key = GENERATE(as<std::string>{}, "default_acceleration", "initial_layer_acceleration", "travel_acceleration");
+
+    DynamicPrintConfig config = DynamicPrintConfig::full_print_config();
+    config.set_deserialize_strict({{ "layer_height", 0.2 }, { key, 1000 }});
+    Slic3r::Print print;
+    Slic3r::Model model;
+    init_print({cube(20)}, print, model, config);
+    print.set_status_silent();
+    Slic3r::Test::gcode(print);
+    const PrintObject *object = print.objects().front();
+    REQUIRE(print.is_step_done(psWipeTower));
+    REQUIRE(print.is_step_done(psGCodeExport));
+
+    config.set_deserialize_strict({{ key, 2000 }});
+    print.apply(model, config);
+
+    INFO("key = " << key);
+    CHECK(object->is_step_done(posSlice));
+    CHECK(object->is_step_done(posPerimeters));
+    CHECK(object->is_step_done(posInfill));
+    CHECK_FALSE(print.is_step_done(psWipeTower));
+    CHECK_FALSE(print.is_step_done(psGCodeExport));
+}

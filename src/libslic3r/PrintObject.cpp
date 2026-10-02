@@ -1264,7 +1264,7 @@ bool PrintObject::invalidate_state_by_config_options(
             // Filtering of unprintable regions in multi-material segmentation depends on if gap-fill is enabled or not.
             // So step posSlice is invalidated when gap-fill was enabled/disabled by option "filter_out_gap_fill" or by
             // changing "gap_infill_speed" to force recomputation of the multi-material segmentation.
-            if (this->is_mm_painted() && (opt_key == "filter_out_gap_fill" && (opt_key == "gap_infill_speed" && is_gap_fill_changed_state_due_to_speed())))
+            if (this->is_mm_painted() && (opt_key == "filter_out_gap_fill" || (opt_key == "gap_infill_speed" && is_gap_fill_changed_state_due_to_speed())))
                 steps.emplace_back(posSlice);
             steps.emplace_back(posPerimeters);
         } else if (
@@ -1586,6 +1586,30 @@ bool PrintObject::invalidate_state_by_config_options(
             || opt_key == "flush_into_objects"
             || opt_key == "flush_into_support") {
             invalidated |= m_print->invalidate_step(psWipeTower);
+            invalidated |= m_print->invalidate_step(psGCodeExport);
+        } else if (
+               opt_key == "default_acceleration"
+            || opt_key == "initial_layer_acceleration"
+            || opt_key == "travel_acceleration") {
+            // Motion-only, but the wipe tower bakes these three into its own toolpaths (Print::_make_wipe_tower).
+            invalidated |= m_print->invalidate_step(psWipeTower);
+            invalidated |= m_print->invalidate_step(psGCodeExport);
+        } else if (
+               opt_key == "outer_wall_acceleration"
+            || opt_key == "inner_wall_acceleration"
+            || opt_key == "top_surface_acceleration"
+            || opt_key == "bridge_acceleration"
+            || opt_key == "sparse_infill_acceleration"
+            || opt_key == "internal_solid_infill_acceleration"
+            || opt_key == "default_jerk"
+            || opt_key == "outer_wall_jerk"
+            || opt_key == "inner_wall_jerk"
+            || opt_key == "infill_jerk"
+            || opt_key == "top_surface_jerk"
+            || opt_key == "initial_layer_jerk"
+            || opt_key == "travel_jerk"
+            || opt_key == "default_junction_deviation") {
+            // Motion planning only: read by the G-code generator, by nothing that produces geometry.
             invalidated |= m_print->invalidate_step(psGCodeExport);
         } else {
             // for legacy, if we can't handle this option let's invalidate all steps
