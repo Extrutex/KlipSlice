@@ -133,6 +133,10 @@
 	<string>${MACOSX_BUNDLE_COPYRIGHT}</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>KLIPSLICE connects to Klipper printers (Moonraker) on your local network to send and monitor print jobs.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_moonraker._tcp</string>
+	</array>
 	<key>NSAppTransportSecurity</key>  
 	<dict>
 		<!-- Disable App Transport Security. Resolves https://github.com/OrcaSlicer/OrcaSlicer/issues/791 -->
