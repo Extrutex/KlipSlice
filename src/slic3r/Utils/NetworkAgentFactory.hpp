@@ -11,7 +11,6 @@
 #include <vector>
 
 namespace Slic3r {
-static constexpr char ORCA_PRINTER_AGENT_ID[] = "orca";
 // No longer registered; kept so access codes stored under the old Bambu agent id still resolve.
 static constexpr char BBL_PRINTER_AGENT_ID[] = "bbl";
 static constexpr char MOONRAKER_PRINTER_AGENT_ID[] = "moonraker";

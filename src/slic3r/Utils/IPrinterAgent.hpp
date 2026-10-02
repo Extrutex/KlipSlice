@@ -54,7 +54,6 @@ enum class FilamentSyncMode {
  * - Print job operations
  *
  * Implementations:
- * - OrcaPrinterAgent: Stub implementation (printer ops not yet supported)
  * - PrinterAgentPluginCapability: Python printer-agent plugin capability that
  *   implements IPrinterAgent directly and is handed out as the live agent
  * - MoonrakerPrinterAgent (and its vendor subclasses): native Klipper/Moonraker agent

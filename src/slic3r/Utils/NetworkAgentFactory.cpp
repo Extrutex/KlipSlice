@@ -2,7 +2,6 @@
 #include "IPrinterAgent.hpp"
 #include "ICloudServiceAgent.hpp"
 #include "OrcaCloudServiceAgent.hpp"
-#include "OrcaPrinterAgent.hpp"
 #include "QidiPrinterAgent.hpp"
 #include "SnapmakerPrinterAgent.hpp"
 #include "MoonrakerPrinterAgent.hpp"
@@ -165,7 +164,6 @@ void NetworkAgentFactory::clear_printer_agent_cache()
 
 void NetworkAgentFactory::register_all_agents()
 {
-    register_agent<OrcaPrinterAgent>();
     register_agent<QidiPrinterAgent>();
     register_agent<SnapmakerPrinterAgent>();
     register_agent<MoonrakerPrinterAgent>();
