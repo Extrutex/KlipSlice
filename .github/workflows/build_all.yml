@@ -1,12 +1,11 @@
 name: Build all
 
 on:
-  # KLIPSLICE: every push/PR to main or dev builds Linux x86_64, Windows x64
-  # and macOS arm64 (public repo, no minute cost). linux-arm and flatpak are
-  # opt-in via workflow_dispatch 'platforms'. Agent work branches (claude/**)
-  # get the same gate on push, since there is no local compiler in a session.
+  # KLIPSLICE: every push builds Linux x86_64, Windows x64 and macOS arm64
+  # (public repo, no minute cost), so every branch carries the same gate.
+  # linux-arm and flatpak are opt-in via workflow_dispatch 'platforms'.
   push:
-    branches: [main, dev, 'claude/**']
+    branches: ['**']
     paths:
      - 'deps/**'
      - 'deps_src/**'
