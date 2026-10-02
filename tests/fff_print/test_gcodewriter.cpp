@@ -512,45 +512,26 @@ static bool ordinals_consecutive(const std::vector<int> &values)
     return true;
 }
 
-SCENARIO("Toolchange emission and prefix per printer kind", "[GCodeWriter][H2C]") {
+SCENARIO("Toolchange emission and prefix", "[GCodeWriter][H2C]") {
     GIVEN("A dual-extruder writer with two filaments") {
         GCodeWriter writer;
         writer.config.filament_diameter.values = {1.75, 1.75};
         writer.set_extruders({0, 1});
 
-        WHEN("the printer is a BBL machine") {
-            writer.set_is_bbl_machine(true);
-            THEN("the toolchange prefix is the plain T command") {
-                REQUIRE_THAT(writer.toolchange_prefix(), Catch::Matchers::Equals("T"));
-            }
-            THEN("toolchange emits a single M1020 with the nozzle id") {
-                const std::string gcode = writer.toolchange(1, 0);
-                REQUIRE_THAT(gcode, Catch::Matchers::ContainsSubstring("M1020 S1 H0"));
-                REQUIRE_THAT(gcode, !Catch::Matchers::StartsWith("T1"));
-            }
-            THEN("the other filament and nozzle emit their own ids") {
-                REQUIRE_THAT(writer.toolchange(0, 1), Catch::Matchers::ContainsSubstring("M1020 S0 H1"));
-            }
-            THEN("an unresolved nozzle keeps the literal -1 convention") {
-                REQUIRE_THAT(writer.toolchange(1, -1), Catch::Matchers::ContainsSubstring("M1020 S1 H-1"));
-            }
-        }
-        WHEN("the printer is a BBL machine with manual filament change") {
-            writer.set_is_bbl_machine(true);
-            writer.config.manual_filament_change.value = true;
-            THEN("the manual tag wins over the M1020 form") {
-                REQUIRE_THAT(writer.toolchange_prefix(), Catch::Matchers::StartsWith(";"));
-                const std::string gcode = writer.toolchange(1, 0);
-                REQUIRE_THAT(gcode, Catch::Matchers::ContainsSubstring(writer.toolchange_prefix() + "1"));
-                REQUIRE_THAT(gcode, !Catch::Matchers::ContainsSubstring("M1020"));
-            }
-        }
-        WHEN("the printer is not a BBL machine") {
-            THEN("toolchange keeps the plain T command") {
+        WHEN("the filament changes") {
+            THEN("toolchange emits the plain T command") {
                 REQUIRE_THAT(writer.toolchange_prefix(), Catch::Matchers::Equals("T"));
                 const std::string gcode = writer.toolchange(1, 0);
                 REQUIRE_THAT(gcode, Catch::Matchers::StartsWith("T1"));
                 REQUIRE_THAT(gcode, !Catch::Matchers::ContainsSubstring("M1020"));
+            }
+        }
+        WHEN("manual filament change is on") {
+            writer.config.manual_filament_change.value = true;
+            THEN("the toolchange is the manual tag line") {
+                REQUIRE_THAT(writer.toolchange_prefix(), Catch::Matchers::StartsWith(";"));
+                const std::string gcode = writer.toolchange(1, 0);
+                REQUIRE_THAT(gcode, Catch::Matchers::ContainsSubstring(writer.toolchange_prefix() + "1"));
             }
         }
     }
@@ -594,7 +575,7 @@ static DynamicPrintConfig dual_extruder_toolchange_config()
 }
 
 SCENARIO("Change blocks carry consecutive toolchange ordinals without a duplicate command", "[GCodeWriter][H2C]") {
-    GIVEN("Two sequentially printed objects on different extruders of a BBL machine") {
+    GIVEN("Two sequentially printed objects on different extruders") {
         DynamicPrintConfig config = dual_extruder_toolchange_config();
         config.set_key_value("print_sequence", new ConfigOptionEnum<PrintSequence>(PrintSequence::ByObject));
 
@@ -609,7 +590,6 @@ SCENARIO("Change blocks carry consecutive toolchange ordinals without a duplicat
 
         auto slice_to_gcode = [&]() {
             Print print;
-            print.is_BBL_printer() = true;
             arrange_objects_on_test_bed(model, config);
             for (auto *mo : model.objects) {
                 mo->ensure_on_bed();
@@ -631,8 +611,7 @@ SCENARIO("Change blocks carry consecutive toolchange ordinals without a duplicat
                 REQUIRE(ordinals.front() <= 3);
             }
             THEN("the writer's own command is suppressed as a duplicate") {
-                REQUIRE(count_lines_with_prefix(gcode, "M1020") == 0);
-                REQUIRE(count_lines_with_prefix(gcode, "T1") >= 1);
+                REQUIRE(count_lines_with_prefix(gcode, "T1") == 1);
             }
         }
         WHEN("the change block does not change the tool itself") {
@@ -640,8 +619,8 @@ SCENARIO("Change blocks carry consecutive toolchange ordinals without a duplicat
                                  new ConfigOptionString("M620 O{toolchange_count + 1}\n"));
             const std::string gcode = slice_to_gcode();
             const std::vector<int> ordinals = collect_line_args(gcode, "M620 O");
-            THEN("the writer's toolchange survives and carries a nozzle id") {
-                REQUIRE(count_lines_with_prefix(gcode, "M1020 S1 H") >= 1);
+            THEN("the writer's own toolchange survives") {
+                REQUIRE(count_lines_with_prefix(gcode, "T1") == 1);
             }
             THEN("the ordinal sequence stays consecutive") {
                 REQUIRE(!ordinals.empty());
@@ -670,7 +649,6 @@ SCENARIO("Prime-tower visits without a filament change do not advance the toolch
         obj->layer_config_ranges[{6.0, 10.0}].assign_config(std::move(range_config));
 
         Print print;
-        print.is_BBL_printer() = true;
         arrange_objects_on_test_bed(model, config);
         for (auto *mo : model.objects) {
             mo->ensure_on_bed();
@@ -693,25 +671,15 @@ SCENARIO("Prime-tower visits without a filament change do not advance the toolch
                 REQUIRE(ordinals.front() <= 3);
             }
             THEN("no duplicate toolchange command follows the change block") {
-                REQUIRE(count_lines_with_prefix(gcode, "M1020") == 0);
+                REQUIRE(count_lines_with_prefix(gcode, "T1") == 1);
             }
         }
     }
 }
 
-// ---------------------------------------------------------------------------
-// Real-profile toolchange coverage, targeted. The all-vendors sweep in test_profile_slicing.cpp now
-// slices a two-colour cube per printer, so it already expands every shipped change_filament_gcode with
-// each printer's DEFAULT extruder variants (both the single-nozzle append_tcr and dual-nozzle set_extruder
-// paths). What that sweep can't reach is a variant-conditional branch the defaults never select — H2D's
-// change gcode has an `== "Direct Drive TPU High Flow"` block. This scenario forces that branch by handing
-// the extruders distinct kits, so an unregistered placeholder inside it still throws "Variable does not
-// exist" here instead of only in the field.
-// ---------------------------------------------------------------------------
-
-// Two 20mm cubes on separate extruders of a BBL machine, printed by object so exactly
-// one real toolchange fires and drives the change_filament_gcode. Returns the g-code.
-static std::string slice_two_object_bbl(DynamicPrintConfig &config)
+// Two 20mm cubes on separate extruders, printed by object so exactly one real
+// toolchange fires and drives the change_filament_gcode. Returns the g-code.
+static std::string slice_two_object_dual(DynamicPrintConfig &config)
 {
     config.set_key_value("print_sequence", new ConfigOptionEnum<PrintSequence>(PrintSequence::ByObject));
 
@@ -725,7 +693,6 @@ static std::string slice_two_object_bbl(DynamicPrintConfig &config)
     obj2->config.set_key_value("extruder", new ConfigOptionInt(2));
 
     Print print;
-    print.is_BBL_printer() = true;
     arrange_objects_on_test_bed(model, config);
     for (auto *mo : model.objects) {
         mo->ensure_on_bed();
@@ -738,49 +705,9 @@ static std::string slice_two_object_bbl(DynamicPrintConfig &config)
     return Slic3r::Test::gcode(print);
 }
 
-// The real change_filament_gcode of a shipped "<printer> 0.4 nozzle" machine profile.
-// The profile does not state it inline any more: it names the template carrying it in
-// `include`, and the loader layers that template under the preset. Follow the same list
-// - so a profile that stops naming one fails here instead of silently slicing G-code it
-// no longer ships.
-static std::string shipped_change_filament_gcode(const std::string &printer)
-{
-    const std::string machine_dir   = std::string(PROFILES_DIR) + "/BBL/machine/";
-    const std::string machine_path  = machine_dir + "Bambu Lab " + printer + " 0.4 nozzle.json";
-    const std::string template_name = "Bambu Lab " + printer + " 0.4 nozzle template change_filament_gcode";
-    // PROFILES_DIR is an absolute path baked in at build time; a sparse test checkout
-    // without resources/ leaves it missing. Skip rather than dereference a config that
-    // never loaded - this is the only fff_print test that reads a shipped profile.
-    if (!boost::filesystem::exists(machine_path))
-        SKIP("shipped profile not present in this checkout: " << machine_path);
-
-    auto load = [](const std::string &file, std::map<std::string, std::string> &key_values) {
-        DynamicPrintConfig        config;
-        ConfigSubstitutionContext substitutions{ForwardCompatibilitySubstitutionRule::Enable};
-        std::string               reason;
-        // false: `inherits` and `include` stay out of the config and land in key_values,
-        // for the loader to resolve - neither is a slicing setting.
-        config.load_from_json(file, substitutions, false, key_values, reason);
-        // Fail loudly on a malformed/renamed profile instead of null-dereferencing in opt_string.
-        INFO("profile: " << file << (reason.empty() ? "" : ("  load reason: " + reason)));
-        return config;
-    };
-
-    std::map<std::string, std::string> machine_values;
-    load(machine_path, machine_values);
-    REQUIRE(machine_values.count("include") == 1);
-    const nlohmann::json includes = nlohmann::json::parse(machine_values["include"]);
-    REQUIRE(std::find(includes.begin(), includes.end(), nlohmann::json(template_name)) != includes.end());
-
-    std::map<std::string, std::string> template_values;
-    const DynamicPrintConfig           config = load(machine_dir + template_name + ".json", template_values);
-    REQUIRE(config.has("change_filament_gcode"));
-    return config.opt_string("change_filament_gcode");
-}
-
 SCENARIO("Toolchange gcode resolves old/new_extruder_variant from printer_extruder_variant", "[GCodeWriter][H2C]")
 {
-    GIVEN("a BBL dual-extruder print whose change gcode reads the extruder-variant placeholders") {
+    GIVEN("a dual-extruder print whose change gcode reads the extruder-variant placeholders") {
         DynamicPrintConfig config = dual_extruder_toolchange_config();
         // A distinctive variant that can only reach the g-code through printer_extruder_variant.
         // Both entries carry it so the assertion is independent of which physical extruder the
@@ -791,7 +718,7 @@ SCENARIO("Toolchange gcode resolves old/new_extruder_variant from printer_extrud
             "; VARIANT old={old_extruder_variant} new={new_extruder_variant}\nT[next_filament_id]\n"));
 
         WHEN("the print is sliced") {
-            const std::string gcode = slice_two_object_bbl(config);
+            const std::string gcode = slice_two_object_dual(config);
             THEN("both placeholders resolve to the printer_extruder_variant value") {
                 // The resolved line is the proof: an unresolved token or a parser throw would
                 // prevent this exact line from being emitted. (A negative "{token}" check is
@@ -805,7 +732,7 @@ SCENARIO("Toolchange gcode resolves old/new_extruder_variant from printer_extrud
 
 SCENARIO("Global current-tool placeholders resolve in a context with no local injection", "[GCodeWriter][H2C]")
 {
-    GIVEN("a BBL dual-extruder print whose before_layer_change_gcode reads the current-tool placeholders") {
+    GIVEN("a dual-extruder print whose before_layer_change_gcode reads the current-tool placeholders") {
         DynamicPrintConfig config = dual_extruder_toolchange_config();
         // before_layer_change is one of the contexts that inject NO current_* into their local config
         // (unlike change_filament / machine_end / layer_change), so these placeholders can only resolve
@@ -817,7 +744,7 @@ SCENARIO("Global current-tool placeholders resolve in a context with no local in
 
         WHEN("the print is sliced (obj1 on filament 0, obj2 on filament 1)") {
             std::string gcode;
-            REQUIRE_NOTHROW(gcode = slice_two_object_bbl(config));
+            REQUIRE_NOTHROW(gcode = slice_two_object_dual(config));
             THEN("all three globals resolve to the CORRECT active-tool values on both sides of the change") {
                 // Assert the FULL resolved marker, not just no-throw: obj1 prints on filament 0 (extruder 0,
                 // nozzle 0) and obj2 on filament 1 (extruder 1, nozzle 1). Locking every field means a
@@ -828,32 +755,6 @@ SCENARIO("Global current-tool placeholders resolve in a context with no local in
                 REQUIRE_THAT(gcode, Catch::Matchers::ContainsSubstring("; GVAR fid=0 eid=0 nid=0"));
                 REQUIRE_THAT(gcode, Catch::Matchers::ContainsSubstring("; GVAR fid=1 eid=1 nid=1"));
             }
-        }
-    }
-}
-
-SCENARIO("Shipped dual-nozzle change_filament_gcode resolves during a real slice", "[GCodeWriter][H2C][Profiles]")
-{
-    const std::string printer = GENERATE(std::string("H2C"), std::string("H2D"), std::string("H2D Pro"), std::string("X2D"));
-
-    GIVEN("the real " + printer + " change_filament_gcode driving a BBL dual-extruder slice") {
-        DynamicPrintConfig config = dual_extruder_toolchange_config();
-        config.set_key_value("change_filament_gcode", new ConfigOptionString(shipped_change_filament_gcode(printer)));
-        // H2D's gcode branches on the extruder variant; give the extruders distinct kits so the
-        // "Direct Drive TPU High Flow" branch is reachable.
-        config.set_key_value("printer_extruder_variant",
-                             new ConfigOptionStrings({"Direct Drive Standard", "Direct Drive TPU High Flow"}));
-        // Extruder-indexed machine rates the stock gcode divides by (default size 1); size to 2 extruders.
-        config.set_key_value("hotend_cooling_rate", new ConfigOptionFloatsNullable({2.0, 2.0}));
-        config.set_key_value("hotend_heating_rate", new ConfigOptionFloatsNullable({2.0, 2.0}));
-
-        THEN("every placeholder resolves (no undefined-variable throw) and the change block runs") {
-            std::string gcode;
-            REQUIRE_NOTHROW(gcode = slice_two_object_bbl(config));
-            // A resolved marker only the emitted change block produces (the trailing config
-            // dump keeps the raw "{filament_type[...]}" template), so this confirms the real
-            // change_filament_gcode was expanded, not merely echoed.
-            REQUIRE_THAT(gcode, Catch::Matchers::ContainsSubstring("set_filament_type:PLA"));
         }
     }
 }

@@ -1177,10 +1177,7 @@ public:
     // Return 4 wipe tower corners in the world coordinates (shifted and rotated), including the wipe tower brim.
     Points first_layer_wipe_tower_corners(bool check_wipe_tower_existance=true) const;
 
-    //SoftFever
-    bool &is_BBL_printer() { return m_isBBLPrinter; }
-    const bool is_BBL_printer() const { return m_isBBLPrinter; }
-    WipeTowerType wipe_tower_type() const { return is_BBL_printer() ? WipeTowerType::Type1 : m_config.wipe_tower_type.value; }
+    WipeTowerType wipe_tower_type() const { return m_config.wipe_tower_type.value; }
     CalibMode& calib_mode() { return m_calib_params.mode; }
     const CalibMode calib_mode() const { return m_calib_params.mode; }
     void set_calib_params(const Calib_Params& params);
@@ -1325,9 +1322,6 @@ private:
     PrintObjectPtrs                         m_objects;
     PrintRegionPtrs                         m_print_regions;
     
-    //SoftFever
-    bool m_isBBLPrinter = false;
-
     // Ordered collections of extrusion paths to build skirt loops and brim.
     ExtrusionEntityCollection               m_skirt;
     std::vector<SkirtBrimGroup>             m_skirt_brim_groups;

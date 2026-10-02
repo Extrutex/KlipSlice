@@ -33,21 +33,18 @@
 using namespace Slic3r;
 using namespace Slic3r::Test;
 
-TEST_CASE("Timelapse g-code is emitted once per layer for Bambu and non-Bambu printers", "[Print][Regression]")
+TEST_CASE("Timelapse g-code is emitted once per layer for every printer structure", "[Print][Regression]")
 {
     struct PrinterCase {
         std::string name;
         std::string structure;
-        bool        is_bbl;
     };
     const PrinterCase printer = GENERATE(from_range(std::vector<PrinterCase>{
-        { "non-BBL undefined", "undefine", false },
-        { "non-BBL CoreXY",    "corexy",   false },
-        { "non-BBL i3",        "i3",       false },
-        { "non-BBL H-Bot",     "hbot",     false },
-        { "non-BBL Delta",     "delta",    false },
-        { "Bambu CoreXY",      "corexy",   true },
-        { "Bambu i3",          "i3",       true },
+        { "undefined", "undefine" },
+        { "CoreXY",    "corexy"   },
+        { "i3",        "i3"       },
+        { "H-Bot",     "hbot"     },
+        { "Delta",     "delta"    },
     }));
     INFO("printer: " << printer.name);
 
@@ -61,7 +58,6 @@ TEST_CASE("Timelapse g-code is emitted once per layer for Bambu and non-Bambu pr
         { "time_lapse_gcode",            "TIMELAPSE_TAKE_FRAME" },
     });
     Print print;
-    print.is_BBL_printer() = printer.is_bbl;
     Model model;
     init_print({ cube(20) }, print, model, config);
     const std::string gcode = Slic3r::Test::gcode(print);
@@ -548,9 +544,6 @@ TEST_CASE("export_gcode writes G-code without a result pointer", "[Print][export
     Model model;
     Slic3r::Test::init_print({cube(20)}, print, model);
     print.process();
-
-    SECTION("non-BBL printer") {}
-    SECTION("BBL printer") { print.is_BBL_printer() = true; }
 
     ScopedTemporaryFile temp(".gcode");
     REQUIRE_NOTHROW(print.export_gcode(temp.string(), nullptr, nullptr));

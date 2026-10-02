@@ -424,10 +424,6 @@ std::string GCodeWriter::set_jerk_xy(double jerk)
         
         gcode << "M205 X" << jerk_x << " Y" << jerk_y;
     }
-    //the is_bbl check should be in the else statement above so that it doesn't inadverently added Z & E to klipper  
-    if (m_is_bbl_printers)
-        gcode << std::setprecision(2) << " Z" << EXTRUDER_LIMIT(m_max_jerk_z) << " E" << EXTRUDER_LIMIT(m_max_jerk_e);
-
     if (GCodeWriter::full_gcode_comment) gcode << " ; adjust jerk";
     gcode << "\n";
 
@@ -502,22 +498,16 @@ std::string GCodeWriter::set_pressure_advance(double pa) const
     std::ostringstream gcode;
     if (pa < 0)
         return gcode.str();
-    if(m_is_bbl_printers){
-        //SoftFever: set L1000 to use linear model
-        gcode << "M900 K" <<std::setprecision(4)<< pa << " L1000 M10 ; Override pressure advance value\n";
-    }
-    else{
-        if (FLAVOR_IS(gcfKlipper))
-            gcode << "SET_PRESSURE_ADVANCE ADVANCE=" << std::setprecision(4) << pa << "; Override pressure advance value\n";
-        else if(FLAVOR_IS(gcfRepRapFirmware))
-            gcode << ("M572 D0 S") << std::setprecision(4) << pa << "; Override pressure advance value\n";
-        else if (FLAVOR_IS(gcfRepetier))
-            // Repetier M233: X is quadratic (K), Y is linear (L).
-            // Applying the value to both parameters simultaneously.
-            gcode << "M233 X" << std::setprecision(4) << pa << " Y" << std::setprecision(4) << pa << " ; Override pressure advance value\n";
-        else
-            gcode << "M900 K" <<std::setprecision(4)<< pa << "; Override pressure advance value\n";
-    }
+    if (FLAVOR_IS(gcfKlipper))
+        gcode << "SET_PRESSURE_ADVANCE ADVANCE=" << std::setprecision(4) << pa << "; Override pressure advance value\n";
+    else if(FLAVOR_IS(gcfRepRapFirmware))
+        gcode << ("M572 D0 S") << std::setprecision(4) << pa << "; Override pressure advance value\n";
+    else if (FLAVOR_IS(gcfRepetier))
+        // Repetier M233: X is quadratic (K), Y is linear (L).
+        // Applying the value to both parameters simultaneously.
+        gcode << "M233 X" << std::setprecision(4) << pa << " Y" << std::setprecision(4) << pa << " ; Override pressure advance value\n";
+    else
+        gcode << "M900 K" <<std::setprecision(4)<< pa << "; Override pressure advance value\n";
     return gcode.str();
 }
 
@@ -641,10 +631,7 @@ std::string GCodeWriter::enable_power_loss_recovery(PowerLossRecoveryMode mode)
 
     const bool enable = mode == PowerLossRecoveryMode::Enable;
 
-    if (m_is_bbl_printers) {
-        gcode << "M1003 S" << (enable ? "1" : "0");
-    }
-    else if (FLAVOR_IS(gcfMarlinFirmware)) {
+    if (FLAVOR_IS(gcfMarlinFirmware)) {
         gcode << "M413 S" << (enable ? "1" : "0");
     } else {
         return std::string();
@@ -696,16 +683,9 @@ std::string GCodeWriter::toolchange(unsigned int filament_id, int nozzle_id)
     // return the toolchange command
     // if we are running a single-extruder setup, just set the extruder and return nothing
     std::ostringstream gcode;
-    // Orca: also emit for non-BBL single-extruder multi-filament setups (MMU-style).
-    if (this->multiple_extruders || (this->config.filament_diameter.values.size() > 1 && !is_bbl_printers())) {
-        // Orca: manual filament change keeps its tag line even on BBL machines, so the
-        // M1020 form must not shadow it. nozzle_id is signed: the null-safe nozzle
-        // lookup legitimately yields -1 ("no specific nozzle"), matching the literal
-        // H-1 the stock change templates emit; an unsigned would wrap.
-        if (m_is_bbl_printers && !config.manual_filament_change)
-            gcode << "M1020 S" << filament_id << " H" << nozzle_id;
-        else
-            gcode << this->toolchange_prefix() << filament_id;
+    // Orca: also emit for single-extruder multi-filament setups (MMU-style).
+    if (this->multiple_extruders || this->config.filament_diameter.values.size() > 1) {
+        gcode << this->toolchange_prefix() << filament_id;
         if (GCodeWriter::full_gcode_comment)
             gcode << " ; change extruder";
         gcode << "\n";

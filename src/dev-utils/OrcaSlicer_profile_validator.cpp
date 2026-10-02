@@ -173,7 +173,7 @@ Vec2d place_wipe_tower(DynamicPrintConfig &cfg, const Vec2d &center)
 // Either way the output file name is built after export, which expands filename_format with the final
 // print statistics. An undefined placeholder in any shipped custom g-code throws
 // Slic3r::PlaceholderParserError.
-std::string slice_two_color_cube_and_export(DynamicPrintConfig cfg, bool is_bbl, bool by_object)
+std::string slice_two_color_cube_and_export(DynamicPrintConfig cfg, bool by_object)
 {
     const Vec2d        center = printable_area_center(cfg);
     std::vector<Vec2d> cube_mins;
@@ -195,7 +195,6 @@ std::string slice_two_color_cube_and_export(DynamicPrintConfig cfg, bool is_bbl,
 
     Model  model;
     Print  print;
-    print.is_BBL_printer() = is_bbl;
     for (const Vec2d &cube_min : cube_mins) {
         TriangleMesh m = make_cube(10, 10, 10);
         m.translate(static_cast<float>(cube_min.x()), static_cast<float>(cube_min.y()), 0.f);
@@ -326,7 +325,7 @@ DynamicPrintConfig slice_config(PresetBundle &bundle)
 std::string slice_selection(PresetBundle &bundle, const std::string &what, bool by_object, const std::string &outdir, const std::string &file_base)
 {
     try {
-        const std::string out = slice_two_color_cube_and_export(slice_config(bundle), /*is_bbl_printer=*/false, by_object);
+        const std::string out = slice_two_color_cube_and_export(slice_config(bundle), by_object);
         if (!outdir.empty() && !out.empty())
             save_string_file(fs::path(outdir) / (file_base + ".gcode"), out);
         if (out.empty() || out.find("G1") == std::string::npos) {

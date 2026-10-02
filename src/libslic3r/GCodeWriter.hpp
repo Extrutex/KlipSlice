@@ -128,9 +128,6 @@ public:
     bool is_current_position_clear() const { return m_is_current_pos_clear; };
     //BBS:
     static bool full_gcode_comment;
-    //SoftFever
-    void set_is_bbl_machine(bool bval) {m_is_bbl_printers = bval;}
-    const bool is_bbl_printers() const {return m_is_bbl_printers;}
     void set_is_first_layer(bool bval) { m_is_first_layer = bval; }
     GCodeFlavor get_gcode_flavor() const { return config.gcode_flavor; }
     void invalidate_acceleration() { m_last_acceleration = 0; m_last_travel_acceleration = 0; }
@@ -195,8 +192,6 @@ public:
     std::string m_gcode_label_objects_start;
     std::string m_gcode_label_objects_end;
 
-    //SoftFever
-    bool            m_is_bbl_printers = false;
     double          m_current_speed;
     bool            m_is_first_layer = true;
 

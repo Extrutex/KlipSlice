@@ -3230,27 +3230,6 @@ void TabPrint::toggle_options()
         }
         cb->SetValue(n);
     }
-
-    // BBL printers do not support cone wipe tower
-    field = m_active_page->get_field("wipe_tower_wall_type");
-    if (auto choice = dynamic_cast<Choice*>(field)) {
-        auto def = print_config_def.get("wipe_tower_wall_type");
-        std::vector<int> enum_set_bbl      = {wtwRectangle, wtwRib};
-        std::vector<int> enum_set_none_bbl = {wtwRectangle, wtwCone, wtwRib};
-        auto&            set               = m_config_manipulation.get_is_BBL_Printer() ? enum_set_bbl : enum_set_none_bbl;
-        auto&            opt               = const_cast<ConfigOptionDef&>(field->m_opt);
-        auto             cb                = dynamic_cast<ComboBox*>(choice->window);
-        auto             n                 = cb->GetValue();
-        opt.enum_values.clear();
-        opt.enum_labels.clear();
-        cb->Clear();
-        for (auto i : set) {
-            opt.enum_values.push_back(def->enum_values[i]);
-            opt.enum_labels.push_back(def->enum_labels[i]);
-            cb->Append(_(def->enum_labels[i]));
-        }
-        cb->SetValue(n);
-    }
 }
 
 void TabPrint::update()

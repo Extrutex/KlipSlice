@@ -851,7 +851,7 @@ void CalibUtils::calib_pa_pattern(const CalibInfo &calib_info, Model& model)
     Vec3d   offset            = Vec3d(current_width / 2, current_depth / 2, 0) - half_pattern_size;
     pa_pattern.set_start_offset(offset);
 
-    model.plates_custom_gcodes[0] = pa_pattern.generate_custom_gcodes(full_config, true, *object, plate_origin);
+    model.plates_custom_gcodes[0] = pa_pattern.generate_custom_gcodes(full_config, *object, plate_origin);
     model.calib_pa_pattern = std::make_unique<CalibPressureAdvancePattern>(pa_pattern);
 }
 
@@ -1617,7 +1617,6 @@ bool CalibUtils::process_and_store_3mf(Model *model, const DynamicPrintConfig &f
 
     Print *fff_print = dynamic_cast<Print *>(print);
     fff_print->set_calib_params(params);
-    fff_print->is_BBL_printer() = true;
 
     //StringObjectException warning;
     //auto err = print->validate(&warning);

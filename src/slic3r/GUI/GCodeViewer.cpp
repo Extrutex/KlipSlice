@@ -1489,10 +1489,9 @@ void GCodeViewer::load_as_gcode(const GCodeProcessorResult& gcode_result, const 
     // ORCA: Apply the default view type now that we know how many tools the G-code actually uses.
     apply_default_view_type();
 
-    // BBS: data for rendering color arrangement recommendation
-    m_nozzle_nums = print.config().option<ConfigOptionFloats>("nozzle_diameter")->values.size();
-    // Orca hack: Hide filament group for non-bbl printers
-    if (!print.is_BBL_printer()) m_nozzle_nums = 1;
+    // Filament groups are not supported on Klipper printers, so the colour arrangement
+    // recommendation always sees a single nozzle.
+    m_nozzle_nums = 1;
     std::vector<int>         filament_maps = print.get_filament_maps();
     std::vector<std::string> color_opt     = print.config().option<ConfigOptionStrings>("filament_colour")->values;
     std::vector<std::string> type_opt      = print.config().option<ConfigOptionStrings>("filament_type")->values;

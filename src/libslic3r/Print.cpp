@@ -2229,9 +2229,8 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
                       "Please change them to the exact uppercase \"G92 E0\"."),
                     nullptr, "layer_change_gcode"};
 
-        // Only Marlin flavours need the reset; BBL printers do not.
+        // Only Marlin flavours need the reset.
         if ((m_config.gcode_flavor == gcfMarlinLegacy || m_config.gcode_flavor == gcfMarlinFirmware) &&
-            !is_BBL_printer() &&
             !before_has_g92_exact && !layer_has_g92_exact)
             return {L("Relative extruder addressing requires resetting the extruder position at each layer to "
                       "prevent loss of floating point accuracy. Add \"G92 E0\" to layer_gcode."),
@@ -2252,7 +2251,7 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
     assert(bed_type_def != nullptr);
 
     // ORCA: check if bed type is compatible with all selected filaments
-    if (is_BBL_printer() || m_config.support_multi_bed_types.value) {
+    if (m_config.support_multi_bed_types.value) {
 	    const t_config_enum_values* bed_type_keys_map = bed_type_def->enum_keys_map;
 	    for (unsigned int extruder_id : extruders) {
 	        const ConfigOptionInts* bed_temp_opt = m_config.option<ConfigOptionInts>(get_bed_temp_key(m_config.curr_bed_type));
@@ -4971,7 +4970,8 @@ void Print::export_gcode_from_previous_file(const std::string& file, GCodeProces
 
     try {
         GCodeProcessor processor;
-        GCodeProcessor::s_IsBBLPrinter = is_BBL_printer();
+        // A previously imported Bambu G-code may have switched the tag dialect; sliced output never uses it.
+        GCodeProcessor::s_IsBBLPrinter = false;
         const Vec3d origin = this->get_plate_origin();
         processor.set_xy_offset(origin(0), origin(1));
         // Reloaded sliced projects re-estimate with the same nozzle-grouping slot context as the

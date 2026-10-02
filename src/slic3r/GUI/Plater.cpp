@@ -16267,7 +16267,6 @@ void Plater::_calib_pa_pattern(const Calib_Params& params)
     CalibPressureAdvancePattern pa_pattern(
         params,
         full_config,
-        /*is_bbl_machine=*/false,
         *cube,
         cur_plate->get_origin()
     );
@@ -16367,7 +16366,6 @@ void Plater::_calib_pa_pattern_gen_gcode()
     for (auto obj : cur_plate->get_objects_on_this_plate()) {
         auto gcode = model().calib_pa_pattern->generate_custom_gcodes(
                                 preset_bundle->full_config(),
-                                /*is_bbl_machine=*/false,
                                 *obj,
                                 cur_plate->get_origin()
         );

@@ -137,7 +137,8 @@ const std::string GCodeProcessor::Toolchange_Wipe_Tag          = " CP_TOOLCHANGE
 const float GCodeProcessor::Wipe_Width = 0.05f;
 const float GCodeProcessor::Wipe_Height = 0.05f;
 
-bool GCodeProcessor::s_IsBBLPrinter = true;
+// Sliced output always uses the compatible tag dialect; only an imported Bambu G-code switches it.
+bool GCodeProcessor::s_IsBBLPrinter = false;
 
 static void set_option_value(ConfigOptionFloats& option, size_t id, float value)
 {
@@ -3697,12 +3698,10 @@ void GCodeProcessor::process_file(const std::string& filename, std::function<voi
             // thus a probability of incorrect substitution is low and the G-code viewer is a consumer-only anyways.
             config.load_from_gcode_file(filename, ForwardCompatibilitySubstitutionRule::EnableSilent);
 
-            // Get the correct printer vendor based on the `printer_model` field
+            // An imported Bambu G-code carries Bambu Studio's tag dialect; everything else, including
+            // every file this slicer writes, uses the compatible one.
             auto printer_model_opt = config.opt<ConfigOptionString>("printer_model");
-            if (printer_model_opt && !printer_model_opt->value.empty()) {
-                // TODO: Orca hack, proper vendor check?
-                GCodeProcessor::s_IsBBLPrinter = boost::starts_with(printer_model_opt->value, "Bambu Lab");
-            }
+            GCodeProcessor::s_IsBBLPrinter = printer_model_opt && boost::starts_with(printer_model_opt->value, "Bambu Lab");
 
             ConfigOptionStrings *filament_color = config.opt<ConfigOptionStrings>("filament_colour");
             ConfigOptionInts    *filament_map   = config.opt<ConfigOptionInts>("filament_map", true);

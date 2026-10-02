@@ -539,16 +539,6 @@ void ConfigManipulation::update_print_fff_config(DynamicPrintConfig* config, con
     }
 #endif
 
-    // BBL printers do not support cone wipe tower
-    if (config->opt_bool("enable_prime_tower") && is_BBL_Printer) {
-        auto wipe_tower_wall_type = config->opt_enum<WipeTowerWallType>("wipe_tower_wall_type");
-        if (wipe_tower_wall_type == WipeTowerWallType::wtwCone) {
-            DynamicPrintConfig new_conf = *config;
-            new_conf.set_key_value("wipe_tower_wall_type", new ConfigOptionEnum<WipeTowerWallType>(WipeTowerWallType::wtwRectangle));
-            apply(config, &new_conf);
-        }
-    }
-
     // Check "enable_support" and "overhangs" relations only on global settings level
     if (is_global_config && config->opt_bool("enable_support")) {
         // Ask only once.
@@ -1020,10 +1010,10 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, in
     //     toggle_field(el, have_sequential_printing);
     toggle_field("print_order", !have_sequential_printing);
 
-    toggle_field("single_extruder_multi_material", !is_BBL_Printer);
+    toggle_field("single_extruder_multi_material", true);
 
     auto bSEMM = preset_bundle->printers.get_edited_preset().config.opt_bool("single_extruder_multi_material");
-    const bool supports_wipe_tower_2 = !is_BBL_Printer && preset_bundle->printers.get_edited_preset().config.opt_enum<WipeTowerType>("wipe_tower_type") == WipeTowerType::Type2;
+    const bool supports_wipe_tower_2 = preset_bundle->printers.get_edited_preset().config.opt_enum<WipeTowerType>("wipe_tower_type") == WipeTowerType::Type2;
 
     toggle_field("ooze_prevention", !bSEMM);
     bool have_ooze_prevention = config->opt_bool("ooze_prevention");
@@ -1148,7 +1138,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, in
         apply(config, &new_conf);
     }
     toggle_line("overhang_reverse_threshold", has_detect_overhang_wall && allow_overhang_reverse && has_overhang_reverse && !has_overhang_reverse_internal_only);
-    toggle_line("timelapse_type", is_BBL_Printer);
+    toggle_line("timelapse_type", false);
 
 
     bool have_small_area_infill_flow_compensation = config->opt_bool("small_area_infill_flow_compensation");
