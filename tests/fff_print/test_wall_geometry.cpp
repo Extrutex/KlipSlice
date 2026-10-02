@@ -27,7 +27,8 @@
 //   (f) runs: n beads across a feature need at most ceil(n/2) wall runs (loops pair the beads, an odd
 //       middle bead is one open line), so more runs means wall pieces that are not chained.
 //
-// Matrix: {arachne, classic, classic + detect_thin_wall} x precise_outer_wall {0, 1}.
+// Matrix: {arachne, classic, classic + detect_thin_wall} x precise_outer_wall {0, 1}, plus Arachne with
+// precise_outer_wall_method = toolpath_shift.
 //
 // Known defects are listed in known_failures(). A cell test case requires each listed check to still
 // disagree with the bead model and every other check to agree, so a fix shows up check by check. Each
@@ -204,11 +205,14 @@ struct Cell {
     const char *generator;
     bool        thin_walls;
     bool        precise;
+    // precise_outer_wall_method
+    const char *method = "outline_shrink";
 };
 
 const Cell cells[] = {
     { "arachne/precise=0",      "arachne", false, false },
     { "arachne/precise=1",      "arachne", false, true  },
+    { "arachne/precise=1/shift", "arachne", false, true, "toolpath_shift" },
     { "classic/precise=0",      "classic", false, false },
     { "classic/precise=1",      "classic", false, true  },
     { "classic+thin/precise=0", "classic", true,  false },
@@ -232,6 +236,7 @@ DynamicPrintConfig cell_config(const Cell &cell)
         { "wall_generator",                cell.generator },
         { "detect_thin_wall",              cell.thin_walls },
         { "precise_outer_wall",            cell.precise },
+        { "precise_outer_wall_method",     cell.method },
         // precise_outer_wall only acts with the inner walls printed first.
         { "wall_sequence",                 "inner wall/outer wall" },
         { "nozzle_diameter",               "0.4" },
@@ -564,7 +569,11 @@ std::vector<Check> evaluate(const Cell &cell)
 // (c') The pseudo cell comparing the two Arachne cells. Every fin that precise_outer_wall=0 prints as one
 // bead must come out as one bead of the same width with precise_outer_wall=1; a missing or split bead
 // counts as an unbounded difference.
-const char *const precise_parity = "arachne/precise=1 vs 0";
+const char *const precise_parity       = "arachne/precise=1 vs 0";
+const char *const precise_shift_parity = "arachne/precise=1/shift vs 0";
+// The pseudo cell comparing the two precise methods on the block: a wall with room behind its beads
+// must come out the same either way, bead for bead.
+const char *const precise_method_block = "arachne/precise=1/shift vs precise=1";
 
 std::vector<Crossing> fin_crossings(const ProbeLayer &layer, size_t i)
 {
@@ -574,10 +583,10 @@ std::vector<Crossing> fin_crossings(const ProbeLayer &layer, size_t i)
     return cross_section(beads_in(layer, around(r)), 1, 0.5 * (r.y0 + r.y1));
 }
 
-std::vector<Check> evaluate_precise_parity()
+std::vector<Check> evaluate_precise_parity(const char *precise_cell)
 {
     const ProbeLayer off = slice_probe_layer(cell_named("arachne/precise=0"));
-    const ProbeLayer on  = slice_probe_layer(cell_named("arachne/precise=1"));
+    const ProbeLayer on  = slice_probe_layer(cell_named(precise_cell));
     std::vector<Check> out;
     for (size_t i = 0; i < fin_thicknesses.size(); ++ i) {
         const std::vector<Crossing> a = fin_crossings(off, i);
@@ -592,9 +601,37 @@ std::vector<Check> evaluate_precise_parity()
     return out;
 }
 
+std::vector<Crossing> block_crossings(const ProbeLayer &layer)
+{
+    const Vec2d o = layer.offset;
+    const Rect  r { block_x0 + o.x(), block_y0 + o.y(), block_x0 + block_size + o.x(), block_y0 + block_size + o.y() };
+    return cross_section(beads_in(layer, around(r), true), 1, 0.5 * (r.y0 + r.y1));
+}
+
+std::vector<Check> evaluate_precise_method_block()
+{
+    const std::vector<Crossing> shrink = block_crossings(slice_probe_layer(cell_named("arachne/precise=1")));
+    const std::vector<Crossing> shift  = block_crossings(slice_probe_layer(cell_named("arachne/precise=1/shift")));
+    std::vector<Check> out;
+    out.push_back({ "block", "wall_beads", double(shift.size()), double(shrink.size()), double(shrink.size()), {} });
+    for (size_t i = 0; i < std::min(shrink.size(), shift.size()); ++ i) {
+        out.push_back({ format("bead %.0f", double(i)), "position", std::abs(shift[i].pos - shrink[i].pos), 0., bead_tolerance,
+                        format("shrink %.4f", shrink[i].pos) + format(" shift %.4f", shift[i].pos) });
+        out.push_back({ format("bead %.0f", double(i)), "width", std::abs(shift[i].width - shrink[i].width), 0., bead_tolerance,
+                        format("shrink %.4f", shrink[i].width) + format(" shift %.4f", shift[i].width) });
+    }
+    return out;
+}
+
 std::vector<Check> evaluate_named(const std::string &name)
 {
-    return name == precise_parity ? evaluate_precise_parity() : evaluate(cell_named(name));
+    if (name == precise_parity)
+        return evaluate_precise_parity("arachne/precise=1");
+    if (name == precise_shift_parity)
+        return evaluate_precise_parity("arachne/precise=1/shift");
+    if (name == precise_method_block)
+        return evaluate_precise_method_block();
+    return evaluate(cell_named(name));
 }
 
 // ---- Known defects ----
@@ -664,11 +701,13 @@ const std::vector<KnownFailure> &known_failures()
 
         { "WALL-4", "arachne/precise=0", "wedge", "runs" },
         { "WALL-4", "arachne/precise=1", "wedge", "runs" },
+        { "WALL-4", "arachne/precise=1/shift", "wedge", "runs" },
         { "WALL-4", "classic+thin/precise=0", "wedge", "runs" },
         { "WALL-4", "classic+thin/precise=1", "wedge", "runs" },
 
         { "WALL-5", "arachne/precise=0", "holes", "worst_diameter" },
         { "WALL-5", "arachne/precise=1", "holes", "worst_diameter" },
+        { "WALL-5", "arachne/precise=1/shift", "holes", "worst_diameter" },
     };
     return list;
 }
@@ -736,6 +775,23 @@ TEST_CASE("Arachne single beads are as wide with precise outer wall as without",
     require_bead_model(precise_parity);
 }
 
+// The toolpath-shift method is the fix for WALL-1: with it the precise outer wall passes every check
+// that the outline-shrink method is listed for in known_failures().
+TEST_CASE("Arachne walls with precise outer wall by toolpath shift match the bead model", "[WallGeometry]")
+{
+    require_bead_model("arachne/precise=1/shift");
+}
+
+TEST_CASE("Arachne single beads are as wide with precise outer wall by toolpath shift as without", "[WallGeometry]")
+{
+    require_bead_model(precise_shift_parity);
+}
+
+TEST_CASE("Both precise outer wall methods place the walls of a thick wall alike", "[WallGeometry]")
+{
+    require_bead_model(precise_method_block);
+}
+
 TEST_CASE("Classic walls without precise outer wall match the bead model", "[WallGeometry]")
 {
     require_bead_model("classic/precise=0");
@@ -798,6 +854,8 @@ TEST_CASE("Wall geometry report", "[.][WallGeometryReport]")
     for (const Cell &cell : cells)
         names.emplace_back(cell.name);
     names.emplace_back(precise_parity);
+    names.emplace_back(precise_shift_parity);
+    names.emplace_back(precise_method_block);
     for (const std::string &name : names) {
         std::string s = "== " + name + "\n";
         for (const Check &c : evaluate_named(name)) {

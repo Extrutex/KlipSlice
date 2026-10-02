@@ -211,6 +211,16 @@ enum class WallSequence {
     Count,
 };
 
+// How precise_outer_wall is realised by the Arachne wall generator.
+enum class PreciseOuterWallMethod
+{
+    // Shrink the outline before the walls are generated and move the outer wall back out.
+    OutlineShrink,
+    // Generate the walls on the true outline and move the walls behind the outer wall inwards.
+    ToolpathShift,
+    Count,
+};
+
 // Orca
 enum class WallDirection
 {
@@ -1418,6 +1428,7 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionBool,                 wipe_before_external_loop))
     ((ConfigOptionEnum<WallInfillOrder>, wall_infill_order))
     ((ConfigOptionBool,                 precise_outer_wall))
+    ((ConfigOptionEnum<PreciseOuterWallMethod>, precise_outer_wall_method))
     ((ConfigOptionPercent,              bridge_density))
     ((ConfigOptionFloat,                 filter_out_gap_fill))
     ((ConfigOptionFloatsOrPercentsNullable, small_perimeter_speed))

@@ -311,6 +311,12 @@ static t_config_enum_values s_keys_map_WallSequence {
 };
 CONFIG_OPTION_ENUM_DEFINE_STATIC_MAPS(WallSequence)
 
+static t_config_enum_values s_keys_map_PreciseOuterWallMethod {
+    { "outline_shrink", int(PreciseOuterWallMethod::OutlineShrink) },
+    { "toolpath_shift", int(PreciseOuterWallMethod::ToolpathShift) },
+};
+CONFIG_OPTION_ENUM_DEFINE_STATIC_MAPS(PreciseOuterWallMethod)
+
 //Orca
 static t_config_enum_values s_keys_map_WallDirection{
     { "ccw",  int(WallDirection::CounterClockwise) },
@@ -1674,6 +1680,24 @@ void PrintConfigDef::init_fff_params()
     def->tooltip  = L("Improve shell precision by adjusting outer wall spacing. This also improves layer consistency. NOTE: This option "
                        "will be ignored for outer-inner or inner-outer-inner wall sequences.");
     def->set_default_value(new ConfigOptionBool{true});
+
+    def = this->add("precise_outer_wall_method", coEnum);
+    def->label = L("Precise wall method");
+    def->category = L("Quality");
+    def->tooltip = L("How the Arachne wall generator realises the precise wall.\n\n"
+                     "Outline shrink: the outline is shrunk before the walls are generated. Thin features lose "
+                     "that width, and features just above the minimum feature size are not printed.\n\n"
+                     "Toolpath shift: the walls are generated on the true outline and only the walls behind the "
+                     "outer wall move inwards, where the wall has room for it. The outer surface stays exact and "
+                     "thin features keep their thickness.\n\n"
+                     "The classic wall generator ignores this option.");
+    def->enum_keys_map = &ConfigOptionEnum<PreciseOuterWallMethod>::get_enum_values();
+    def->enum_values.push_back("outline_shrink");
+    def->enum_values.push_back("toolpath_shift");
+    def->enum_labels.push_back(L("Outline shrink"));
+    def->enum_labels.push_back(L("Toolpath shift"));
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionEnum<PreciseOuterWallMethod>(PreciseOuterWallMethod::OutlineShrink));
 
     def = this->add("only_one_wall_top", coBool);
     def->label = L("Only one wall on top surfaces");

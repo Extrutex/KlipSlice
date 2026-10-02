@@ -2500,18 +2500,23 @@ void PerimeterGenerator::process_arachne()
             loop_number = 0;
         
         auto apply_precise_outer_wall = config->precise_outer_wall && config->wall_sequence == WallSequence::InnerOuter;
+        // The precise outer wall puts half of (width - spacing) more room between the outer wall and the wall
+        // behind it. The outline-shrink method takes that room out of the outline and moves the outer wall
+        // back out by wall_0_inset, which costs every thin feature that much thickness. The toolpath-shift
+        // method leaves the outline alone and moves the walls behind the outer wall by inner_wall_shift.
+        const bool precise_by_outline_shrink = apply_precise_outer_wall && config->precise_outer_wall_method == PreciseOuterWallMethod::OutlineShrink;
+        const coord_t precise_wall_gap = apply_precise_outer_wall ? coord_t(ext_perimeter_width / 2 - ext_perimeter_spacing / 2) : 0;
         // Orca: properly adjust offset for the outer wall if precise_outer_wall is enabled.
         ExPolygons last = offset_ex(surface.expolygon.simplify_p(surface_simplify_resolution),
-                       apply_precise_outer_wall? -float(ext_perimeter_width - ext_perimeter_spacing )
+                       precise_by_outline_shrink ? -float(ext_perimeter_width - ext_perimeter_spacing )
                                                  : -float(ext_perimeter_width / 2. - ext_perimeter_spacing / 2.));
         
         Arachne::WallToolPathsParams input_params = Arachne::make_paths_params(this->layer_id, *object_config, *print_config);
         // Set params is_top_or_bottom_layer for adjusting short-wall removal sensitivity.
         input_params.is_top_or_bottom_layer = (is_bottom_layer || is_topmost_layer) ? true : false;
 
-        coord_t wall_0_inset = 0;
-        if (apply_precise_outer_wall)
-           wall_0_inset = -coord_t(ext_perimeter_width / 2 - ext_perimeter_spacing / 2);
+        const coord_t wall_0_inset     = precise_by_outline_shrink ? -precise_wall_gap : 0;
+        const coord_t inner_wall_shift = precise_by_outline_shrink ? 0 : precise_wall_gap;
 
         //PS: One wall top surface for Arachne
         ExPolygons top_expolygons;
@@ -2526,7 +2531,7 @@ void PerimeterGenerator::process_arachne()
         
         Polygons   last_p = to_polygons(last);
         Arachne::WallToolPaths wallToolPaths(last_p, bead_width_0, perimeter_spacing, coord_t(loop_number + 1),
-                                               wall_0_inset, layer_height, input_params_tmp);
+                                               wall_0_inset, layer_height, input_params_tmp, inner_wall_shift);
         std::vector<Arachne::VariableWidthLines>   perimeters = wallToolPaths.getToolPaths();
         ExPolygons  infill_contour = union_ex(wallToolPaths.getInnerContour());
 
@@ -2580,7 +2585,7 @@ void PerimeterGenerator::process_arachne()
                 const bool     clip_walls_over_top = top_fill_replaces_inner_walls(*this->config);
                 const Polygons inner_region        = to_polygons(offset_ex(clip_walls_over_top ? infill_contour
                                                                                                : diff_ex(infill_contour, top_expolygons),
-                                                                          wall_0_inset));
+                                                                          -precise_wall_gap));
                 Arachne::WallToolPaths inner_wall_tool_paths(inner_region, perimeter_spacing, perimeter_spacing, coord_t(inner_loop_number + 1), 0, layer_height, input_params_tmp);
                 std::vector<Arachne::VariableWidthLines> inner_perimeters = inner_wall_tool_paths.getToolPaths();
 
@@ -2603,7 +2608,7 @@ void PerimeterGenerator::process_arachne()
             } else {
                 // There is no top surface ExPolygon, so we call Arachne again with parameters
                 // like when the single perimeter feature is disabled.
-                Arachne::WallToolPaths no_single_perimeter_tool_paths(last_p, bead_width_0, perimeter_spacing, coord_t(inner_loop_number + 2), wall_0_inset, layer_height, input_params_tmp);
+                Arachne::WallToolPaths no_single_perimeter_tool_paths(last_p, bead_width_0, perimeter_spacing, coord_t(inner_loop_number + 2), wall_0_inset, layer_height, input_params_tmp, inner_wall_shift);
                 perimeters     = no_single_perimeter_tool_paths.getToolPaths();
                 infill_contour = union_ex(no_single_perimeter_tool_paths.getInnerContour());
             }

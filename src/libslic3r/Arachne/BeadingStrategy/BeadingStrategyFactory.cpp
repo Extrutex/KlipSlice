@@ -12,6 +12,7 @@
 #include "DistributedBeadingStrategy.hpp"
 #include "RedistributeBeadingStrategy.hpp"
 #include "OuterWallInsetBeadingStrategy.hpp"
+#include "InnerWallShiftBeadingStrategy.hpp"
 #include "libslic3r/Arachne/BeadingStrategy/BeadingStrategy.hpp"
 
 namespace Slic3r::Arachne {
@@ -27,6 +28,7 @@ BeadingStrategyPtr BeadingStrategyFactory::makeStrategy(const coord_t preferred_
                                                         const double  wall_add_middle_threshold,
                                                         const coord_t max_bead_count,
                                                         const coord_t outer_wall_offset,
+                                                        const coord_t inner_wall_shift,
                                                         const int     inward_distributed_center_wall_count,
                                                         const double  minimum_variable_line_ratio)
 {
@@ -53,6 +55,12 @@ BeadingStrategyPtr BeadingStrategyFactory::makeStrategy(const coord_t preferred_
     // Apply the LimitedBeadingStrategy last, since that adds a 0-width marker wall which other beading strategies shouldn't touch.
     BOOST_LOG_TRIVIAL(trace) << "Applying the Limited Beading meta-strategy with maximum bead count = " << max_bead_count << ".";
     ret = std::make_unique<LimitedBeadingStrategy>(max_bead_count, std::move(ret));
+
+    // Applied after the Limited strategy on purpose: it moves that strategy's marker wall along with the inner walls.
+    if (inner_wall_shift > 0) {
+        BOOST_LOG_TRIVIAL(trace) << "Applying the InnerWallShift meta-strategy with shift = " << inner_wall_shift << ".";
+        ret = std::make_unique<InnerWallShiftBeadingStrategy>(inner_wall_shift, std::move(ret));
+    }
     return ret;
 }
 } // namespace Slic3r::Arachne

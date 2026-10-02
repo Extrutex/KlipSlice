@@ -1305,6 +1305,7 @@ static std::vector<std::string> s_Preset_print_options{
     "bridge_density",
     "internal_bridge_density",
     "precise_outer_wall",
+    "precise_outer_wall_method",
     "bridge_acceleration",
     "sparse_infill_acceleration",
     "internal_solid_infill_acceleration",
