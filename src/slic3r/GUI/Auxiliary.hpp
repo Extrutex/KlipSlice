@@ -161,7 +161,6 @@ public:
     wxScrolledWindow *  m_scrolledWindow{nullptr};
     wxWrapSizer *       m_gsizer_content{nullptr};
     //AuFile *            m_button_add{nullptr};
-    Button *            m_button_del{nullptr};
     AuFile *            m_big_button_add{ nullptr };
     AuFilesHash         m_aufiles_list;
 
@@ -208,11 +207,6 @@ private:
     DesignerPanel * m_designer_panel= {nullptr};
 
     /* images */
-    wxBitmap  m_signal_strong_img;
-    wxBitmap  m_signal_middle_img;
-    wxBitmap  m_signal_weak_img;
-    wxBitmap  m_signal_no_img;
-    wxBitmap  m_printer_img;
     wxBitmap  m_arrow_img;
     wxWindow *create_side_tools();
 

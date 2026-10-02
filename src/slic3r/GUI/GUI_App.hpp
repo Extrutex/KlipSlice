@@ -331,7 +331,6 @@ private:
     bool             m_side_popup_status{false};
     bool             m_show_http_error_msgdlg{false};
     std::chrono::steady_clock::time_point m_last_401_error_time;
-    bool             m_show_error_msgdlg{false};
     wxString         m_info_dialog_content;
     HttpServer       m_http_server;
     bool             m_show_gcode_window{true};
@@ -649,7 +648,6 @@ public:
 
 
 
-    NetworkErrorDialog* m_server_error_dialog { nullptr };
 
 
 #if defined(__WINDOWS__)
