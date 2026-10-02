@@ -645,8 +645,6 @@ set(SLIC3R_GUI_SOURCES
     pchheader.hpp
     Utils/ASCIIFolding.cpp
     Utils/ASCIIFolding.hpp
-    Utils/AstroBox.cpp
-    Utils/AstroBox.hpp
     Utils/bambu_networking.hpp
     Utils/Bonjour.cpp
     Utils/Bonjour.hpp
@@ -664,20 +662,14 @@ set(SLIC3R_GUI_SOURCES
     Utils/CrealityPrintAgent.hpp
     Utils/CrealityHostDiscovery.cpp
     Utils/CrealityHostDiscovery.hpp
-    Utils/Duet.cpp
-    Utils/Duet.hpp
     Utils/ElegooLink.cpp
     Utils/ElegooLink.hpp
     Utils/EmbossStyleManager.cpp
     Utils/EmbossStyleManager.hpp
-    Utils/ESP3D.cpp
-    Utils/ESP3D.hpp
     Utils/FileHelp.cpp
     Utils/FileHelp.hpp
     Utils/FixModelByCgal.cpp
     Utils/FixModelByCgal.hpp
-    Utils/FlashAir.cpp
-    Utils/FlashAir.hpp
     Utils/Flashforge.cpp
     Utils/Flashforge.hpp
     Utils/FontConfigHelp.cpp
@@ -692,8 +684,6 @@ set(SLIC3R_GUI_SOURCES
     Utils/json_diff.hpp
     Utils/minilzo_extension.cpp
     Utils/minilzo_extension.hpp
-    Utils/MKS.cpp
-    Utils/MKS.hpp
     Utils/NetworkAgent.cpp
     Utils/NetworkAgent.hpp
     Utils/NetworkAgentFactory.hpp
@@ -726,8 +716,6 @@ set(SLIC3R_GUI_SOURCES
     Utils/Profile.hpp
     Utils/RaycastManager.cpp
     Utils/RaycastManager.hpp
-    Utils/Repetier.cpp
-    Utils/Repetier.hpp
     Utils/Serial.cpp
     Utils/Serial.hpp
     Utils/SerialMessage.hpp
@@ -736,8 +724,6 @@ set(SLIC3R_GUI_SOURCES
     Utils/SimplyPrint.hpp
     Utils/TCPConsole.cpp
     Utils/TCPConsole.hpp
-    Utils/UltiMaker.cpp
-    Utils/UltiMaker.hpp
     Utils/UndoRedo.cpp
     Utils/UndoRedo.hpp
     Utils/WebSocketClient.hpp
