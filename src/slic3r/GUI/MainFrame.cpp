@@ -2047,11 +2047,7 @@ std::vector<MainFrame::PrintSelectType> MainFrame::available_print_actions() con
     bool support_print_all = true;
     if (preset_bundle && !preset_bundle->use_bbl_network() && !use_printer_agents) {
         support_send = false; // All 3rd print hosts do not have the send options
-
-        const auto& cfg           = preset_bundle->printers.get_edited_preset().config;
-        const auto* host_type_opt = cfg.option<ConfigOptionEnum<PrintHostType>>("host_type");
-        // Only simply print support uploading all plates
-        support_print_all = host_type_opt != nullptr && host_type_opt->value == PrintHostType::htSimplyPrint;
+        support_print_all = false; // Moonraker takes one file per upload
     }
 
     actions.push_back(ePrintPlate);
@@ -4329,8 +4325,7 @@ void MainFrame::load_printer_url()
     }
     wxString url = from_u8(PrintHost::get_print_host_webui(&cfg));
     wxString apikey;
-    const auto host_type = cfg.option<ConfigOptionEnum<PrintHostType>>("host_type")->value;
-    if (cfg.has("printhost_apikey") && host_type != htSimplyPrint)
+    if (cfg.has("printhost_apikey"))
         apikey = cfg.opt_string("printhost_apikey");
     if (!url.empty()) {
         load_printer_url(url, apikey);

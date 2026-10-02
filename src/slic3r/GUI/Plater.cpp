@@ -3683,8 +3683,7 @@ void Sidebar::update_all_preset_comboboxes()
         if(url.empty())
             url = file_url_from_path(boost::filesystem::path(resources_dir()) / "web/orca/missing_connection.html");
         else {
-            const auto host_type = cfg.option<ConfigOptionEnum<PrintHostType>>("host_type")->value;
-            if (cfg.has("printhost_apikey") && (host_type != htSimplyPrint))
+            if (cfg.has("printhost_apikey"))
                 apikey = cfg.opt_string("printhost_apikey");
             print_btn_type = (preset_bundle.is_bbl_vendor() || wxGetApp().app_config->get_bool("use_printer_agents"))
                                  ? MainFrame::PrintSelectType::ePrintPlate
@@ -19918,14 +19917,10 @@ void Plater::send_gcode_legacy(int plate_idx, Export3mfProgressFn proFn)
         default_output_file.replace_extension(".gcode.3mf");
     }
 
-    // Repetier specific: Query the server for the list of file groups.
+    // No remaining host sorts uploads into server-side groups.
     wxArrayString groups;
-    {
-        wxBusyCursor wait;
-        upload_job.printhost->get_groups(groups);
-    }
 
-    // PrusaLink specific: Query the server for the list of file groups.
+    // Query the server for its storage roots.
     wxArrayString storage_paths;
     wxArrayString storage_names;
     {

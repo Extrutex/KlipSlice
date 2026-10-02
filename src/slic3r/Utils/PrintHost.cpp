@@ -22,11 +22,8 @@
 #include "../GUI/PrintHostDialogs.hpp"
 #include "../GUI/MainFrame.hpp"
 #include "slic3r/plugin/PluginManager.hpp"
-#include "Obico.hpp"
 #include "Flashforge.hpp"
-#include "SimplyPrint.hpp"
 #include "ElegooLink.hpp"
-#include "3DPrinterOS.hpp"
 #include "Moonraker.hpp"
 
 namespace fs = boost::filesystem;
@@ -58,11 +55,8 @@ PrintHost* PrintHost::get_print_host(DynamicPrintConfig *config)
             case htPrusaLink: return new PrusaLink(config);
             case htPrusaConnect: return new PrusaConnect(config);
             case htCrealityPrint:    return new CrealityPrint(config);
-            case htObico:     return new Obico(config);
             case htFlashforge: return new Flashforge(config);
-            case htSimplyPrint: return new SimplyPrint(config);
             case htElegooLink: return new ElegooLink(config);
-            case ht3DPrinterOS: return new C3DPrinterOS(config);
             case htMoonraker: return new Moonraker(config);
             default:          return nullptr;
         }

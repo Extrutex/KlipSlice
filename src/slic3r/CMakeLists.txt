@@ -298,8 +298,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/Jobs/Job.hpp
     GUI/Jobs/NotificationProgressIndicator.cpp
     GUI/Jobs/NotificationProgressIndicator.hpp
-    GUI/Jobs/OAuthJob.cpp
-    GUI/Jobs/OAuthJob.hpp
     GUI/Jobs/OrientJob.cpp
     GUI/Jobs/OrientJob.hpp
     GUI/Jobs/PlaterWorker.hpp
@@ -377,8 +375,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/Notebook.hpp
     GUI/NotificationManager.cpp
     GUI/NotificationManager.hpp
-    GUI/OAuthDialog.cpp
-    GUI/OAuthDialog.hpp
     GUI/ObjColorDialog.cpp
     GUI/ObjColorDialog.hpp
     GUI/ObjectDataViewModel.cpp
@@ -414,8 +410,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/PresetComboBoxes.hpp
     GUI/PresetHints.cpp
     GUI/PresetHints.hpp
-    GUI/PrinterCloudAuthDialog.cpp
-    GUI/PrinterCloudAuthDialog.hpp
     GUI/PrinterWebView.cpp
     GUI/PrinterWebViewHandler.cpp
     GUI/PrinterWebViewHandler.hpp
@@ -702,8 +696,6 @@ set(SLIC3R_GUI_SOURCES
     Utils/MoonrakerPrinterAgent.hpp
     Utils/Moonraker.cpp
     Utils/Moonraker.hpp
-    Utils/Obico.cpp
-    Utils/Obico.hpp
     Utils/OctoPrint.cpp
     Utils/OctoPrint.hpp
     Utils/PresetUpdater.cpp
@@ -720,15 +712,11 @@ set(SLIC3R_GUI_SOURCES
     Utils/Serial.hpp
     Utils/SerialMessage.hpp
     Utils/SerialMessageType.hpp
-    Utils/SimplyPrint.cpp
-    Utils/SimplyPrint.hpp
     Utils/TCPConsole.cpp
     Utils/TCPConsole.hpp
     Utils/UndoRedo.cpp
     Utils/UndoRedo.hpp
     Utils/WebSocketClient.hpp
-    Utils/3DPrinterOS.hpp
-    Utils/3DPrinterOS.cpp
     Utils/WxFontUtils.cpp
     Utils/WxFontUtils.hpp
     Utils/FileTransferUtils.cpp
