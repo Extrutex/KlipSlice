@@ -34,6 +34,12 @@
 // BBS
 #include "BBLTopbar.hpp"
 #include "PrinterWebView.hpp"
+#include "GUI.hpp"
+#include "MsgDialog.hpp"
+#include "Plater.hpp"
+#include "Widgets/StaticLine.hpp"
+#include "libslic3r/Thread.hpp"
+#include "slic3r/Utils/NetworkAgent.hpp"
 #include "calib_dlg.hpp"
 #include "slic3r/plugin/host/PluginPages.hpp"
 
