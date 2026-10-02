@@ -1253,7 +1253,7 @@ void PlaterPresetComboBox::update()
                                                 "Bambu PLA Galaxy", "Bambu PLA Metal", "Bambu PLA Marble", "Bambu PETG-CF", "Bambu PETG Translucent", "Bambu ABS-GF"};
     std::vector<std::string> first_vendors     = {"", "Bambu", "Generic"}; // Empty vendor for non-system presets
     std::vector<std::string> first_types     = {"PLA", "PETG", "ABS", "TPU"};
-    auto  add_presets       = [this, &preset_descriptions, &filament_orders, &preset_filament_vendors, &first_vendors, &preset_filament_types, &preset_aliases, &preset_bundle_ids, &preset_bundle_names, &first_types, &selected_in_ams]
+    auto  add_presets       = [this, &preset_descriptions, &filament_orders, &preset_filament_vendors, &first_vendors, &preset_filament_types, &preset_aliases, &preset_bundle_ids, &preset_bundle_names, &first_types]
             (std::map<wxString, wxBitmap *> const &presets, wxString const &selected, std::string const &group, wxString const &groupName) {
         if (!presets.empty()) {
             set_label_marker(Append(_L(group), wxNullBitmap, DD_ITEM_STYLE_SPLIT_ITEM));
