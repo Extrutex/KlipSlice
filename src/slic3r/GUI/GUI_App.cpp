@@ -1326,14 +1326,8 @@ void GUI_App::init_networking_callbacks()
                     return;
                 }
 
-                if (MachineObject* obj = m_device_manager->get_my_machine(dev_id)) {
+                if (MachineObject* obj = m_device_manager->get_my_machine(dev_id))
                     obj->parse_json("lan", msg);
-                    // Orca: skip it if it doesn't support subscription based filament sync
-                    if (this->m_device_manager->get_selected_machine() == obj &&
-                        m_agent->get_filament_sync_mode() == FilamentSyncMode::subscription) {
-                        GUI::wxGetApp().sidebar().load_ams_list(obj);
-                    }
-                }
 
                 if (GUI::wxGetApp().plater())
                     GUI::wxGetApp().plater()->update_machine_sync_status();

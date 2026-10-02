@@ -492,14 +492,12 @@ std::vector<NativeCommand> build_command_catalog()
     });
 
     // ---- Printer / device connection ----
-    add_with_icon("sync_ams", _u8L("Synchronize Filament List from AMS"), _u8L("Printer"), "ams_fila_sync", [](const std::string&) {
-        Plater* plater     = wxGetApp().plater();
-        DeviceManager* dev = wxGetApp().getDeviceManager();
-        if (dev && dev->get_selected_machine() && plater) {
+    add_with_icon("sync_ams", _u8L("Synchronize Filament List from the Printer"), _u8L("Printer"), "ams_fila_sync", [](const std::string&) {
+        if (Plater* plater = wxGetApp().plater()) {
             plater->sidebar().sync_ams_list();
             return AppActionRunResult{AppActionRunResult::Level::Success};
         }
-        return AppActionRunResult{AppActionRunResult::Level::Info, _L("Connect a printer to synchronize the AMS filament list.")};
+        return AppActionRunResult{AppActionRunResult::Level::Info, _L("Open a project to synchronize the filament list.")};
     });
 
     // ---- Presets / cloud ----

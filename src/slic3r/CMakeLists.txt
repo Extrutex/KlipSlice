@@ -680,6 +680,8 @@ set(SLIC3R_GUI_SOURCES
     Utils/MoonrakerPrinterAgent.hpp
     Utils/Moonraker.cpp
     Utils/Moonraker.hpp
+    Utils/MoonrakerFilaments.cpp
+    Utils/MoonrakerFilaments.hpp
     Utils/PresetUpdater.cpp
     Utils/PresetUpdater.hpp
     Utils/PrintHost.cpp

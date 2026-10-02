@@ -192,6 +192,7 @@
 #include "DeviceCore/DevManager.h"
 #include "DeviceCore/DevConfigUtil.h"
 #include "DeviceCore/DevDefs.h"
+#include "../Utils/MoonrakerFilaments.hpp"
 
 using boost::optional;
 namespace fs = boost::filesystem;
@@ -3217,7 +3218,7 @@ Sidebar::Sidebar(Plater *parent)
 
     ams_btn = new ScalableButton(p->m_panel_filament_title, wxID_ANY, "ams_fila_sync", wxEmptyString, wxDefaultSize, wxDefaultPosition,
                                                  wxBU_EXACTFIT | wxNO_BORDER, false, 16); // ORCA match icon size with other icons as 16x16
-    ams_btn->SetToolTip(_L("Synchronize filament list from AMS"));
+    ams_btn->SetToolTip(_L("Synchronize filament list from the printer's filament changer"));
     ams_btn->Bind(wxEVT_BUTTON, [this](wxCommandEvent &e) {
         sync_ams_list();
     });
@@ -3657,12 +3658,7 @@ void Sidebar::update_all_preset_comboboxes()
         // ORCA: hide the physical-printer connection button when printer agents are enabled
         p->m_printer_connect->Show(!use_printer_agents);
 
-        // ORCA: show/hide sync-ams button based on filament sync mode
-        auto agent = wxGetApp().getAgent();
-        if (agent && agent->get_filament_sync_mode() != FilamentSyncMode::none)
-            p->m_bpButton_ams_filament->Show();
-        else
-            p->m_bpButton_ams_filament->Hide();
+        p->m_bpButton_ams_filament->Show();
 
         // Orca: with "Support 3MF as gcode" (use_3mf) the local export is a .gcode.3mf bundle, so when no
         // printer host/IP is configured the default action is "Export plate sliced file" (mirrors the
@@ -5852,106 +5848,41 @@ void Sidebar::on_bed_type_change(BedType bed_type)
         p->combo_printer_bed->SetSelection(0);
 }
 
-/**
- * Build a map of filament configurations from the connected printer's AMS (Automatic Material System).
- *
- * Data Flow Architecture:
- * =======================
- * This function reads pre-populated state from MachineObject - it does NOT directly call
- * NetworkAgent APIs. The data pipeline is:
- *
- *   Printer Device (MQTT/LAN messages)
- *       ↓
- *   NetworkAgent (receives JSON, triggers OnMessageFn callbacks)
- *       ↓
- *   MachineObject::parse_json() (updates device state)
- *       ├── vt_slot (std::vector<DevAmsTray>) - virtual tray data for external filament
- *       └── DevFilaSystem → DevAms → DevAmsTray - AMS unit hierarchy
- *       ↓
- *   build_filament_ams_list() [THIS FUNCTION] - aggregates into DynamicPrintConfig maps
- *
- * Data Sources:
- * - obj->vt_slot: Virtual trays for external/manual filament loading (when ams_support_virtual_tray is true)
- * - obj->GetFilaSystem()->GetAmsList(): Map of AMS units, each containing multiple DevAmsTray slots
- *
- * Return Value:
- * - Map key encoding:
- *   - Virtual trays: 0x10000 + vt_tray.id (first/main extruder), or just vt_tray.id (secondary)
- *   - AMS trays: 0x10000 + (ams_id * 4 + slot_id) (main extruder), or (ams_id * 4 + slot_id) (secondary)
- *   - The 0x10000 flag indicates the main/right extruder
- * - Map value: DynamicPrintConfig with filament properties (id, type, color, etc.)
- *
- * @param obj The MachineObject representing the connected printer (nullable)
- * @return Map of tray indices to filament configurations
- */
-std::map<int, DynamicPrintConfig> Sidebar::build_filament_ams_list(MachineObject* obj)
+// The filament list of the printer behind the edited printer preset, read through Moonraker
+// (Happy Hare, AFC lane data, a Qidi box or a Snapmaker toolhead). Keys are 0x10000 + slot index,
+// the main-extruder encoding PresetBundle::sync_ams_list expects. Every reported slot gets an entry
+// so the slot numbers stay aligned, an empty one as a placeholder. `error` receives the transport
+// failure when the printer could not be read.
+std::map<int, DynamicPrintConfig> Sidebar::build_filament_ams_list(std::string *error)
 {
     std::map<int, DynamicPrintConfig> filament_ams_list;
-    if (!obj) return filament_ams_list;
+    PresetBundle *bundle = wxGetApp().preset_bundle;
+    if (!bundle)
+        return filament_ams_list;
 
-    // For pull-mode agents (e.g., HTTP REST API), refresh DevFilaSystem first
-    auto* agent = wxGetApp().getDeviceManager()->get_agent();
-    if (agent && agent->get_filament_sync_mode() == FilamentSyncMode::pull) {
-        if (!agent->fetch_filament_info(obj->get_dev_id())) {
-            return filament_ams_list;
-        }
-    }
+    std::string fetch_error;
+    const MoonrakerFilamentState state = MoonrakerFilaments::fetch(bundle->printers.get_edited_preset().config, &bundle->filaments, fetch_error);
+    if (error)
+        *error = fetch_error;
 
-    auto build_tray_config = [](DevAmsTray const &tray, std::string const &name, std::string ams_id, std::string slot_id) {
-        BOOST_LOG_TRIVIAL(info) << boost::format("build_filament_ams_list: name %1% setting_id %2% type %3% color %4%")
-                    % name % tray.setting_id % tray.m_fila_type % tray.color;
-        DynamicPrintConfig tray_config;
-        tray_config.set_key_value("filament_id", new ConfigOptionStrings{tray.setting_id});
-        tray_config.set_key_value("tag_uid", new ConfigOptionStrings{tray.tag_uid});
-        tray_config.set_key_value("ams_id", new ConfigOptionStrings{ams_id});
-        tray_config.set_key_value("slot_id", new ConfigOptionStrings{slot_id});
-        tray_config.set_key_value("filament_type", new ConfigOptionStrings{tray.m_fila_type});
-        tray_config.set_key_value("tray_name", new ConfigOptionStrings{ name });
-        tray_config.set_key_value("filament_colour", new ConfigOptionStrings{into_u8(wxColour("#" + tray.color).GetAsString(wxC2S_HTML_SYNTAX))});
-        tray_config.set_key_value("filament_multi_colour", new ConfigOptionStrings{});
-        tray_config.set_key_value("filament_colour_type", new ConfigOptionStrings{std::to_string(tray.ctype)});
-        tray_config.set_key_value("filament_exist", new ConfigOptionBools{tray.is_exists});
-        tray_config.set_key_value("filament_slot_placeholder", new ConfigOptionBools{tray.is_slot_placeholder});
-        std::optional<FilamentBaseInfo> info;
-        if (wxGetApp().preset_bundle) {
-            info = wxGetApp().preset_bundle->get_filament_by_filament_id(tray.setting_id);
-        }
-        tray_config.set_key_value("filament_is_support", new ConfigOptionBools{ info.has_value() ? info->is_support : false});
-        for (int i = 0; i < tray.cols.size(); ++i) {
-            tray_config.opt<ConfigOptionStrings>("filament_multi_colour")->values.push_back(into_u8(wxColour("#" + tray.cols[i]).GetAsString(wxC2S_HTML_SYNTAX)));
-        }
-        return tray_config;
-    };
-
-    if (obj->ams_support_virtual_tray) {
-        int extruder = 0x10000; // Main (first) extruder at right
-        for (auto & vt_tray : obj->vt_slot) {
-            filament_ams_list.emplace(extruder + stoi(vt_tray.id), build_tray_config(vt_tray, "Ext",vt_tray.id, "0"));//254 or 255
-            extruder = 0;
-        }
-    }
-
-    auto get_ams_name = [](int ams_id, int slot_id)->std::string {
-        if (ams_id >= 0 && ams_id < 26) {
-            char slot_name = slot_id + '1';
-            return std::string(1, 'A' + ams_id) + std::string(1, slot_name);
-        } else if (ams_id >= 128 && ams_id < 153) {
-            return "HT-" + std::string(1, 'A' + (ams_id - 128));
-        } else {
-            assert(false);
-        }
-        return std::string();
-    };
-
-    auto list = obj->GetFilaSystem()->GetAmsList();
-    for (auto ams : list) {
-        int ams_id   = std::stoi(ams.first);
-        int extruder = ams.second->GetExtruderId() ? 0 : 0x10000; // Main (first) extruder at right
-        for (auto tray : ams.second->GetTrays()) {
-            int  slot_id = std::stoi(tray.first);
-            filament_ams_list.emplace(extruder + (ams_id * 4 + slot_id),
-                                      build_tray_config(*tray.second, get_ams_name(ams_id, slot_id), std::to_string(ams_id), std::to_string(slot_id)));
-        }
+    for (const MoonrakerFilamentSlot &slot : state.slots) {
+        BOOST_LOG_TRIVIAL(info) << boost::format("build_filament_ams_list: slot T%1% loaded %2% type %3% colour %4% filament_id %5%")
+                                       % slot.index % slot.loaded % slot.material % slot.color % slot.filament_id;
+        DynamicPrintConfig tray;
+        tray.set_key_value("filament_id", new ConfigOptionStrings{slot.loaded ? slot.filament_id : std::string()});
+        tray.set_key_value("tag_uid", new ConfigOptionStrings{std::string()});
+        tray.set_key_value("ams_id", new ConfigOptionStrings{std::to_string(slot.index / 4)});
+        tray.set_key_value("slot_id", new ConfigOptionStrings{std::to_string(slot.index % 4)});
+        tray.set_key_value("filament_type", new ConfigOptionStrings{slot.material});
+        tray.set_key_value("tray_name", new ConfigOptionStrings{"T" + std::to_string(slot.index)});
+        tray.set_key_value("filament_colour", new ConfigOptionStrings{"#" + slot.color.substr(0, 6)});
+        tray.set_key_value("filament_multi_colour", new ConfigOptionStrings{});
+        tray.set_key_value("filament_colour_type", new ConfigOptionStrings{"1"});
+        tray.set_key_value("filament_exist", new ConfigOptionBools{slot.loaded});
+        tray.set_key_value("filament_slot_placeholder", new ConfigOptionBools{!slot.loaded});
+        const std::optional<FilamentBaseInfo> info = slot.loaded ? bundle->get_filament_by_filament_id(slot.filament_id) : std::nullopt;
+        tray.set_key_value("filament_is_support", new ConfigOptionBools{info.has_value() && info->is_support});
+        filament_ams_list.emplace(0x10000 + slot.index, std::move(tray));
     }
     return filament_ams_list;
 }
@@ -6025,110 +5956,75 @@ void Sidebar::get_small_btn_sync_pos_size(wxPoint &pt, wxSize &size) {
     pt   = ams_btn->GetScreenPosition();
 }
 
-void Sidebar::load_ams_list(MachineObject* obj)
+void Sidebar::load_ams_list(std::string *error)
 {
-    std::map<int, DynamicPrintConfig> filament_ams_list;
+    std::map<int, DynamicPrintConfig> filament_ams_list = build_filament_ams_list(error);
 
-    // build_filament_ams_list handles both subscription-based and non-subscription-based agents:
-    // - For non-subscription agents, it calls fetch_filament_info() first to populate DevFilaSystem
-    // - Then it always reads from DevFilaSystem to build the filament list
-    if (obj) {
-        filament_ams_list = build_filament_ams_list(obj);
-    }
-
-    bool device_change     = false;
-    const std::string& device = obj ? obj->get_dev_id() : "";
-    if (p->ams_list_device != device) {
-        p->ams_list_device = device;
-        device_change      = true;
-    }
+    const std::string device        = MoonrakerFilaments::base_url(wxGetApp().preset_bundle->printers.get_edited_preset().config);
+    const bool        device_change = p->ams_list_device != device;
+    p->ams_list_device              = device;
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": %1% items") % filament_ams_list.size();
     if (wxGetApp().preset_bundle->filament_ams_list == filament_ams_list && !device_change)
-    {
         return;
-    }
     wxGetApp().preset_bundle->filament_ams_list = filament_ams_list;
 
-    for (auto c : p->combos_filament){
+    for (auto c : p->combos_filament) {
         c->update();
-        if (device_change) {
-            c->ShowBadge(false);//change printer,then clear badge
-        }
+        if (device_change)
+            c->ShowBadge(false); // another printer, so the badges of the old one go
     }
-
     p->combo_printer->update();
 }
 
-void Sidebar::sync_ams_list(bool is_from_big_sync_btn)
+void Sidebar::sync_ams_list(bool /*is_from_big_sync_btn*/)
 {
-    wxBusyCursor cursor;
-    // Force load ams list
-    auto obj = wxGetApp().getDeviceManager()->get_selected_machine();
-    if (!obj)
+    PresetBundle *bundle = wxGetApp().preset_bundle;
+    const wxString title = _L("Sync filaments from printer");
+    if (MoonrakerFilaments::base_url(bundle->printers.get_edited_preset().config).empty()) {
+        MessageDialog(this, _L("The printer preset has no host. Enter the printer's Moonraker address in the printer settings first."),
+                      title, wxOK | wxICON_INFORMATION).ShowModal();
         return;
-    GUI::wxGetApp().sidebar().load_ams_list(obj);
+    }
 
-    auto & list = wxGetApp().preset_bundle->filament_ams_list;
+    std::string error;
+    {
+        wxBusyCursor cursor;
+        load_ams_list(&error);
+    }
+    auto &list = bundle->filament_ams_list;
     if (list.empty()) {
-        auto printer_name = p->plater->get_selected_printer_name_in_combox();
-        p->plater->pop_warning_and_go_to_device_page(printer_name, Plater::PrinterWarningType::NOT_CONNECTED, _L("Sync printer information"));
+        MessageDialog(this,
+                      error.empty() ? _L("The printer reports no filament changer. Happy Hare, AFC, a Qidi box and Snapmaker toolheads are supported.") :
+                                      format_wxstr(_L("Could not read the printer at %1%: %2%"), from_u8(p->ams_list_device), from_u8(error)),
+                      title, wxOK | wxICON_WARNING).ShowModal();
         return;
     }
-    bool exist_at_list_one_filament =false;
-    for (auto &cur : list) {
-        auto temp_config    = cur.second;
-        auto filament_type  = temp_config.opt_string("filament_type", 0u);
-        auto filament_color = temp_config.opt_string("filament_colour", 0u);
-        if (!filament_type.empty() || temp_config.opt_bool("filament_exist", 0u)) {
-            exist_at_list_one_filament = true;
-            break;
-        }
-    }
-    if (!exist_at_list_one_filament) {
-        if (!obj->is_filament_installed()) {
-            p->plater->pop_warning_and_go_to_device_page("", Plater::PrinterWarningType::UNINSTALL_FILAMENT, _L("Sync printer information"));
-            return;
-        }
-        p->plater->pop_warning_and_go_to_device_page("", Plater::PrinterWarningType::EMPTY_FILAMENT, _L("Sync printer information"));
+    int loaded = 0;
+    for (auto &cur : list)
+        if (cur.second.opt_bool("filament_exist", 0u))
+            ++loaded;
+    if (loaded == 0) {
+        MessageDialog(this, _L("Every slot of the printer's filament changer is empty."), title, wxOK | wxICON_WARNING).ShowModal();
         return;
     }
-    if (!wxGetApp().plater()->is_same_printer_for_connected_and_selected()) {
-        return;
-    }
+
     std::string ams_filament_ids = wxGetApp().app_config->get("ams_filament_ids", p->ams_list_device);
     std::vector<std::string> list2;
-    if (!ams_filament_ids.empty()) {
+    if (!ams_filament_ids.empty())
         boost::algorithm::split(list2, ams_filament_ids, boost::algorithm::is_any_of(","));
-    }
-    wxGetApp().plater()->update_all_plate_thumbnails(true);//preview thumbnail for sync_dlg
-    SyncAmsInfoDialog::SyncInfo temp_info;
-    temp_info.use_dialog_pos = false;
-    temp_info.cancel_text_to_later = is_from_big_sync_btn;
-    if (m_sync_dlg == nullptr) {
-        m_sync_dlg = new SyncAmsInfoDialog(this, temp_info);
-    } else {
-        m_sync_dlg->set_info(temp_info);
-    }
-    int dlg_res{(int) wxID_CANCEL};
-    if (m_sync_dlg->is_need_show()) {
-        m_sync_dlg->deal_only_exist_ext_spool(obj);
-        if (m_sync_dlg->is_dirty_filament()) {
-            wxGetApp().get_tab(Preset::TYPE_FILAMENT)->select_preset(wxGetApp().preset_bundle->filament_presets[0], false, "", false, true);
-            wxGetApp().preset_bundle->export_selections(*wxGetApp().app_config);
-            update_dynamic_filament_list();
-        }
-        m_sync_dlg->set_check_dirty_fialment(false);
-        dlg_res = m_sync_dlg->ShowModal();
-    } else {
-        dlg_res =(int) wxID_YES;
-    }
-    if (dlg_res == wxID_CANCEL)
+
+    const bool sync_color_only = wxGetApp().app_config->get("sync_ams_filament_mode") == "1";
+    MessageDialog confirm(this,
+                          format_wxstr(sync_color_only ? _L("Take the colours of the %1% loaded slots of the printer's filament changer over into the project?") :
+                                                         _L("Replace the project's filament list with the %1% loaded slots of the printer's filament changer?"),
+                                       loaded),
+                          title, wxYES_NO | wxICON_QUESTION);
+    const int dlg_res = confirm.ShowModal();
+    if (dlg_res != wxID_YES)
         return;
-    auto sync_result = m_sync_dlg->get_result();
-    if (!sync_result.is_same_printer) {
-        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << "check error: sync_result.is_same_printer value is false";
-        return;
-    }
+    // Klipper changers report plain slots, so the trays map onto the project one to one.
+    const bool                direct_sync = true;
+    std::map<int, AMSMapInfo> sync_maps;
     list2.resize(list.size());
     auto iter = list.begin();
     for (int i = 0; i < list.size(); ++i, ++iter) {
@@ -6150,8 +6046,7 @@ void Sidebar::sync_ams_list(bool is_from_big_sync_btn)
     MergeFilamentInfo merge_info;
     std::vector<std::pair<DynamicPrintConfig *,std::string>> unknowns;
     auto enable_append  = wxGetApp().app_config->get_bool("enable_append_color_by_sync_ams");
-    auto sync_color_only = wxGetApp().app_config->get("sync_ams_filament_mode") == "1";
-    auto n              = wxGetApp().preset_bundle->sync_ams_list(unknowns, !sync_result.direct_sync, sync_result.sync_maps, enable_append, merge_info, sync_color_only);
+    auto n              = wxGetApp().preset_bundle->sync_ams_list(unknowns, !direct_sync, sync_maps, enable_append, merge_info, sync_color_only);
     wxString detail;
     for (auto & uk : unknowns) {
         auto tray_name     = uk.first->opt_string("tray_name", 0u);
@@ -6230,7 +6125,7 @@ void Sidebar::sync_ams_list(bool is_from_big_sync_btn)
     };
     { // badge ams filament
         clear_combos_filament_badge();
-        if (sync_result.direct_sync) {
+        if (direct_sync) {
             // Orca: PresetBundle::sync_ams_list rebuilds combos_filament
             // 1:1 from the AMS trays that produce a combo (loaded trays + placeholders; non-placeholder
             // empty trays are skipped), so every resulting combo is AMS-sourced and gets a badge. The
@@ -6254,7 +6149,7 @@ void Sidebar::sync_ams_list(bool is_from_big_sync_btn)
             }
         };
         std::vector<bool> sync_ams_badges;
-        for (auto iter : sync_result.sync_maps) {
+        for (auto iter : sync_maps) {
             sync_ams_badges.push_back(false);
             if (iter.second.ams_id == "" || iter.second.slot_id == "") {
                 continue;
@@ -6283,7 +6178,7 @@ void Sidebar::sync_ams_list(bool is_from_big_sync_btn)
             }
         }
     } else {
-        for (auto iter : sync_result.sync_maps) {
+        for (auto iter : sync_maps) {
             if (iter.second.ams_id == "" || iter.second.slot_id == "") {
                 continue;
             }

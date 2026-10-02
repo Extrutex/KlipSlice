@@ -784,7 +784,6 @@ namespace Slic3r
     void DeviceManager::OnSelectedMachineLost()
     {
         GUI::wxGetApp().sidebar().update_sync_status(nullptr);
-        GUI::wxGetApp().sidebar().load_ams_list(nullptr);
     }
 
     void DeviceManager::OnSelectedMachineChanged(const std::string& /*pre_dev_id*/,
@@ -796,13 +795,8 @@ namespace Slic3r
             ctx.code = LifecycleEvtCode::Ok;
             fire_lifecycle_event(LifecycleEvent::DeviceSelected, ctx);
         }
-        if (MachineObject* obj_ = get_selected_machine()) {
+        if (MachineObject* obj_ = get_selected_machine())
             GUI::wxGetApp().sidebar().update_sync_status(obj_);
-            if(m_agent->get_filament_sync_mode() == FilamentSyncMode::subscription)
-            {
-                GUI::wxGetApp().sidebar().load_ams_list(obj_);
-            }
-        };
     }
 
     void DeviceManager::reload_printer_settings()
