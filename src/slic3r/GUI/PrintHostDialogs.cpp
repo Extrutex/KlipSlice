@@ -35,27 +35,21 @@
 #include "NotificationManager.hpp"
 #include "ExtraRenderers.hpp"
 #include "format.hpp"
-#include "../Utils/CrealityPrint.hpp"
-#include "BitmapComboBox.hpp"
 #include "wxExtensions.hpp"
 
-#include <nlohmann/json.hpp>
 
 namespace fs = boost::filesystem;
-using json = nlohmann::json;
 
 namespace Slic3r {
 namespace GUI {
 
 static const char *CONFIG_KEY_PATH  = "printhost_path";
-static const char *CONFIG_KEY_GROUP = "printhost_group";
 static const char* CONFIG_KEY_STORAGE = "printhost_storage";
 
-PrintHostSendDialog::PrintHostSendDialog(const fs::path &path, PrintHostPostUploadActions post_actions, const wxArrayString &groups, const wxArrayString& storage_paths, const wxArrayString& storage_names, bool switch_to_device_tab)
+PrintHostSendDialog::PrintHostSendDialog(const fs::path &path, PrintHostPostUploadActions post_actions, const wxArrayString& storage_paths, const wxArrayString& storage_names, bool switch_to_device_tab)
     : MsgDialog(static_cast<wxWindow*>(wxGetApp().mainframe), _L("Send G-code to printer host"), _L("Upload to Printer Host with the following filename:"), 0) // Set style = 0 to avoid default creation of the "OK" button. 
                                                                                                                                                                // All buttons will be added later in this constructor 
     , txt_filename(new wxTextCtrl(this, wxID_ANY))
-    , combo_groups(!groups.IsEmpty() ? new wxComboBox(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, groups, wxCB_READONLY) : nullptr)
     , combo_storage(storage_names.GetCount() > 1 ? new wxComboBox(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, storage_names, wxCB_READONLY) : nullptr)
     , post_upload_action(PrintHostPostUploadAction::None)
     , m_paths(storage_paths)
@@ -84,18 +78,8 @@ void PrintHostSendDialog::init()
     content_sizer->Add(label_dir_hint);
     content_sizer->AddSpacer(VERT_SPACING);
     
-    if (combo_groups != nullptr) {
-        // Repetier specific: Show a selection of file groups.
-        auto *label_group = new wxStaticText(this, wxID_ANY, _L("Group"));
-        content_sizer->Add(label_group);
-        content_sizer->Add(combo_groups, 0, wxBOTTOM, 2*VERT_SPACING);        
-        wxString recent_group = from_u8(app_config->get("recent", CONFIG_KEY_GROUP));
-        if (! recent_group.empty())
-            combo_groups->SetValue(recent_group);
-    }
-
     if (combo_storage != nullptr) {
-        // PrusaLink specific: User needs to choose a storage
+        // The host offers several storage roots: the user picks one.
         auto* label_group = new wxStaticText(this, wxID_ANY, _L("Upload to storage") + ":");
         content_sizer->Add(label_group);
         content_sizer->Add(combo_storage, 0, wxBOTTOM, 2 * VERT_SPACING);
@@ -104,7 +88,7 @@ void PrintHostSendDialog::init()
         if (!recent_storage.empty())
             combo_storage->SetValue(recent_storage); 
     } else if (storage_names.GetCount() == 1){
-        // PrusaLink specific: Show which storage has been detected.
+        // A single storage root: show which one the upload goes to.
         auto* label_group = new wxStaticText(this, wxID_ANY, _L("Upload to storage") + ": " + storage_names.front());
         content_sizer->Add(label_group);
         m_preselected_storage = storage_paths.front();
@@ -224,16 +208,6 @@ PrintHostPostUploadAction PrintHostSendDialog::post_action() const
     return post_upload_action;
 }
 
-std::string PrintHostSendDialog::group() const
-{
-     if (combo_groups == nullptr) {
-         return "";
-     } else {
-         wxString group = combo_groups->GetValue();
-         return into_u8(group);
-    }
-}
-
 std::string PrintHostSendDialog::storage() const
 {
     if (!combo_storage)
@@ -257,10 +231,6 @@ void PrintHostSendDialog::EndModal(int ret)
 		AppConfig *app_config = wxGetApp().app_config;
 		app_config->set("recent", CONFIG_KEY_PATH, into_u8(path));
 
-        if (combo_groups != nullptr) {
-            wxString group = combo_groups->GetValue();
-            app_config->set("recent", CONFIG_KEY_GROUP, into_u8(group));
-        }
         if (combo_storage != nullptr) {
             wxString storage = combo_storage->GetValue();
             app_config->set("recent", CONFIG_KEY_STORAGE, into_u8(storage));
@@ -637,253 +607,6 @@ bool PrintHostQueueDialog::load_user_data(int udt, std::vector<int>& vector)
         }
     }
     return true;
-}
-
-CrealityPrintHostSendDialog::CrealityPrintHostSendDialog(const fs::path&            path,
-                                                         PrintHostPostUploadActions post_actions,
-                                                         const wxArrayString&       groups,
-                                                         const wxArrayString&       storage_paths,
-                                                         const wxArrayString&       storage_names,
-                                                         bool                       switch_to_device_tab,
-                                                         PrintHost*                 printhost)
-    : PrintHostSendDialog(path, post_actions, groups, storage_paths, storage_names, switch_to_device_tab)
-    , m_enableSelfTest(false)
-    , m_printhost(printhost)
-{}
-
-void CrealityPrintHostSendDialog::init()
-{
-    PrintHostSendDialog::init();
-
-    auto* creality_host = static_cast<CrealityPrint*>(m_printhost);
-    bool multi_color;
-    std::string printer_name;
-    {
-        wxBusyCursor wait;
-        multi_color = creality_host->supports_multi_color_print();
-        if (multi_color)
-            printer_name = creality_host->model_name();
-    }
-    if (!multi_color)
-        return;
-
-    auto* group_box = new wxStaticBox(this, wxID_ANY,
-        wxString::Format(_L("Printer: %s"), printer_name));
-    auto* group_sizer = new wxStaticBoxSizer(group_box, wxVERTICAL);
-    content_sizer->Add(group_sizer, 0, wxEXPAND);
-
-    const AppConfig* app_config = wxGetApp().app_config;
-    std::string saved = app_config->get("recent", CONFIG_KEY_ENABLESELFTEST);
-    if (!saved.empty()) {
-        try { m_enableSelfTest = std::stoi(saved) != 0; } catch (...) {}
-    }
-
-    // Calibration checkbox
-    {
-        auto checkbox_sizer = new wxBoxSizer(wxHORIZONTAL);
-        auto checkbox       = new ::CheckBox(this);
-        checkbox->SetValue(m_enableSelfTest);
-        checkbox->Bind(wxEVT_TOGGLEBUTTON, [this](wxCommandEvent& e) {
-            m_enableSelfTest = e.IsChecked();
-            AppConfig* ac = wxGetApp().app_config;
-            ac->set("recent", CONFIG_KEY_ENABLESELFTEST, m_enableSelfTest ? "1" : "0");
-            e.Skip();
-        });
-        checkbox_sizer->Add(checkbox, 0, wxALL | wxALIGN_CENTER, FromDIP(2));
-        auto checkbox_text = new wxStaticText(this, wxID_ANY, _L("Calibrate before printing"), wxDefaultPosition, wxDefaultSize, 0);
-        checkbox_sizer->Add(checkbox_text, 0, wxALL | wxALIGN_CENTER, FromDIP(2));
-        checkbox_text->SetFont(::Label::Body_13);
-        checkbox_text->SetForegroundColour(StateColor::darkModeColorFor(wxColour("#323A3D")));
-        group_sizer->Add(checkbox_sizer);
-        group_sizer->AddSpacer(VERT_SPACING);
-    }
-
-    // --- Color mapping UI ---
-    // Get gcode filament info from slicer
-    auto  preset_bundle    = wxGetApp().preset_bundle;
-    auto  full_config      = preset_bundle->full_config();
-    auto* filament_colors  = full_config.option<ConfigOptionStrings>("filament_colour");
-    auto* filament_types   = full_config.option<ConfigOptionStrings>("filament_type");
-    int   gcode_filament_count = filament_colors ? (int)filament_colors->values.size() : 0;
-
-    // Query printer for loaded materials
-    {
-        wxBusyCursor wait;
-        std::string boxes_json = creality_host->query_boxes_info();
-        if (!boxes_json.empty()) {
-            try {
-                auto resp = nlohmann::json::parse(boxes_json);
-                if (resp.contains("boxsInfo") && resp["boxsInfo"].contains("materialBoxs")) {
-                    for (auto& box : resp["boxsInfo"]["materialBoxs"]) {
-                        int box_id = box["id"].get<int>();
-                        int box_type = box.value("type", 0);
-                        // Skip inactive CFS boxes (type 0 with state != 1)
-                        // Spool holder (type 1) is always available
-                        if (box_type == 0 && box.value("state", 0) != 1)
-                            continue;
-                        for (auto& mat : box["materials"]) {
-                            int slot_id = mat["id"].get<int>();
-                            std::string tool_id = "T" + std::to_string(box_id) + std::string(1, 'A' + slot_id);
-                            // Creality uses "#0RRGGBB" (7 hex digits), normalize to "#RRGGBB"
-                            std::string color = mat.value("color", "#FFFFFF");
-                            if (color.size() == 8 && color[0] == '#')
-                                color = "#" + color.substr(2);
-                            m_printer_slots.push_back({
-                                tool_id,
-                                mat.value("type", ""),
-                                color,
-                                box_id,
-                                slot_id
-                            });
-                        }
-                    }
-                }
-            } catch (const nlohmann::json::exception& e) {
-                BOOST_LOG_TRIVIAL(error) << "CrealityPrint dialog: Failed to parse boxsInfo: " << e.what();
-            }
-        }
-    }
-
-    if (gcode_filament_count > 0 && !m_printer_slots.empty()) {
-        auto* label = new wxStaticText(this, wxID_ANY, _L("Filament Mapping:"));
-        label->SetFont(::Label::Body_13);
-        label->SetForegroundColour(StateColor::darkModeColorFor(wxColour("#323A3D")));
-        group_sizer->Add(label);
-        group_sizer->AddSpacer(4);
-
-        for (int i = 0; i < gcode_filament_count; i++) {
-            auto* row_sizer = new wxBoxSizer(wxHORIZONTAL);
-
-            // Left side: gcode filament color swatch + type
-            std::string gc_color = (filament_colors && i < (int)filament_colors->values.size())
-                                   ? filament_colors->values[i] : "#FFFFFF";
-            std::string gc_type  = (filament_types && i < (int)filament_types->values.size())
-                                   ? filament_types->values[i] : "?";
-
-            // Color indicator panel
-            auto* color_panel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(16), FromDIP(16)));
-            color_panel->SetBackgroundColour(wxColour(gc_color));
-            color_panel->SetMinSize(wxSize(FromDIP(16), FromDIP(16)));
-            row_sizer->Add(color_panel, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(4));
-
-            auto* type_label = new wxStaticText(this, wxID_ANY,
-                wxString::Format("%d (%s)", i + 1, gc_type.c_str()));
-            type_label->SetFont(::Label::Body_13);
-            type_label->SetForegroundColour(StateColor::darkModeColorFor(wxColour("#323A3D")));
-            type_label->SetMinSize(wxSize(FromDIP(80), -1));
-            row_sizer->Add(type_label, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(8));
-
-            // Arrow
-            auto* arrow_label = new wxStaticText(this, wxID_ANY, wxString::FromUTF8("\xe2\x86\x92"));
-            arrow_label->SetFont(::Label::Body_13);
-            row_sizer->Add(arrow_label, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(8));
-
-            // Right side: dropdown with color icons per slot
-            int icon_sz = FromDIP(16);
-            auto* combo = new BitmapComboBox(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, nullptr, wxCB_READONLY);
-            for (auto& slot : m_printer_slots) {
-                wxBitmap* bmp = get_extruder_color_icon(slot.color, "", icon_sz, icon_sz);
-                wxString label_str;
-                if (slot.box_id == 0)
-                    label_str = wxString::Format("Ext - %s", slot.type.c_str());
-                else
-                    label_str = wxString::Format("%s - %s", slot.tool_id.substr(1).c_str(), slot.type.c_str());
-                combo->Append(label_str, bmp ? *bmp : wxNullBitmap);
-            }
-            // Find best default: CFS exact color+type, CFS type-only,
-            // Ext exact, Ext type-only, else positional
-            int default_sel = (i < (int)m_printer_slots.size()) ? i : 0;
-            bool matched = false;
-            for (int pass = 0; pass < 4 && !matched; pass++) {
-                for (int s = 0; s < (int)m_printer_slots.size(); s++) {
-                    bool is_ext = (m_printer_slots[s].box_id == 0);
-                    bool type_match = (m_printer_slots[s].type == gc_type);
-                    bool color_match = (wxColour(m_printer_slots[s].color) == wxColour(gc_color));
-                    bool hit = false;
-                    switch (pass) {
-                    case 0: hit = !is_ext && type_match && color_match; break;
-                    case 1: hit = !is_ext && type_match; break;
-                    case 2: hit = is_ext && type_match && color_match; break;
-                    case 3: hit = is_ext && type_match; break;
-                    }
-                    if (hit) {
-                        default_sel = s;
-                        matched = true;
-                        break;
-                    }
-                }
-            }
-            combo->SetSelection(default_sel);
-            row_sizer->Add(combo, 0, wxALIGN_CENTER_VERTICAL);
-
-            group_sizer->Add(row_sizer);
-            group_sizer->AddSpacer(4);
-            m_slot_combos.push_back(combo);
-        }
-
-        int ext_slot_idx = -1;
-        for (int s = 0; s < (int)m_printer_slots.size(); s++) {
-            if (m_printer_slots[s].box_id == 0) {
-                ext_slot_idx = s;
-                break;
-            }
-        }
-        if (ext_slot_idx >= 0) {
-            for (int ci = 0; ci < (int)m_slot_combos.size(); ci++) {
-                int sel = m_slot_combos[ci]->GetSelection();
-                if (sel >= 0 && sel < (int)m_printer_slots.size() &&
-                    m_printer_slots[sel].box_id == 0) {
-                    for (int cj = 0; cj < (int)m_slot_combos.size(); cj++) {
-                        if (cj != ci)
-                            m_slot_combos[cj]->Enable(false);
-                    }
-                    break;
-                }
-            }
-
-            for (auto* c : m_slot_combos) {
-                c->Bind(wxEVT_COMBOBOX, [this](wxCommandEvent& e) {
-                    int sel = e.GetSelection();
-                    if (sel >= 0 && sel < (int)m_printer_slots.size() &&
-                        m_printer_slots[sel].box_id == 0) {
-                        for (auto* c2 : m_slot_combos) {
-                            if (c2 != e.GetEventObject())
-                                c2->Enable(false);
-                        }
-                    } else {
-                        for (auto* c2 : m_slot_combos)
-                            c2->Enable(true);
-                    }
-                    e.Skip();
-                });
-            }
-        }
-    }
-
-    this->Layout();
-    this->Fit();
-}
-
-std::map<std::string, std::string> CrealityPrintHostSendDialog::extendedInfo() const
-{
-    std::map<std::string, std::string> info;
-    info["enableSelfTest"] = m_enableSelfTest ? "1" : "0";
-
-    // Color mapping: colorMatch_0, colorMatch_1, ... tab-delimited
-    for (int i = 0; i < (int)m_slot_combos.size(); i++) {
-        int sel = m_slot_combos[i]->GetSelection();
-        if (sel >= 0 && sel < (int)m_printer_slots.size()) {
-            auto& slot = m_printer_slots[sel];
-            // id = gcode tool index (T1A for first filament, T1B for second, ...),
-            // not the destination CFS slot — firmware matches by gcode tool.
-            std::string gcode_tool = "T1" + std::string(1, 'A' + i);
-            info["colorMatch_" + std::to_string(i)] =
-                gcode_tool + "\t" + slot.type + "\t" + slot.color + "\t" +
-                std::to_string(slot.box_id) + "\t" + std::to_string(slot.material_id);
-        }
-    }
-
-    return info;
 }
 
 }}

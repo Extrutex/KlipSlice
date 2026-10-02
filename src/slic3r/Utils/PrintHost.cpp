@@ -17,7 +17,6 @@
 
 #include "libslic3r/PrintConfig.hpp"
 #include "libslic3r/Channel.hpp"
-#include "CrealityPrint.hpp"
 #include "../GUI/PrintHostDialogs.hpp"
 #include "../GUI/MainFrame.hpp"
 #include "slic3r/plugin/PluginManager.hpp"
@@ -48,7 +47,6 @@ PrintHost* PrintHost::get_print_host(DynamicPrintConfig *config)
         const auto host_type = opt != nullptr ? opt->value : htMoonraker;
 
         switch (host_type) {
-            case htCrealityPrint:    return new CrealityPrint(config);
             case htMoonraker: return new Moonraker(config);
             default:          return nullptr;
         }

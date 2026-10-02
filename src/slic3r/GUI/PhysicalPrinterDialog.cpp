@@ -35,7 +35,6 @@
 #include "RemovableDriveManager.hpp"
 #include "BitmapCache.hpp"
 #include "BonjourDialog.hpp"
-#include "CrealityDiscoveryDialog.hpp"
 #include "MsgDialog.hpp"
 
 namespace Slic3r {
@@ -144,24 +143,6 @@ void PhysicalPrinterDialog::build_printhost_settings(ConfigOptionsGroup* m_optgr
     {
         auto sizer = create_sizer_with_btn(parent, &m_printhost_browse_btn, "printer_host_browser", _L("Browse") + " " + dots);
         m_printhost_browse_btn->Bind(wxEVT_BUTTON, [=](wxCommandEvent& e) {
-            const auto host_type = m_config->opt_enum<PrintHostType>("host_type");
-
-            // Creality K-series printers announce themselves via DNS-SD under a
-            // per-device-unique service type _Creality-<MAC-hex>._udp, so the
-            // standard fixed-service-name Bonjour browser does not find them.
-            // Dispatch to the Creality-specific scanner instead.
-            if (host_type == htCrealityPrint) {
-                CrealityDiscoveryDialog dialog(this);
-                if (dialog.ShowModal() == wxID_OK && !dialog.selected_ip().empty()) {
-                    // set_value expects the value wrapped as wxString -- TextCtrl::set_value
-                    // any_casts to wxString, so a raw std::string throws bad_any_cast.
-                    wxString new_url = wxString::FromUTF8("http://" + dialog.selected_ip());
-                    m_optgroup->set_value("print_host", new_url, true);
-                    m_optgroup->get_field("print_host")->field_changed();
-                }
-                return;
-            }
-
             BonjourDialog dialog(this, Preset::printer_technology(*m_config));
             if (dialog.show_and_lookup()) {
                 m_optgroup->set_value("print_host", dialog.get_selected(), true);

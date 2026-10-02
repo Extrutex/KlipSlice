@@ -33,7 +33,6 @@ struct PrintHostUpload
     boost::filesystem::path source_path;
     boost::filesystem::path upload_path;
 
-    std::string group;
     std::string storage;
 
     PrintHostPostUploadAction post_action { PrintHostPostUploadAction::None };

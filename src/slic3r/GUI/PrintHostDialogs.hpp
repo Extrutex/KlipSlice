@@ -13,7 +13,6 @@
 #include "MsgDialog.hpp"
 #include "../Utils/PrintHost.hpp"
 #include "libslic3r/PrintConfig.hpp"
-#include "libslic3r/ProjectTask.hpp"
 class wxButton;
 class wxTextCtrl;
 class wxComboBox;
@@ -24,8 +23,6 @@ class wxStaticText;
 class wxWrapSizer;
 class CheckBox;
 
-namespace Slic3r { namespace GUI { class BitmapComboBox; } }
-
 namespace Slic3r {
 
 namespace GUI {
@@ -33,11 +30,10 @@ namespace GUI {
 class PrintHostSendDialog : public GUI::MsgDialog
 {
 public:
-    PrintHostSendDialog(const boost::filesystem::path &path, PrintHostPostUploadActions post_actions, const wxArrayString& groups, const wxArrayString& storage_paths, const wxArrayString& storage_names, bool switch_to_device_tab);
+    PrintHostSendDialog(const boost::filesystem::path &path, PrintHostPostUploadActions post_actions, const wxArrayString& storage_paths, const wxArrayString& storage_names, bool switch_to_device_tab);
     virtual ~PrintHostSendDialog() {}
     boost::filesystem::path filename() const;
     PrintHostPostUploadAction post_action() const;
-    std::string group() const;
     std::string storage() const;
     bool switch_to_device_tab() const {return m_switch_to_device_tab;}
 
@@ -47,7 +43,6 @@ public:
 
 protected:
     wxTextCtrl *txt_filename;
-    wxComboBox *combo_groups;
     wxComboBox* combo_storage;
     PrintHostPostUploadAction post_upload_action;
     wxString    m_valid_suffix;
@@ -144,37 +139,6 @@ private:
     std::vector<std::pair<std::string, std::string>> upload_names;
     void save_user_data(int);
     bool load_user_data(int, std::vector<int>&);
-};
-
-class CrealityPrintHostSendDialog : public PrintHostSendDialog
-{
-public:
-    CrealityPrintHostSendDialog(const boost::filesystem::path& path,
-                                PrintHostPostUploadActions     post_actions,
-                                const wxArrayString&           groups,
-                                const wxArrayString&           storage_paths,
-                                const wxArrayString&           storage_names,
-                                bool                           switch_to_device_tab,
-                                PrintHost*                     printhost);
-
-    virtual void                               init() override;
-    virtual std::map<std::string, std::string> extendedInfo() const override;
-
-private:
-    static constexpr const char* CONFIG_KEY_ENABLESELFTEST = "crealityprint_enable_self_test";
-
-    bool        m_enableSelfTest;
-    PrintHost*  m_printhost;
-
-    struct SlotInfo {
-        std::string tool_id;   // e.g. "T1A"
-        std::string type;      // e.g. "PLA"
-        std::string color;     // e.g. "#ffffff"
-        int         box_id;
-        int         material_id;
-    };
-    std::vector<SlotInfo>   m_printer_slots;
-    std::vector<BitmapComboBox*> m_slot_combos; // one per gcode filament
 };
 
 wxDECLARE_EVENT(EVT_PRINTHOST_PROGRESS, PrintHostQueueDialog::Event);

@@ -75,7 +75,6 @@
 #include "libslic3r/Utils.hpp"
 #include "libslic3r/PresetBundle.hpp"
 #include "libslic3r/PublishSettings.hpp"
-#include "slic3r/Utils/CrealityPrint.hpp"
 #include "libslic3r/ClipperUtils.hpp"
 // For stl export
 #include "libslic3r/CSGMesh/ModelToCSGMesh.hpp"
@@ -19917,9 +19916,6 @@ void Plater::send_gcode_legacy(int plate_idx, Export3mfProgressFn proFn)
         default_output_file.replace_extension(".gcode.3mf");
     }
 
-    // No remaining host sorts uploads into server-side groups.
-    wxArrayString groups;
-
     // Query the server for its storage roots.
     wxArrayString storage_paths;
     wxArrayString storage_names;
@@ -19936,19 +19932,8 @@ void Plater::send_gcode_legacy(int plate_idx, Export3mfProgressFn proFn)
     {
         auto        config        = get_app_config();
 
-        const auto host_type_opt        = physical_printer_config->option<ConfigOptionEnum<PrintHostType>>("host_type");
-        const auto host_type            = host_type_opt != nullptr ? host_type_opt->value : htMoonraker;
-
-        std::unique_ptr<PrintHostSendDialog> pDlg;
-        if (host_type == htCrealityPrint) {
-            pDlg = std::make_unique<CrealityPrintHostSendDialog>(default_output_file, upload_job.printhost->get_post_upload_actions(), groups,
-                                                                 storage_paths, storage_names,
-                                                                 config->get_bool("open_device_tab_post_upload"),
-                                                                 upload_job.printhost.get());
-        } else {
-            pDlg = std::make_unique<PrintHostSendDialog>(default_output_file, upload_job.printhost->get_post_upload_actions(), groups,
-                                                         storage_paths, storage_names, config->get_bool("open_device_tab_post_upload"));
-        }
+        auto pDlg = std::make_unique<PrintHostSendDialog>(default_output_file, upload_job.printhost->get_post_upload_actions(),
+                                                          storage_paths, storage_names, config->get_bool("open_device_tab_post_upload"));
 
         pDlg->init();
         if (pDlg->ShowModal() != wxID_OK) {
@@ -19960,7 +19945,6 @@ void Plater::send_gcode_legacy(int plate_idx, Export3mfProgressFn proFn)
         upload_job.switch_to_device_tab    = pDlg->switch_to_device_tab();
         upload_job.upload_data.upload_path = pDlg->filename();
         upload_job.upload_data.post_action = pDlg->post_action();
-        upload_job.upload_data.group       = pDlg->group();
         upload_job.upload_data.storage     = pDlg->storage();
         upload_job.upload_data.extended_info = pDlg->extendedInfo();
         // Orca: gcode inside a .gcode.3mf is index-coded (Metadata/plate_<N>.gcode) and a bundle may
