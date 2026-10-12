@@ -1500,7 +1500,7 @@ private:
             gcode << "M204 P" << acceleration;
         }
         else if (m_gcode_flavor == gcfKlipper && m_accel_to_decel_enable) {
-            gcode << "SET_VELOCITY_LIMIT ACCEL_TO_DECEL=" << acceleration * m_accel_to_decel_factor / 100;
+            gcode << "SET_VELOCITY_LIMIT MINIMUM_CRUISE_RATIO=" << (1.0 - m_accel_to_decel_factor / 100.0);
             gcode << "\nM204 S" << acceleration;
         }
         else {

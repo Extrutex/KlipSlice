@@ -784,3 +784,55 @@ TEST_CASE("Custom G-code motion limits are restored before generated moves", "[G
     REQUIRE(gcode.find("M204 S6000 ; adjust acceleration", custom_gcode_pos) != std::string::npos);
     REQUIRE(gcode.find("M205 X8 Y8 ; adjust jerk", custom_gcode_pos) != std::string::npos);
 }
+
+TEST_CASE("Klipper acceleration commands preserve the configured cruise ratio", "[GCodeWriter][Klipper]")
+{
+    const double factor = GENERATE(1.0, 25.0, 50.0, 100.0);
+    const bool enabled = GENERATE(false, true);
+    const bool combined = GENERATE(false, true);
+    GCodeWriter writer;
+    writer.config.gcode_flavor.value = gcfKlipper;
+    writer.config.accel_to_decel_enable.value = enabled;
+    writer.config.accel_to_decel_factor.value = factor;
+    const std::string command = combined ? writer.set_accel_and_jerk(1200, 5.0)
+                                         : writer.set_print_acceleration(1200);
+    REQUIRE_THAT(command, Catch::Matchers::ContainsSubstring("ACCEL=1200"));
+    REQUIRE(command.find("ACCEL_TO_DECEL=") == std::string::npos);
+    const auto position = command.find("MINIMUM_CRUISE_RATIO=");
+    if (enabled) {
+        REQUIRE(position != std::string::npos);
+        const double ratio = std::stod(command.substr(position + std::string("MINIMUM_CRUISE_RATIO=").size()));
+        REQUIRE_THAT(ratio, Catch::Matchers::WithinAbs(1.0 - factor / 100.0, 1e-6));
+    } else {
+        REQUIRE(position == std::string::npos);
+    }
+}
+
+TEST_CASE("Klipper prime towers emit the configured minimum cruise ratio", "[GCodeWriter][Klipper][WipeTower]")
+{
+    DynamicPrintConfig config = dual_extruder_toolchange_config();
+    config.set_key_value("gcode_flavor", new ConfigOptionEnum<GCodeFlavor>(gcfKlipper));
+    config.set_key_value("enable_prime_tower", new ConfigOptionBool(true));
+    config.set_key_value("wipe_tower_type", new ConfigOptionEnum<WipeTowerType>(WipeTowerType::Type1));
+    config.set_key_value("accel_to_decel_enable", new ConfigOptionBool(true));
+    config.set_key_value("accel_to_decel_factor", new ConfigOptionPercent(37.));
+    Model model;
+    auto *object = model.add_object();
+    object->add_volume(cube(4));
+    object->add_instance();
+    DynamicPrintConfig upper_layers;
+    upper_layers.set_key_value("extruder", new ConfigOptionInt(2));
+    upper_layers.set_key_value("layer_height", new ConfigOptionFloat(0.2));
+    object->layer_config_ranges[{2.0, 4.0}].assign_config(std::move(upper_layers));
+    Print print;
+    arrange_objects_on_test_bed(model, config);
+    object->ensure_on_bed();
+    print.auto_assign_extruders(object);
+    print.apply(model, config);
+    print.validate();
+    print.set_status_silent();
+    print.process();
+    const std::string gcode = Slic3r::Test::gcode(print);
+    REQUIRE(gcode.find("ACCEL_TO_DECEL=") == std::string::npos);
+    REQUIRE_THAT(gcode, Catch::Matchers::ContainsSubstring("SET_VELOCITY_LIMIT MINIMUM_CRUISE_RATIO=0.63"));
+}
