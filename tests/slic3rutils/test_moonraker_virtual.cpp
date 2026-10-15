@@ -24,7 +24,8 @@ TEST_CASE("The Moonraker host uploads and starts a print on the virtual API", "[
     REQUIRE(std::string(key).size() > 0);
 
     Slic3r::DynamicPrintConfig config = Slic3r::DynamicPrintConfig::full_print_config();
-    config.set_deserialize_strict({{"print_host", url}, {"printhost_apikey", key}});
+    config.set_deserialize_strict({{"print_host", url}, {"printhost_apikey", key}, {"printhost_cafile", ""},
+                                   {"printhost_ssl_ignore_revoke", "0"}});
     Slic3r::Moonraker host(&config);
     wxString error;
     const bool connected = host.test(error);

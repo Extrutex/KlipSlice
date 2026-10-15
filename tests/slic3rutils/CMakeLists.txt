@@ -20,6 +20,7 @@ add_executable(${_TEST_NAME}_tests
     test_moonraker_filaments.cpp
     test_moonraker_status.cpp
     test_moonraker_virtual.cpp
+    test_moonraker_upload.cpp
     test_slicing_pipeline_bindings.cpp
     test_slicing_pipeline_config.cpp
     test_plugin_sort.cpp

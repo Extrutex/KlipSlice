@@ -13,6 +13,7 @@
 #include <curl/curl.h>
 
 #include "libslic3r/AppConfig.hpp"
+#include "libslic3r/Exception.hpp"
 #include "libslic3r/PrintConfig.hpp"
 #include "slic3r/GUI/I18N.hpp"
 #include "slic3r/GUI/GUI.hpp"
@@ -62,14 +63,42 @@ std::string substitute_host(const std::string &orig_addr, std::string sub_addr)
     return out;
 }
 
+// A print host is built from a physical printer's config. Configs assembled elsewhere (CLI,
+// tests, a full print config) may lack the printhost_* options; those then take their
+// documented defaults instead of dereferencing a missing option.
+template<class T> const T &host_option(const DynamicPrintConfig &config, const char *key)
+{
+    if (const T *opt = config.option<T>(key))
+        return *opt;
+    const ConfigOptionDef *def = print_config_def.get(key);
+    if (def == nullptr || def->get_default_value<T>() == nullptr)
+        throw Slic3r::RuntimeError(std::string("Moonraker: unknown print host option ") + key);
+    return *def->get_default_value<T>();
+}
+
 } // namespace
 
 Moonraker::Moonraker(DynamicPrintConfig *config)
-    : m_host(config->opt_string("print_host"))
-    , m_apikey(config->opt_string("printhost_apikey"))
-    , m_cafile(config->opt_string("printhost_cafile"))
-    , m_ssl_revoke_best_effort(config->opt_bool("printhost_ssl_ignore_revoke"))
+    : m_host(host_option<ConfigOptionString>(*config, "print_host").value)
+    , m_apikey(host_option<ConfigOptionString>(*config, "printhost_apikey").value)
+    , m_cafile(host_option<ConfigOptionString>(*config, "printhost_cafile").value)
+    , m_ssl_revoke_best_effort(host_option<ConfigOptionBool>(*config, "printhost_ssl_ignore_revoke").value)
 {}
+
+std::string Moonraker::uploaded_path(const std::string &response_body)
+{
+    // Moonraker answers /server/files/upload without the {"result": ...} envelope of its other
+    // endpoints: {"item": {"path": "<dir>/<name>.gcode", "root": "gcodes"}, "action": ...}.
+    // The enveloped form is accepted too, for proxies and compatible servers that add it.
+    std::stringstream ss(response_body);
+    pt::ptree ptree;
+    pt::read_json(ss, ptree);
+    if (const auto path = ptree.get_optional<std::string>("item.path"))
+        return *path;
+    if (const auto path = ptree.get_optional<std::string>("result.item.path"))
+        return *path;
+    return {};
+}
 
 const char* Moonraker::get_name() const { return "Moonraker"; }
 
@@ -231,7 +260,7 @@ bool Moonraker::get_storage(wxArrayString &storage_path, wxArrayString &storage_
 bool Moonraker::start_print(const std::string &resolved_ip, wxString &error_msg, const std::string &filename) const
 {
     // POST /printer/print/start with JSON body { "filename": "<name>.gcode" }.
-    // `filename` is what /server/files/upload returned as result.item.path (the storage-relative
+    // `filename` is what /server/files/upload returned as item.path (the storage-relative
     // path inside `root`, no leading slash, with extension). The body goes through property_tree
     // so that special characters in the file name are escaped properly.
     const char *name = get_name();
@@ -271,8 +300,8 @@ bool Moonraker::upload_inner(const std::string &resolved_ip, PrintHostUpload upl
     // POST /server/files/upload as multipart/form-data with:
     //     file = <gcode file>
     //     root = <storage root>     (Moonraker default: "gcodes")
-    // Successful response shape:
-    //     { "result": { "item": { "path": "<name>.gcode", "root": "<root>" }, "print_started": <bool> } }
+    // Successful response shape (no "result" envelope on this endpoint):
+    //     { "item": { "path": "<name>.gcode", "root": "<root>" }, "print_started": <bool>, "action": "create_file" }
     // The print is always started explicitly via /printer/print/start regardless of
     // `print_started`, so there is a single call site for that state.
     const char *name = get_name();
@@ -283,7 +312,7 @@ bool Moonraker::upload_inner(const std::string &resolved_ip, PrintHostUpload upl
 
     std::string url = make_url("server/files/upload", resolved_ip);
     bool result = true;
-    std::string uploaded_path;
+    std::string stored_path;
 
     if (!resolved_ip.empty())
         info_fn(L"resolve", boost::nowide::widen(url));
@@ -311,27 +340,20 @@ bool Moonraker::upload_inner(const std::string &resolved_ip, PrintHostUpload upl
         .on_complete([&](std::string body, unsigned status) {
             BOOST_LOG_TRIVIAL(debug) << boost::format("%1%: upload HTTP %2%: %3%") % name % status % body;
             try {
-                std::stringstream ss(body);
-                pt::ptree ptree;
-                pt::read_json(ss, ptree);
-
-                // Moonraker confirms the storage-relative path in result.item.path. Exactly that
-                // string goes to /printer/print/start, so any server-side renaming is respected.
-                const auto stored_path = ptree.get_optional<std::string>("result.item.path");
-                if (stored_path) {
-                    uploaded_path = *stored_path;
-                } else {
-                    // Older Moonraker or a slimmer envelope without result.item.path.
-                    uploaded_path = upload_filename.string();
+                // Moonraker confirms the storage-relative path in item.path. Exactly that string
+                // goes to /printer/print/start, so any server-side renaming is respected.
+                stored_path = Moonraker::uploaded_path(body);
+                if (stored_path.empty()) {
+                    stored_path = upload_filename.string();
                     BOOST_LOG_TRIVIAL(warning) << boost::format(
-                        "%1%: upload response missing result.item.path, falling back to original filename `%2%`")
-                        % name % uploaded_path;
+                        "%1%: upload response has no item.path, falling back to original filename `%2%`")
+                        % name % stored_path;
                 }
             } catch (const std::exception &ex) {
                 BOOST_LOG_TRIVIAL(warning) << boost::format(
                     "%1%: could not parse upload response (%2%); falling back to original filename")
                     % name % ex.what();
-                uploaded_path = upload_filename.string();
+                stored_path = upload_filename.string();
             }
         })
         .on_error([&](std::string body, std::string error, unsigned status) {
@@ -355,9 +377,9 @@ bool Moonraker::upload_inner(const std::string &resolved_ip, PrintHostUpload upl
     if (!result)
         return false;
 
-    if (upload_data.post_action == PrintHostPostUploadAction::StartPrint && !uploaded_path.empty()) {
+    if (upload_data.post_action == PrintHostPostUploadAction::StartPrint && !stored_path.empty()) {
         wxString start_msg;
-        if (!start_print(resolved_ip, start_msg, uploaded_path)) {
+        if (!start_print(resolved_ip, start_msg, stored_path)) {
             error_fn(std::move(start_msg));
             return false;
         }

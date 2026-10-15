@@ -55,6 +55,9 @@ public:
     bool get_storage(wxArrayString &storage_path, wxArrayString &storage_name) const override;
     const std::string& get_apikey() const { return m_apikey; }
     const std::string& get_cafile() const { return m_cafile; }
+    // Storage-relative path of the uploaded file from a /server/files/upload response body, or
+    // empty if the response carries none. Throws if the body is not JSON.
+    static std::string uploaded_path(const std::string &response_body);
 
 protected:
     std::string m_host;
