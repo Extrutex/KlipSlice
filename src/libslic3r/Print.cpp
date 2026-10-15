@@ -204,6 +204,7 @@ bool Print::invalidate_state_by_config_options(const ConfigOptionResolver & /* n
         "retract_restart_extra_toolchange",
         "retraction_speed",
         "use_firmware_retraction",
+        "firmware_owns_retraction",
         "slow_down_layer_time",
         "standby_temperature_delta",
         "preheat_time",
@@ -1760,6 +1761,18 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
                 return e < is_mixed.size() && is_mixed[e] && e < gradient.size() && gradient[e]; }))
             warn(L("A gradient mixed filament is used, but 'Mixed color sublayer' is disabled. The gradient will not be printed."),
                  "enable_mixed_color_sublayer");
+    }
+
+    // KLIPSLICE: SET_RETRACTION carries the slicer's values to Klipper's [firmware_retraction], which
+    // rejects speeds below 1 mm/s and a negative extra restart length. A rejected command aborts the print.
+    if (m_config.use_firmware_retraction && !m_config.firmware_owns_retraction) {
+        auto any_of = [](const ConfigOptionFloats &opt, auto pred) { return std::any_of(opt.values.begin(), opt.values.end(), pred); };
+        if (any_of(m_config.retraction_speed, [](double v) { return v < 1.; }))
+            return { L("Klipper's SET_RETRACTION needs a retraction speed of at least 1 mm/s."), nullptr, "retraction_speed" };
+        if (any_of(m_config.deretraction_speed, [](double v) { return v != 0. && v < 1.; }))
+            return { L("Klipper's SET_RETRACTION needs a deretraction speed of at least 1 mm/s, or 0 to use the retraction speed."), nullptr, "deretraction_speed" };
+        if (any_of(m_config.retract_restart_extra, [](double v) { return v < 0.; }))
+            return { L("Klipper's SET_RETRACTION does not accept a negative extra length on restart."), nullptr, "retract_restart_extra" };
     }
 
     if (nozzles < 2 && extruders.size() > 1) {

@@ -22,10 +22,35 @@ acceleration changes then omit the cruise parameter. There is no automatic
 firmware detection in the offline slicing pipeline. Custom start/end/tool-change
 G-code is preserved and must be migrated by its author.
 
+## Firmware Retraction
+
+With `use_firmware_retraction`, retractions are `G10`/`G11` and Klipper's
+`[firmware_retraction]` section performs the moves. By default
+(`firmware_owns_retraction` on) its printer.cfg values apply and the slicer's
+retraction length, speeds and extra restart length are not used. With the option
+off, the slicer sends the active filament's values with `SET_RETRACTION`, so
+per-filament retraction settings reach the printer. The values stay active in
+Klipper after the print, as with any `SET_RETRACTION`.
+
+`SET_RETRACTION` clears Klipper's single "retracted" flag, so a `G11` after it
+is ignored and the filament stays retracted. The writer therefore mirrors that
+flag and emits the command only while Klipper is not retracted: right before a
+`G10`, or right after a `G11`. On a filament change the `G11` that follows
+restores the previous filament's retraction with the values it was made with,
+and the new values follow it. With several independent nozzles the parked tool
+can still hold the flag when the new one first retracts; the new values then
+wait for the next `G11`. A command is only written when the values differ from
+the last one sent.
+
+Klipper rejects speeds below 1 mm/s and a negative extra length; print
+validation reports those values instead of letting the command abort the print.
+
 ## Verification
 
 `tests/fff_print/test_gcodewriter.cpp` checks enabled/disabled output, percentage
-boundaries, combined commands and actual Type1 prime-tower generation. The
+boundaries, combined commands and actual Type1 prime-tower generation. It also
+replays sliced firmware-retraction output with the semantics of Klipper's
+`[firmware_retraction]` on one and two nozzles. The
 virtual fixture Dockerfile accepts an explicit repository/ref/commit triple and
 rejects mismatched source hashes. FLUXRAKER's companion integration runner selects
 pinned legacy/current targets and audits removed parameters before printing.

@@ -2,8 +2,10 @@
 #define slic3r_GCodeWriter_hpp_
 
 #include "libslic3r.h"
-#include <string>
+#include <array>
 #include <charconv>
+#include <optional>
+#include <string>
 #include "Extruder.hpp"
 #include "Point.hpp"
 #include "Polygon.hpp"
@@ -208,6 +210,16 @@ public:
     bool spiral_lift_fits_printable_area(const Vec2d &center, double radius) const;
     std::string _retract(double length, double restart_extra, const std::string &comment);
     std::string set_acceleration_internal(Acceleration type, unsigned int acceleration);
+    // KLIPSLICE: SET_RETRACTION with the active filament's values when the slicer owns Klipper's
+    // firmware retraction values. Empty if they are already active, the firmware owns them, or
+    // Klipper is retracted.
+    std::string set_firmware_retraction();
+
+    // Retraction values last sent with SET_RETRACTION: length, retract speed, extra restart length,
+    // unretract speed. Empty until the first command of the file.
+    std::optional<std::array<double, 4>> m_firmware_retraction_sent;
+    // Mirrors the global "retracted" flag of Klipper's [firmware_retraction]: set by G10, cleared by G11.
+    bool m_firmware_retracted = false;
 
 };
 

@@ -1700,6 +1700,7 @@ PRINT_CONFIG_CLASS_DEFINE(
 
     // SoftFever
     ((ConfigOptionBool,                use_firmware_retraction))
+    ((ConfigOptionBool,                firmware_owns_retraction))
     ((ConfigOptionBool,                use_relative_e_distances))
     ((ConfigOptionBool,                accel_to_decel_enable))
     ((ConfigOptionPercent,             accel_to_decel_factor))

@@ -1179,7 +1179,9 @@ std::string GCodeWriter::_retract(double length, double restart_extra, const std
     std::string gcode;
     if (double dE = filament()->retract(length, restart_extra);  !is_zero(dE)) {
         if (this->config.use_firmware_retraction) {
-            gcode = FLAVOR_IS(gcfMachinekit) ? "G22 ; retract\n" : "G10 ; retract\n";
+            gcode = this->set_firmware_retraction();
+            gcode += FLAVOR_IS(gcfMachinekit) ? "G22 ; retract\n" : "G10 ; retract\n";
+            m_firmware_retracted = true;
         }
         else {
             // BBS
@@ -1198,6 +1200,30 @@ std::string GCodeWriter::_retract(double length, double restart_extra, const std
     return gcode;
 }
 
+std::string GCodeWriter::set_firmware_retraction()
+{
+    // Klipper's SET_RETRACTION also clears the [firmware_retraction] "retracted" flag, so a G11 issued
+    // after it does nothing. The flag is global, while the writer keeps a retraction state per
+    // extruder: after a tool change the new tool may retract while the parked one still holds the
+    // flag. Hold the values back until a G11 has cleared it.
+    const Extruder *fil = filament();
+    if (fil == nullptr || !this->config.use_firmware_retraction || this->config.firmware_owns_retraction || m_firmware_retracted)
+        return {};
+    const std::array<double, 4> values{ fil->retraction_length(), double(fil->retract_speed()),
+                                        fil->retract_restart_extra(), double(fil->deretract_speed()) };
+    if (m_firmware_retraction_sent == values)
+        return {};
+    m_firmware_retraction_sent = values;
+
+    std::ostringstream gcode;
+    gcode << "SET_RETRACTION RETRACT_LENGTH=" << values[0] << " RETRACT_SPEED=" << values[1]
+          << " UNRETRACT_EXTRA_LENGTH=" << values[2] << " UNRETRACT_SPEED=" << values[3];
+    if (GCodeWriter::full_gcode_comment)
+        gcode << " ; retraction of the active filament";
+    gcode << "\n";
+    return gcode.str();
+}
+
 std::string GCodeWriter::unretract(float extra_retract)
 {
     std::string gcode;
@@ -1208,7 +1234,11 @@ std::string GCodeWriter::unretract(float extra_retract)
     if (double dE = filament()->unretract(); !is_zero(dE)) {
         if (this->config.use_firmware_retraction) {
             gcode += FLAVOR_IS(gcfMachinekit) ? "G23 ; unretract\n" : "G11 ; unretract\n";
+            m_firmware_retracted = false;
             gcode += this->reset_e();
+            // G11 restored what the last G10 retracted with the values active at that time. Only now
+            // may the values of a newly activated filament replace them.
+            gcode += this->set_firmware_retraction();
         }
         else {
             //BBS

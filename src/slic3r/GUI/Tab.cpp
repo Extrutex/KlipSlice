@@ -5084,6 +5084,7 @@ void TabPrinter::build_fff()
 
         optgroup->append_single_option_line("use_relative_e_distances", "printer_basic_information_advanced#use-relative-e-distances");
         optgroup->append_single_option_line("use_firmware_retraction", "printer_basic_information_advanced#use-firmware-retraction");
+        optgroup->append_single_option_line("firmware_owns_retraction", "printer_basic_information_advanced#use-firmware-retraction");
         // optgroup->append_single_option_line("spaghetti_detector");
         optgroup->append_single_option_line("time_cost", "printer_basic_information_advanced#time-cost");
 
@@ -6039,6 +6040,7 @@ void TabPrinter::toggle_options()
 
         for (auto el : {"use_firmware_retraction", "use_relative_e_distances", "support_multi_bed_types", "pellet_modded_printer", "bed_mesh_max", "bed_mesh_min", "bed_mesh_probe_distance", "adaptive_bed_mesh_margin", "thumbnails"})
           toggle_line(el, true);
+        toggle_line("firmware_owns_retraction", m_config->opt_bool("use_firmware_retraction"));
 
         bool gcf_is_marlin_firmware = m_config->option<ConfigOptionEnum<GCodeFlavor>>("gcode_flavor")->value == GCodeFlavor::gcfMarlinFirmware;
         toggle_line("enable_power_loss_recovery", gcf_is_marlin_firmware);
@@ -6103,9 +6105,10 @@ void TabPrinter::toggle_options()
         toggle_option("extruder_printable_height", false, i);
         toggle_line("extruder_printable_height", m_preset_bundle->get_printer_extruder_count() == 2, i);
 
-        // when using firmware retraction, firmware decides retraction length
+        // when using firmware retraction, firmware decides retraction length, unless the slicer
+        // sends its values with SET_RETRACTION
         bool use_firmware_retraction = m_config->opt_bool("use_firmware_retraction");
-        toggle_option("retract_length", !use_firmware_retraction, i);
+        bool firmware_owns_retraction = use_firmware_retraction && m_config->opt_bool("firmware_owns_retraction");
 
         // user can customize travel length if we have retraction length or we"re using
         // firmware retraction
@@ -6126,11 +6129,15 @@ void TabPrinter::toggle_options()
 
         // some options only apply when not using firmware retraction
         vec.resize(0);
-        vec = {"retraction_speed", "deretraction_speed", "retract_before_wipe", "retract_after_wipe",
-               "retract_length", "retract_restart_extra", "wipe_distance"};
+        vec = {"retract_before_wipe", "retract_after_wipe", "wipe_distance"};
         for (auto el : vec)
             //BBS
             toggle_option(el, retraction && !use_firmware_retraction, i);
+        // SET_RETRACTION carries these to Klipper
+        toggle_option("retraction_length", !firmware_owns_retraction, i);
+        vec = {"retraction_speed", "deretraction_speed", "retract_restart_extra"};
+        for (auto el : vec)
+            toggle_option(el, retraction && !firmware_owns_retraction, i);
 
         bool wipe = retraction && m_config->opt_bool("wipe", variant_index);
 

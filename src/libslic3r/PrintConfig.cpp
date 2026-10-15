@@ -6112,10 +6112,19 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("use_firmware_retraction", coBool);
     def->label = L("Use firmware retraction");
-    def->tooltip = L("This experimental setting uses G10 and G11 commands to have the firmware "
-                   "handle the retraction. This is only supported in recent Marlin.");
+    def->tooltip = L("Retract and unretract with G10 and G11 and let Klipper perform the moves. "
+                   "Requires a [firmware_retraction] section in printer.cfg.");
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("firmware_owns_retraction", coBool);
+    def->label = L("Retraction values from printer.cfg");
+    def->tooltip = L("With firmware retraction, Klipper retracts by the values in its [firmware_retraction] section. "
+                     "Disable this to send the slicer's retraction length, speeds and extra restart length of the "
+                     "active filament to Klipper with SET_RETRACTION, so per-filament retraction settings apply. "
+                     "The values stay active in Klipper after the print.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(true));
 
     def = this->add("disable_m73", coBool);
     def->label = L("Disable set remaining print time");
