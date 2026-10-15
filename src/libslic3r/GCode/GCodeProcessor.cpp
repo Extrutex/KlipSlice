@@ -1471,7 +1471,7 @@ void GCodeProcessor::run_post_process()
                             const int real_tool = tool_number < m_physical_extruder_map.size() ? m_physical_extruder_map[tool_number] : tool_number;
                             std::string comment = "preheat T" + std::to_string(real_tool) +
                                                 " time: " + std::to_string((int) std::round(time_diffs[0])) + "s";
-                            return GCodeWriter::set_temperature(temperature, this->m_flavor, false, real_tool, comment);
+                            return GCodeWriter::format_temperature(temperature, false, real_tool, comment);
                         }
                     },
                     // line replacer

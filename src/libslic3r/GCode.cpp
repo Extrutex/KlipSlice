@@ -3914,13 +3914,6 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
                         m_sorted_layer_filaments.emplace_back(lt.extruders);
                 }
 
-                // Orca: disable power loss recovery if it was enabled earlier
-                {
-                    const auto plr_mode = print.config().enable_power_loss_recovery.value;
-                    if (m_second_layer_things_done && plr_mode == PowerLossRecoveryMode::Enable) {
-                        file.write(m_writer.enable_power_loss_recovery(PowerLossRecoveryMode::Disable));
-                    }
-                }
                 ++ finished_objects;
                 // Flag indicating whether the nozzle temperature changes from 1st to 2nd layer were performed.
                 // Reset it when starting another object from 1st layer.
@@ -3996,10 +3989,6 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
                     m_sorted_layer_filaments.emplace_back(lt.extruders);
             }
 
-            // Orca: disable power loss recovery
-            if (m_second_layer_things_done && print.config().enable_power_loss_recovery.value == PowerLossRecoveryMode::Enable) {
-                file.write(m_writer.enable_power_loss_recovery(PowerLossRecoveryMode::Disable));
-            }
             if (m_wipe_tower)
                 // Purge the extruder, pull out the active filament.
                 file.write(m_wipe_tower->finalize(*this));
@@ -4059,8 +4048,6 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
         }
         file.writeln(this->placeholder_parser_process("machine_end_gcode", print.config().machine_end_gcode, m_writer.filament()->id(), &config));
     }
-    file.write(m_writer.update_progress(m_layer_count, m_layer_count, true)); // 100%
-    file.write(m_writer.postamble());
 
     if (activate_chamber_temp_control && max_chamber_temp > 0)
         file.write(m_writer.set_chamber_temperature(0, false));  //close chamber_temperature
@@ -5727,10 +5714,6 @@ LayerResult GCode::process_layer(
     }
 
     if (!first_layer && !m_second_layer_things_done) {
-        // Orca: set power loss recovery
-        const auto plr_mode = print.config().enable_power_loss_recovery.value;
-        gcode += m_writer.enable_power_loss_recovery(plr_mode);
-
       // Reset acceleration at sencond layer
       // Orca: only set once, don't need to call set_accel_and_jerk
       if (NOZZLE_CONFIG(default_acceleration) > 0 && NOZZLE_CONFIG(initial_layer_acceleration) > 0) {
@@ -7096,8 +7079,7 @@ std::string GCode::change_layer(coordf_t print_z)
 {
     std::string gcode;
     if (m_layer_count > 0)
-        // Increment a progress bar indicator.
-        gcode += m_writer.update_progress(++ m_layer_index, m_layer_count);
+        ++ m_layer_index;
     //BBS
     coordf_t z = print_z + m_config.z_offset.value;  // in unscaled coordinates
     if (FILAMENT_CONFIG(retract_when_changing_layer) && m_writer.will_move_z(z)) {

@@ -5037,7 +5037,6 @@ void TabPrinter::build_fff()
         optgroup->append_single_option_line("pellet_modded_printer", "printer_basic_information_advanced#pellet-modded-printer");
 
         optgroup->append_single_option_line("use_3mf");
-        optgroup->append_single_option_line("enable_power_loss_recovery", "printer_basic_information_advanced#power-loss-recovery");
         //option  = optgroup->get_option("wrapping_exclude_area");
         //option.opt.full_width = true;
         //optgroup->append_single_option_line(option);
@@ -6041,9 +6040,6 @@ void TabPrinter::toggle_options()
         for (auto el : {"use_firmware_retraction", "use_relative_e_distances", "support_multi_bed_types", "pellet_modded_printer", "bed_mesh_max", "bed_mesh_min", "bed_mesh_probe_distance", "adaptive_bed_mesh_margin", "thumbnails"})
           toggle_line(el, true);
         toggle_line("firmware_owns_retraction", m_config->opt_bool("use_firmware_retraction"));
-
-        bool gcf_is_marlin_firmware = m_config->option<ConfigOptionEnum<GCodeFlavor>>("gcode_flavor")->value == GCodeFlavor::gcfMarlinFirmware;
-        toggle_line("enable_power_loss_recovery", gcf_is_marlin_firmware);
 
         const bool support_parallel_printheads = printer_cfg.opt_bool("support_parallel_printheads");
         toggle_line("parallel_printheads_count", support_parallel_printheads);

@@ -49,8 +49,7 @@ public:
         return out;
     }
     std::string preamble();
-    std::string postamble() const;
-    static std::string set_temperature(unsigned int temperature, GCodeFlavor flavor, bool wait = false, int tool = -1, std::string comment = std::string());
+    static std::string format_temperature(unsigned int temperature, bool wait = false, int tool = -1, std::string comment = std::string());
 
     std::string set_temperature(unsigned int temperature, bool wait = false, int tool = -1) const;
     std::string set_bed_temperature(int temperature, bool wait = false);
@@ -64,8 +63,6 @@ public:
     std::string set_pressure_advance(double pa) const;
     std::string set_input_shaping(char axis, float damp, float freq, std::string type) const;
     std::string reset_e(bool force = false);
-    std::string update_progress(unsigned int num, unsigned int tot, bool allow_100 = false) const;
-    std::string enable_power_loss_recovery(PowerLossRecoveryMode mode);
     // return false if this extruder was already selected
     bool        need_toolchange(unsigned int filament_id) const;
     std::string set_extruder(unsigned int filament_id);
@@ -109,7 +106,7 @@ public:
     // To be called by the CoolingBuffer from another thread.
     // ORCA: `part_cooling_fan_min_pwm` (0-100, default 0) is a floor applied only when `speed` is non-zero, used to overcome
     // PWM start-up thresholds on fans that won't spool below a certain duty cycle. A `speed` of 0 is always honoured.
-    static std::string set_fan(const GCodeFlavor gcode_flavor, unsigned int speed, unsigned int part_cooling_fan_min_pwm = 0);
+    static std::string format_fan(unsigned int speed, unsigned int part_cooling_fan_min_pwm = 0);
     // To be called by the main thread. It always emits the G-code, it does not remember the previous state.
     // Keeping the state is left to the CoolingBuffer, which runs asynchronously on another thread.
     std::string set_fan(unsigned int speed) const;

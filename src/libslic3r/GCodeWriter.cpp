@@ -207,78 +207,26 @@ void GCodeWriter::set_extruders(std::vector<unsigned int> extruder_ids)
 std::string GCodeWriter::preamble()
 {
     std::ostringstream gcode;
-
-    if (FLAVOR_IS_NOT(gcfMakerWare)) {
-        gcode << "G90\n";
-        gcode << "G21\n";
+    gcode << "G90\n";
+    gcode << "G21\n";
+    if (this->config.use_relative_e_distances) {
+        gcode << "M83 ; use relative distances for extrusion\n";
+    } else {
+        gcode << "M82 ; use absolute distances for extrusion\n";
     }
-    if (FLAVOR_IS(gcfRepRapSprinter) ||
-        FLAVOR_IS(gcfRepRapFirmware) ||
-        FLAVOR_IS(gcfMarlinLegacy) ||
-        FLAVOR_IS(gcfMarlinFirmware) ||
-        FLAVOR_IS(gcfTeacup) ||
-        FLAVOR_IS(gcfRepetier) ||
-        FLAVOR_IS(gcfSmoothie) ||
-        FLAVOR_IS(gcfKlipper))
-    {
-        if (this->config.use_relative_e_distances) {
-            gcode << "M83 ; use relative distances for extrusion\n";
-        } else {
-            gcode << "M82 ; use absolute distances for extrusion\n";
-        }
-        gcode << this->reset_e(true);
-    }
-
+    gcode << this->reset_e(true);
     return gcode.str();
 }
 
-std::string GCodeWriter::postamble() const
+std::string GCodeWriter::format_temperature(unsigned int temperature, bool wait, int tool, std::string comment)
 {
+    if (comment.empty())
+        comment = wait ? "set nozzle temperature and wait for it to be reached" : "set nozzle temperature";
     std::ostringstream gcode;
-    if (FLAVOR_IS(gcfMachinekit))
-          gcode << "M2 ; end of program\n";
-    return gcode.str();
-}
-
-std::string GCodeWriter::set_temperature(unsigned int temperature, GCodeFlavor flavor, bool wait, int tool, std::string comment){
-    if (wait && (flavor == gcfMakerWare || flavor == gcfSailfish))
-        return "";
-
-    std::string code;
-    if (wait && flavor != gcfTeacup && flavor != gcfRepRapFirmware) {
-        code    = "M109";
-        if(comment.empty())
-            comment = "set nozzle temperature and wait for it to be reached";
-    } else {
-        if (flavor == gcfRepRapFirmware) { // M104 is deprecated on RepRapFirmware
-            code = "G10";
-        } else {
-            code = "M104";
-        }
-        if(comment.empty())
-            comment = "set nozzle temperature";
-    }
-
-    std::ostringstream gcode;
-    gcode << code << " ";
-    if (flavor == gcfMach3 || flavor == gcfMachinekit) {
-        gcode << "P";
-    } else {
-        gcode << "S";
-    }
-    gcode << temperature;
-    if (tool != -1) {
-        if (flavor == gcfRepRapFirmware) {
-            gcode << " P" << tool;
-        } else {
-            gcode << " T" << tool;
-        }
-    }
+    gcode << (wait ? "M109" : "M104") << " S" << temperature;
+    if (tool != -1)
+        gcode << " T" << tool;
     gcode << " ; " << comment << "\n";
-
-    if ((flavor == gcfTeacup || flavor == gcfRepRapFirmware) && wait)
-        gcode << "M116 ; wait for temperature to be reached\n";
-
     return gcode.str();
 }
 
@@ -287,7 +235,7 @@ std::string GCodeWriter::set_temperature(unsigned int temperature, bool wait, in
     // set tool to -1 to make sure we won't emit T parameter for single extruder or SEMM
     if (!this->multiple_extruders || m_single_extruder_multi_material)
         tool = -1;
-    return set_temperature(temperature, this->config.gcode_flavor, wait, tool);
+    return format_temperature(temperature, wait, tool);
 }
 
 // BBS
@@ -498,16 +446,7 @@ std::string GCodeWriter::set_pressure_advance(double pa) const
     std::ostringstream gcode;
     if (pa < 0)
         return gcode.str();
-    if (FLAVOR_IS(gcfKlipper))
-        gcode << "SET_PRESSURE_ADVANCE ADVANCE=" << std::setprecision(4) << pa << "; Override pressure advance value\n";
-    else if(FLAVOR_IS(gcfRepRapFirmware))
-        gcode << ("M572 D0 S") << std::setprecision(4) << pa << "; Override pressure advance value\n";
-    else if (FLAVOR_IS(gcfRepetier))
-        // Repetier M233: X is quadratic (K), Y is linear (L).
-        // Applying the value to both parameters simultaneously.
-        gcode << "M233 X" << std::setprecision(4) << pa << " Y" << std::setprecision(4) << pa << " ; Override pressure advance value\n";
-    else
-        gcode << "M900 K" <<std::setprecision(4)<< pa << "; Override pressure advance value\n";
+    gcode << "SET_PRESSURE_ADVANCE ADVANCE=" << std::setprecision(4) << pa << "; Override pressure advance value\n";
     return gcode.str();
 }
 
@@ -525,67 +464,26 @@ std::string GCodeWriter::set_input_shaping(char axis, float damp, float freq, st
     }
     std::ostringstream gcode;
     std::ostringstream params;
-    switch (this->config.gcode_flavor) {
-    case gcfKlipper: {
-        if (!type.empty() && type != "Default") {
-            params << " SHAPER_TYPE=" << type;
-        }
-        if (axis != 'A')
-        {
-            if (freq > 0.0f) {
-                params << " SHAPER_FREQ_" << axis << "=" << std::fixed << std::setprecision(2) << freq;
-            }
-            if (damp > 0.0f) {
-                params << " DAMPING_RATIO_" << axis << "=" << std::fixed << std::setprecision(3) << damp;
-            }
-        } else {
-            if (freq > 0.0f || disable) {
-                params << " SHAPER_FREQ_X=" << std::fixed << std::setprecision(2) << freq << " SHAPER_FREQ_Y=" << std::fixed << std::setprecision(2) << freq;
-            }
-            if (damp > 0.0f || disable) {
-                params << " DAMPING_RATIO_X=" << std::fixed << std::setprecision(3) << damp << " DAMPING_RATIO_Y=" << std::fixed << std::setprecision(3) << damp;
-            }
-        }
-        if (!params.str().empty()) {
-            gcode << "SET_INPUT_SHAPER" << params.str();
-        }
-        break;
+    if (!type.empty() && type != "Default") {
+        params << " SHAPER_TYPE=" << type;
     }
-    case gcfRepRapFirmware: {
-        if (!type.empty() && type != "Default" && type != "DAA") {
-            params << " P\"" << type << "\"";
+    if (axis != 'A') {
+        if (freq > 0.0f) {
+            params << " SHAPER_FREQ_" << axis << "=" << std::fixed << std::setprecision(2) << freq;
         }
+        if (damp > 0.0f) {
+            params << " DAMPING_RATIO_" << axis << "=" << std::fixed << std::setprecision(3) << damp;
+        }
+    } else {
         if (freq > 0.0f || disable) {
-            params << " F" << std::fixed << std::setprecision(2) << freq;
+            params << " SHAPER_FREQ_X=" << std::fixed << std::setprecision(2) << freq << " SHAPER_FREQ_Y=" << std::fixed << std::setprecision(2) << freq;
         }
         if (damp > 0.0f || disable) {
-            params << " S" << std::fixed << std::setprecision(3) << damp;
+            params << " DAMPING_RATIO_X=" << std::fixed << std::setprecision(3) << damp << " DAMPING_RATIO_Y=" << std::fixed << std::setprecision(3) << damp;
         }
-        if (!params.str().empty()) {
-            gcode << "M593" << params.str();
-        }
-        break;
     }
-    case gcfMarlinFirmware: {
-        if (axis != 'A') {
-            params << " " << axis;
-        }
-        if (freq > 0.0f || disable) {
-            params << " F" << std::fixed << std::setprecision(2) << freq;
-        }
-        if (damp > 0.0f || disable) {
-            params << " D" << std::fixed << std::setprecision(3) << damp;
-        }
-        if (!params.str().empty()) {
-            gcode << "M593" << params.str();
-        }
-        break;
-    }
-    case gcfMarlinLegacy: {
-        throw std::runtime_error(_u8L("Input shaping is not supported by Marlin < 2.1.2.\nCheck your firmware version and update your G-code flavor to ´Marlin 2´."));
-    }
-    default:
-        throw std::runtime_error(_u8L("Input shaping is only supported by Klipper, RepRapFirmware and Marlin 2."));
+    if (!params.str().empty()) {
+        gcode << "SET_INPUT_SHAPER" << params.str();
     }
     if (!gcode.str().empty()) {
         if (GCodeWriter::full_gcode_comment) {
@@ -599,11 +497,6 @@ std::string GCodeWriter::set_input_shaping(char axis, float damp, float freq, st
 
 std::string GCodeWriter::reset_e(bool force)
 {
-    if (FLAVOR_IS(gcfMach3)
-        || FLAVOR_IS(gcfMakerWare)
-        || FLAVOR_IS(gcfSailfish))
-        return "";
-
     if (m_curr_extruder_id!=-1 && m_curr_filament_extruder[m_curr_extruder_id] != nullptr) {
         if (is_zero(m_curr_filament_extruder[m_curr_extruder_id]->E()) && ! force)
             return "";
@@ -622,53 +515,13 @@ std::string GCodeWriter::reset_e(bool force)
     }
 }
 
-std::string GCodeWriter::enable_power_loss_recovery(PowerLossRecoveryMode mode)
-{
-    std::ostringstream gcode;
-
-    if (mode == PowerLossRecoveryMode::PrinterConfiguration)
-        return std::string();
-
-    const bool enable = mode == PowerLossRecoveryMode::Enable;
-
-    if (FLAVOR_IS(gcfMarlinFirmware)) {
-        gcode << "M413 S" << (enable ? "1" : "0");
-    } else {
-        return std::string();
-    }
-    if (GCodeWriter::full_gcode_comment) gcode << " ; set Power-loss Recovery";
-    gcode << "\n";
-    return gcode.str();
-}
-
-std::string GCodeWriter::update_progress(unsigned int num, unsigned int tot, bool allow_100) const
-{
-    if (FLAVOR_IS_NOT(gcfMakerWare) && FLAVOR_IS_NOT(gcfSailfish))
-        return "";
-
-    if (config.disable_m73) {
-        return "";
-    }
-
-    unsigned int percent = (unsigned int)floor(100.0 * num / tot + 0.5);
-    if (!allow_100) percent = std::min(percent, (unsigned int)99);
-
-    std::ostringstream gcode;
-    gcode << "M73 P" << percent;
-    //BBS
-    if (GCodeWriter::full_gcode_comment) gcode << " ; update progress";
-    gcode << "\n";
-    return gcode.str();
-}
-
 std::string GCodeWriter::toolchange_prefix() const
 {
     // Orca: the manual-filament-change tag must stay ahead of the flavor selection so
     // MMU manual-change handling keeps working.
     if (config.manual_filament_change)
         return ";" + GCodeProcessor::reserved_tag(GCodeProcessor::ETags::Manual_Tool_Change) + "T";
-    return FLAVOR_IS(gcfMakerWare) ? "M135 T" :
-           FLAVOR_IS(gcfSailfish)  ? "M108 T" : "T";
+    return "T";
 }
 
 std::string GCodeWriter::toolchange(unsigned int filament_id, int nozzle_id)
@@ -1180,7 +1033,7 @@ std::string GCodeWriter::_retract(double length, double restart_extra, const std
     if (double dE = filament()->retract(length, restart_extra);  !is_zero(dE)) {
         if (this->config.use_firmware_retraction) {
             gcode = this->set_firmware_retraction();
-            gcode += FLAVOR_IS(gcfMachinekit) ? "G22 ; retract\n" : "G10 ; retract\n";
+            gcode += "G10 ; retract\n";
             m_firmware_retracted = true;
         }
         else {
@@ -1193,9 +1046,6 @@ std::string GCodeWriter::_retract(double length, double restart_extra, const std
             gcode = w.string();
         }
     }
-
-    if (FLAVOR_IS(gcfMakerWare))
-        gcode += "M103 ; extruder off\n";
 
     return gcode;
 }
@@ -1228,12 +1078,9 @@ std::string GCodeWriter::unretract(float extra_retract)
 {
     std::string gcode;
 
-    if (FLAVOR_IS(gcfMakerWare))
-        gcode = "M101 ; extruder on\n";
-
     if (double dE = filament()->unretract(); !is_zero(dE)) {
         if (this->config.use_firmware_retraction) {
-            gcode += FLAVOR_IS(gcfMachinekit) ? "G23 ; unretract\n" : "G11 ; unretract\n";
+            gcode += "G11 ; unretract\n";
             m_firmware_retracted = false;
             gcode += this->reset_e();
             // G11 restored what the last G10 retracted with the values active at that time. Only now
@@ -1269,7 +1116,7 @@ std::string GCodeWriter::unlift()
     return gcode;
 }
 
-std::string GCodeWriter::set_fan(const GCodeFlavor gcode_flavor, unsigned int speed, unsigned int part_cooling_fan_min_pwm)
+std::string GCodeWriter::format_fan(unsigned int speed, unsigned int part_cooling_fan_min_pwm)
 {
     std::ostringstream gcode;
     // ORCA: clamp non-zero fan commands up to the configured PWM floor so fans that can't spool at low duty
@@ -1277,29 +1124,12 @@ std::string GCodeWriter::set_fan(const GCodeFlavor gcode_flavor, unsigned int sp
     if (speed > 0 && part_cooling_fan_min_pwm > 0 && speed < part_cooling_fan_min_pwm)
         speed = part_cooling_fan_min_pwm;
     if (speed == 0) {
-        switch (gcode_flavor) {
-        case gcfTeacup:
-            gcode << "M106 S0"; break;
-        case gcfMakerWare:
-        case gcfSailfish:
-            gcode << "M127";    break;
-        default:
-            gcode << "M106 S0";    break;
-        }
+        gcode << "M106 S0";
         if (GCodeWriter::full_gcode_comment)
             gcode << " ; disable fan";
         gcode << "\n";
     } else {
-        switch (gcode_flavor) {
-        case gcfMakerWare:
-        case gcfSailfish:
-            gcode << "M126";    break;
-        case gcfMach3:
-        case gcfMachinekit:
-            gcode << "M106 P" << static_cast<unsigned int>(255.5 * speed / 100.0); break;
-        default:
-            gcode << "M106 S" << static_cast<unsigned int>(255.5 * speed / 100.0); break;
-        }
+        gcode << "M106 S" << static_cast<unsigned int>(255.5 * speed / 100.0);
         if (GCodeWriter::full_gcode_comment)
             gcode << " ; enable fan";
         gcode << "\n";
@@ -1311,8 +1141,7 @@ std::string GCodeWriter::set_fan(unsigned int speed) const
 {
     //BBS
     // ORCA: pick up the per-printer PWM floor from the active config.
-    return GCodeWriter::set_fan(this->config.gcode_flavor, speed,
-                                static_cast<unsigned int>(std::max(0, this->config.part_cooling_fan_min_pwm.value)));
+    return GCodeWriter::format_fan(speed, static_cast<unsigned int>(std::max(0, this->config.part_cooling_fan_min_pwm.value)));
 }
 
 //BBS: set additional fan speed for BBS machine only
