@@ -3682,7 +3682,6 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
         file.write_format("SET_PRINT_STATS_INFO TOTAL_LAYER=%u\n", m_layer_count);
 
     // Emit machine envelope limits for the Marlin firmware.
-    this->print_machine_envelope(file, print);
 
     // Disable fan.
     if (m_config.auxiliary_fan.value && print.config().close_fan_the_first_x_layers.get_at(initial_extruder_id)) {
@@ -4538,95 +4537,6 @@ PlaceholderParserIntegration &ppi = m_placeholder_parser_integration;
 
 // Print the machine envelope G-code for the Marlin firmware based on the "machine_max_xxx" parameters.
 // Do not process this piece of G-code by the time estimator, it already knows the values through another sources.
-void GCode::print_machine_envelope(GCodeOutputStream &file, Print &print)
-{
-    const auto flavor = print.config().gcode_flavor.value;
-    if ((flavor == gcfMarlinLegacy || flavor == gcfMarlinFirmware || flavor == gcfRepRapFirmware) &&
-        print.config().emit_machine_limits_to_gcode.value == true) {
-
-        // Get all physical tool ids current print will use
-        std::unordered_set<unsigned int> used_extruders;
-        for (const auto& extruder : m_writer.extruders()) {
-            used_extruders.insert(extruder.extruder_id());
-        }
-
-        // Get the max limit value among used extruders
-        auto get_max_value = [&used_extruders](const std::string key, const ConfigOptionFloats& v) { 
-            unsigned int stride = 1;
-            if (printer_options_with_variant_2.count(key) > 0) {
-                stride = 2;
-            }
-
-            double value = std::numeric_limits<double>::lowest();
-            for (unsigned int extruder : used_extruders) {
-                value = std::max(value, v.values[extruder * stride]);
-            }
-
-            assert(value > std::numeric_limits<double>::lowest());
-            return value;
-        };
-#define MAX_LIMIT(OPT) get_max_value(#OPT, print.config().OPT)
-
-        int factor = flavor == gcfRepRapFirmware ? 60 : 1; // RRF M203 and M566 are in mm/min
-        file.write_format("M201 X%d Y%d Z%d E%d\n",
-            int(MAX_LIMIT(machine_max_acceleration_x) + 0.5),
-            int(MAX_LIMIT(machine_max_acceleration_y) + 0.5),
-            int(MAX_LIMIT(machine_max_acceleration_z) + 0.5),
-            int(MAX_LIMIT(machine_max_acceleration_e) + 0.5));
-        file.write_format("M203 X%d Y%d Z%d E%d\n",
-            int(MAX_LIMIT(machine_max_speed_x) * factor + 0.5),
-            int(MAX_LIMIT(machine_max_speed_y) * factor + 0.5),
-            int(MAX_LIMIT(machine_max_speed_z) * factor + 0.5),
-            int(MAX_LIMIT(machine_max_speed_e) * factor + 0.5));
-
-        // Now M204 - acceleration. This one is quite hairy thanks to how Marlin guys care about
-        // Legacy Marlin should export travel acceleration the same as printing acceleration.
-        // MarlinFirmware has the two separated.
-        int travel_acc = flavor == gcfMarlinLegacy
-                       ? int(MAX_LIMIT(machine_max_acceleration_extruding) + 0.5)
-                       : int(MAX_LIMIT(machine_max_acceleration_travel) + 0.5);
-        if (flavor == gcfRepRapFirmware)
-            file.write_format("M204 P%d T%d ; sets acceleration (P, T), mm/sec^2\n",
-                int(MAX_LIMIT(machine_max_acceleration_extruding) + 0.5),
-                travel_acc);
-        else if (flavor == gcfMarlinFirmware)
-            // New Marlin uses M204 P[print] R[retract] T[travel]
-            file.write_format("M204 P%d R%d T%d ; sets acceleration (P, T) and retract acceleration (R), mm/sec^2\n",
-                int(MAX_LIMIT(machine_max_acceleration_extruding) + 0.5),
-                int(MAX_LIMIT(machine_max_acceleration_retracting) + 0.5),
-                int(MAX_LIMIT(machine_max_acceleration_travel) + 0.5));
-        else
-            file.write_format("M204 P%d R%d T%d\n",
-                int(MAX_LIMIT(machine_max_acceleration_extruding) + 0.5),
-                int(MAX_LIMIT(machine_max_acceleration_retracting) + 0.5),
-                travel_acc);
-
-        assert(is_decimal_separator_point());
-        file.write_format(flavor == gcfRepRapFirmware
-            ? "M566 X%.2lf Y%.2lf Z%.2lf E%.2lf ; sets the jerk limits, mm/min\n"
-            : "M205 X%.2lf Y%.2lf Z%.2lf E%.2lf ; sets the jerk limits, mm/sec\n",
-            MAX_LIMIT(machine_max_jerk_x) * factor,
-            MAX_LIMIT(machine_max_jerk_y) * factor,
-            MAX_LIMIT(machine_max_jerk_z) * factor,
-            MAX_LIMIT(machine_max_jerk_e) * factor);
-
-        // New Marlin uses M205 J[mm] for junction deviation (only apply if it is > 0)
-        file.write_format(writer().set_junction_deviation(MAX_LIMIT(machine_max_junction_deviation)).c_str());
-
-        // Orca: Override input shaping values
-        if (print.config().input_shaping_emit.value && flavor != gcfMarlinLegacy) {
-            const bool input_shaping_disable = print.config().input_shaping_type.value == InputShaperType::Disable;
-            file.write_format(writer().set_input_shaping('X', print.config().input_shaping_damp_x.value,
-                print.config().input_shaping_freq_x.value, print.config().opt_serialize("input_shaping_type")).c_str());
-            if (flavor != gcfRepRapFirmware && !input_shaping_disable) {
-                file.write_format(writer().set_input_shaping('Y', print.config().input_shaping_damp_y.value,
-                    print.config().input_shaping_freq_y.value, "").c_str());
-            }
-        }
-    }
-#undef MAX_LIMIT
-}
-
 // BBS
 int GCode::get_bed_temperature(const int extruder_id, const bool is_first_layer, const BedType bed_type) const
 {
@@ -5658,10 +5568,8 @@ LayerResult GCode::process_layer(
         case CalibMode::Calib_Input_shaping_freq: {
             if (m_layer_index == 1){
                 gcode += writer().set_input_shaping('A', print.calib_params().start, 0.f, print.calib_params().shaper_type);
-                if (m_writer.get_gcode_flavor() == gcfKlipper) {
-                    // Disable minimum cruise ratio to ensure consistent motion for calibration
-                    gcode += "SET_VELOCITY_LIMIT MINIMUM_CRUISE_RATIO=0\n";
-                }
+                // Disable minimum cruise ratio to ensure consistent motion for calibration
+                gcode += "SET_VELOCITY_LIMIT MINIMUM_CRUISE_RATIO=0\n";
             } else {
                 if (print.calib_params().freqStartX == print.calib_params().freqStartY && print.calib_params().freqEndX == print.calib_params().freqEndY) {
                     gcode += writer().set_input_shaping('A', 0.f, this->interpolate_value_across_layers(print.calib_params().freqStartX, print.calib_params().freqEndX), "");
@@ -5674,10 +5582,8 @@ LayerResult GCode::process_layer(
         }
         case CalibMode::Calib_Input_shaping_damp: {
             if (m_layer_index == 1){
-                if (m_writer.get_gcode_flavor() == gcfKlipper) {
-                    // Disable minimum cruise ratio to ensure consistent motion for calibration
-                    gcode += "SET_VELOCITY_LIMIT MINIMUM_CRUISE_RATIO=0\n";
-                }
+                // Disable minimum cruise ratio to ensure consistent motion for calibration
+                gcode += "SET_VELOCITY_LIMIT MINIMUM_CRUISE_RATIO=0\n";
                 gcode += writer().set_input_shaping('X', 0.f, print.calib_params().freqStartX, print.calib_params().shaper_type);
                 gcode += writer().set_input_shaping('Y', 0.f, print.calib_params().freqStartY, print.calib_params().shaper_type);
             } else {
@@ -5686,13 +5592,7 @@ LayerResult GCode::process_layer(
             break;
         }
         case CalibMode::Calib_Cornering: {
-            if (m_writer.get_gcode_flavor() == gcfMarlinFirmware &&
-                !m_config.machine_max_junction_deviation.values.empty() &&
-                m_config.machine_max_junction_deviation.values.front() > 0) {
-                gcode += writer().set_junction_deviation(this->interpolate_value_across_layers(print.calib_params().start, print.calib_params().end));
-            } else {
-                gcode += writer().set_jerk_xy(this->interpolate_value_across_layers(print.calib_params().start, print.calib_params().end));
-            }
+            gcode += writer().set_jerk_xy(this->interpolate_value_across_layers(print.calib_params().start, print.calib_params().end));
             break;
         }
     }
@@ -5708,9 +5608,6 @@ LayerResult GCode::process_layer(
             gcode += m_writer.set_jerk_xy(NOZZLE_CONFIG(initial_layer_jerk));
         }
 
-        if (m_writer.get_gcode_flavor() == gcfMarlinFirmware && NOZZLE_CONFIG(default_junction_deviation) > 0) {
-            gcode += m_writer.set_junction_deviation(NOZZLE_CONFIG(default_junction_deviation));
-        }
     }
 
     if (!first_layer && !m_second_layer_things_done) {
@@ -7917,13 +7814,7 @@ std::string GCode::_extrude(const ExtrusionPath &path, std::string description, 
         }
     }
 
-    if (m_writer.get_gcode_flavor() == gcfKlipper) {
-        gcode += m_writer.set_accel_and_jerk(acceleration_i, jerk);
-
-    } else {
-        gcode += m_writer.set_print_acceleration(acceleration_i);
-        gcode += m_writer.set_jerk_xy(jerk);
-    }
+    gcode += m_writer.set_accel_and_jerk(acceleration_i, jerk);
 
     // calculate effective extrusion length per distance unit (e_per_mm)
     double filament_flow_ratio = FILAMENT_CONFIG(filament_flow_ratio);
@@ -8902,12 +8793,7 @@ std::string GCode::travel_to(const Point& point, ExtrusionRole role, std::string
         }
     }
     
-    if (m_writer.get_gcode_flavor() == gcfKlipper) {
-        gcode += m_writer.set_accel_and_jerk(acceleration_to_set, jerk_to_set);
-    } else {
-        gcode += m_writer.set_travel_acceleration(acceleration_to_set);
-        gcode += m_writer.set_jerk_xy(jerk_to_set);
-    }
+    gcode += m_writer.set_accel_and_jerk(acceleration_to_set, jerk_to_set);
 
     // if a retraction would be needed, try to use reduce_crossing_wall to plan a
     // multi-hop travel path inside the configuration space

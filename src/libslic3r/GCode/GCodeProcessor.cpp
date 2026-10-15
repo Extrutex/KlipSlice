@@ -3089,9 +3089,10 @@ void GCodeProcessor::apply_config(const PrintConfig& config)
         m_time_processor.machines[i].retract_acceleration     = (max_retract_acceleration > 0.0f) ? max_retract_acceleration :
                                                                                                     DEFAULT_RETRACT_ACCELERATION;
         float max_travel_acceleration = get_option_value(m_time_processor.machine_limits.machine_max_acceleration_travel, i);
-        if (!GCodeWriter::supports_separate_travel_acceleration(config.gcode_flavor.value)){
+        // Only these firmwares limit travel acceleration separately (M204 T / M202).
+        const GCodeFlavor flavor = config.gcode_flavor.value;
+        if (flavor != gcfRepetier && flavor != gcfMarlinFirmware && flavor != gcfRepRapFirmware)
             max_travel_acceleration = 0;
-        }
         m_time_processor.machines[i].max_travel_acceleration = max_travel_acceleration;
         m_time_processor.machines[i].travel_acceleration     = (max_travel_acceleration > 0.0f) ? max_travel_acceleration :
                                                                                                   DEFAULT_TRAVEL_ACCELERATION;

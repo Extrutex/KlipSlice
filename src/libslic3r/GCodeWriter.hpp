@@ -24,7 +24,7 @@ public:
         m_curr_extruder_id (-1),
         m_cached_extruder_idx(0),
         m_single_extruder_multi_material(false),
-        m_last_acceleration(0), m_max_acceleration(0),m_last_travel_acceleration(0), m_max_travel_acceleration(0),
+        m_last_acceleration(0), m_max_acceleration(0),
         m_last_jerk(0), m_max_jerk_x(0), m_max_jerk_y(0),
         m_last_bed_temperature(0), m_last_bed_temperature_reached(true),
         m_lifted(0),
@@ -54,12 +54,10 @@ public:
     std::string set_temperature(unsigned int temperature, bool wait = false, int tool = -1) const;
     std::string set_bed_temperature(int temperature, bool wait = false);
     std::string set_chamber_temperature(int temperature, bool wait = false);
-    std::string set_print_acceleration(unsigned int acceleration)   { return set_acceleration_internal(Acceleration::Print, acceleration); }
-    std::string set_travel_acceleration(unsigned int acceleration)  { return set_acceleration_internal(Acceleration::Travel, acceleration); }
+    std::string set_print_acceleration(unsigned int acceleration);
     std::string set_jerk_xy(double jerk);
     // Orca: set acceleration and jerk in one command for Klipper
     std::string set_accel_and_jerk(unsigned int acceleration, double jerk);
-    std::string set_junction_deviation(double junction_deviation); 
     std::string set_pressure_advance(double pa) const;
     std::string set_input_shaping(char axis, float damp, float freq, std::string type) const;
     std::string reset_e(bool force = false);
@@ -128,12 +126,8 @@ public:
     //BBS:
     static bool full_gcode_comment;
     void set_is_first_layer(bool bval) { m_is_first_layer = bval; }
-    GCodeFlavor get_gcode_flavor() const { return config.gcode_flavor; }
-    void invalidate_acceleration() { m_last_acceleration = 0; m_last_travel_acceleration = 0; }
+    void invalidate_acceleration() { m_last_acceleration = 0; }
     void invalidate_jerk() { m_last_jerk = 0; }
-
-    // Returns whether this flavor supports separate print and travel acceleration.
-    static bool supports_separate_travel_acceleration(GCodeFlavor flavor);
   private:
 	// Extruders are sorted by their ID, so that binary search is possible.
     std::vector<Extruder> m_filament_extruders;
@@ -143,21 +137,13 @@ public:
     // Motion uses the global/base process variant until a filament becomes active.
     size_t     m_cached_extruder_idx;
     unsigned int              m_last_acceleration;
-    unsigned int              m_last_travel_acceleration;
-    std::vector<unsigned int> m_max_travel_acceleration;
 
-    // Limit for setting the acceleration, to respect the machine limits set for the Marlin firmware.
+    // Limit for setting the acceleration and the square corner velocity, from the machine limits.
     // If set to zero, the limit is not in action. Indexed by 0-based physical nozzle id.
     std::vector<unsigned int> m_max_acceleration;
     std::vector<double>       m_max_jerk_x;
     std::vector<double>       m_max_jerk_y;
     double                    m_last_jerk;
-    std::vector<double>       m_max_jerk_z;
-    std::vector<double>       m_max_jerk_e;
-    std::vector<double>       m_max_junction_deviation;
-
-    // unsigned int  m_travel_acceleration;
-    // unsigned int  m_travel_jerk;
 
 
     //BBS
@@ -194,11 +180,6 @@ public:
     double          m_current_speed;
     bool            m_is_first_layer = true;
 
-    enum class Acceleration {
-        Travel,
-        Print
-    };
-
     std::string _travel_to_z(double z, const std::string &comment);
     std::string _spiral_travel_to_z(double z, const Vec2d &ij_offset, const std::string &comment);
     // Orca: printable area of the active extruder (per-extruder when configured, otherwise the bed). Null when unknown.
@@ -206,7 +187,6 @@ public:
     // Orca: true if a full spiral-lift circle (center in bed coordinates, mm) fits inside the active printable area.
     bool spiral_lift_fits_printable_area(const Vec2d &center, double radius) const;
     std::string _retract(double length, double restart_extra, const std::string &comment);
-    std::string set_acceleration_internal(Acceleration type, unsigned int acceleration);
     // KLIPSLICE: SET_RETRACTION with the active filament's values when the slicer owns Klipper's
     // firmware retraction values. Empty if they are already active, the firmware owns them, or
     // Klipper is retracted.
