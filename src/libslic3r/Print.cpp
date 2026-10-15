@@ -1763,10 +1763,55 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
                  "enable_mixed_color_sublayer");
     }
 
+    // KLIPSLICE: Klipper's [firmware_retraction] keeps one global "retracted" flag. The writer tracks a
+    // retraction per nozzle (per filament without single_extruder_multi_material): after a tool change
+    // the next nozzle's G10 is dropped while the parked one holds the flag, and its G11 pushes out what
+    // the parked nozzle retracted. An automatic filament map is only settled while slicing, so with
+    // several nozzles it counts as a split. The filaments are those the tool ordering prints with:
+    // custom layer tool changes included, mixed slots expanded to their physical components.
+    const bool firmware_retraction_per_nozzle = m_config.use_firmware_retraction && [&] {
+        const auto &is_mixed   = m_config.filament_is_mixed.values;
+        const auto &components = m_config.filament_mixed_components.values;
+        std::vector<unsigned int> physical;
+        for (unsigned int f : this->extruders(true)) {
+            std::vector<unsigned int> parts;
+            if (f < is_mixed.size() && is_mixed[f] && f < components.size())
+                parts = parse_mixed_components(components[f]);
+            // Same validity rule as ToolOrdering::resolve_mixed_filaments: physical components only.
+            if (std::any_of(parts.begin(), parts.end(), [&](unsigned int c) { return c == 0 || c > is_mixed.size() || is_mixed[c - 1]; }))
+                parts.clear();
+            if (parts.size() < 2)
+                physical.push_back(f);
+            else
+                for (unsigned int c : parts)
+                    physical.push_back(c - 1);
+        }
+        sort_remove_duplicates(physical);
+        if (physical.size() < 2)
+            return false;
+        if (!m_config.single_extruder_multi_material)
+            return true;
+        if (nozzles > 1 && is_auto_filament_map_mode(get_filament_map_mode()))
+            return true;
+        const size_t first_nozzle = get_extruder_id(physical.front());
+        return std::any_of(physical.begin(), physical.end(), [&](unsigned int f) { return get_extruder_id(f) != first_nozzle; });
+    }();
+    if (firmware_retraction_per_nozzle && m_config.firmware_owns_retraction)
+        warn(L("Firmware retraction with more than one nozzle: Klipper tracks a single retraction for all nozzles, "
+               "so retractions after a tool change can be lost or doubled. Disable firmware retraction for this print."),
+             "use_firmware_retraction");
+
     // KLIPSLICE: SET_RETRACTION carries the slicer's values to Klipper's [firmware_retraction], which
-    // rejects speeds below 1 mm/s and a negative extra restart length. A rejected command aborts the print.
+    // rejects a negative length, speeds below 1 mm/s and a negative extra restart length. A rejected
+    // command aborts the print.
     if (m_config.use_firmware_retraction && !m_config.firmware_owns_retraction) {
+        if (firmware_retraction_per_nozzle)
+            return { L("Retraction values from the slicer need firmware retraction on a single nozzle. Klipper tracks "
+                       "a single retraction for all nozzles. Disable firmware retraction or take the values from printer.cfg."),
+                     nullptr, "firmware_owns_retraction" };
         auto any_of = [](const ConfigOptionFloats &opt, auto pred) { return std::any_of(opt.values.begin(), opt.values.end(), pred); };
+        if (any_of(m_config.retraction_length, [](double v) { return v < 0.; }))
+            return { L("Klipper's SET_RETRACTION does not accept a negative retraction length."), nullptr, "retraction_length" };
         if (any_of(m_config.retraction_speed, [](double v) { return v < 1.; }))
             return { L("Klipper's SET_RETRACTION needs a retraction speed of at least 1 mm/s."), nullptr, "retraction_speed" };
         if (any_of(m_config.deretraction_speed, [](double v) { return v != 0. && v < 1.; }))

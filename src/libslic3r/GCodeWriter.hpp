@@ -128,6 +128,12 @@ public:
     void set_is_first_layer(bool bval) { m_is_first_layer = bval; }
     void invalidate_acceleration() { m_last_acceleration = 0; }
     void invalidate_jerk() { m_last_jerk = 0; }
+    // KLIPSLICE: custom G-code sent its own SET_RETRACTION, so the values the writer sent last are
+    // no longer the active ones; the next G10 sends the active filament's values again.
+    void invalidate_firmware_retraction_values() { m_firmware_retraction_sent.reset(); }
+    // KLIPSLICE: custom G-code left Klipper's [firmware_retraction] retracted (G10) or not
+    // (G11, SET_RETRACTION). The writer must not send SET_RETRACTION while it is retracted.
+    void set_firmware_retracted(bool retracted) { m_firmware_retracted = retracted; }
   private:
 	// Extruders are sorted by their ID, so that binary search is possible.
     std::vector<Extruder> m_filament_extruders;

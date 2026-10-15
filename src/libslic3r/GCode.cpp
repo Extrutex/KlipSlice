@@ -733,6 +733,11 @@ static std::vector<Vec2d> get_path_of_change_filament(const Print& print)
     {
         bool acceleration = false;
         bool jerk         = false;
+        // KLIPSLICE: the block sends SET_RETRACTION, replacing the retraction values in Klipper.
+        bool firmware_retraction_values = false;
+        // KLIPSLICE: state of Klipper's [firmware_retraction] "retracted" flag after the block, if any
+        // command in it changes the flag: G10 sets it, G11 and SET_RETRACTION clear it.
+        std::optional<bool> firmware_retracted;
     };
 
     static bool custom_gcode_line_has_xy_parameter(const std::string &raw)
@@ -758,9 +763,14 @@ static std::vector<Vec2d> get_path_of_change_filament(const Print& print)
                 changes.acceleration |= boost::icontains(line.raw(), "ACCEL=");
                 changes.jerk         |= boost::icontains(line.raw(), "SQUARE_CORNER_VELOCITY=");
             }
-
-            if (changes.acceleration && changes.jerk)
-                parser.quit_parsing();
+            else if (boost::iequals(cmd, "SET_RETRACTION")) {
+                changes.firmware_retraction_values = true;
+                changes.firmware_retracted         = false;
+            }
+            else if (boost::iequals(cmd, "G10"))
+                changes.firmware_retracted = true;
+            else if (boost::iequals(cmd, "G11"))
+                changes.firmware_retracted = false;
         });
         return changes;
     }
@@ -4471,6 +4481,12 @@ PlaceholderParserIntegration &ppi = m_placeholder_parser_integration;
             m_writer.invalidate_acceleration();
         if (motion_state_changes.jerk)
             m_writer.invalidate_jerk();
+        // KLIPSLICE: G10/G11/SET_RETRACTION in custom G-code move Klipper's firmware retraction state
+        // behind the writer's back. Macros that retract internally cannot be seen here.
+        if (motion_state_changes.firmware_retraction_values)
+            m_writer.invalidate_firmware_retraction_values();
+        if (motion_state_changes.firmware_retracted)
+            m_writer.set_firmware_retracted(*motion_state_changes.firmware_retracted);
 
         if (const std::vector<double> &pos = ppi.opt_position->values; ppi.position != pos) {
             // Update G-code writer.

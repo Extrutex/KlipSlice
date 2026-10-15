@@ -51,20 +51,31 @@ is ignored and the filament stays retracted. The writer therefore mirrors that
 flag and emits the command only while Klipper is not retracted: right before a
 `G10`, or right after a `G11`. On a filament change the `G11` that follows
 restores the previous filament's retraction with the values it was made with,
-and the new values follow it. With several independent nozzles the parked tool
-can still hold the flag when the new one first retracts; the new values then
-wait for the next `G11`. A command is only written when the values differ from
-the last one sent.
+and the new values follow it. A command is only written when the values differ
+from the last one sent. Custom G-code takes part in that state: a `G10`, `G11`
+or `SET_RETRACTION` in it updates the mirrored flag, and its own
+`SET_RETRACTION` makes the writer send the filament's values again before the
+next `G10`. Macros that retract internally are not visible to the slicer.
 
-Klipper rejects speeds below 1 mm/s and a negative extra length; print
-validation reports those values instead of letting the command abort the print.
+The single flag cannot describe several independent nozzles: the writer keeps a
+retraction per nozzle, so after a tool change the new nozzle's `G10` is dropped
+while the parked one holds the flag, and its `G11` pushes out what the parked
+nozzle retracted. Print validation therefore rejects slicer-owned values when a
+print uses more than one nozzle (or more than one filament without
+`single_extruder_multi_material`, or an automatic filament map on a
+multi-nozzle printer), and warns about it when the values come from printer.cfg.
+
+Klipper rejects a negative length, speeds below 1 mm/s and a negative extra
+length; print validation reports those values instead of letting the command
+abort the print.
 
 ## Verification
 
 `tests/fff_print/test_gcodewriter.cpp` checks enabled/disabled output, percentage
 boundaries, combined commands and actual Type1 prime-tower generation. It also
 replays sliced firmware-retraction output with the semantics of Klipper's
-`[firmware_retraction]` on one and two nozzles. The
+`[firmware_retraction]` on a shared nozzle, including custom G-code that
+retracts or sets its own values. The
 virtual fixture Dockerfile accepts an explicit repository/ref/commit triple and
 rejects mismatched source hashes. FLUXRAKER's companion integration runner selects
 pinned legacy/current targets and audits removed parameters before printing.

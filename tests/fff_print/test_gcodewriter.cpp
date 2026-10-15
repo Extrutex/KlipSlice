@@ -586,6 +586,8 @@ struct KlipperFirmwareRetraction
     std::vector<std::pair<int, Values>> retractions;
     int    set_while_retracted = 0;
     int    dropped_unretractions = 0;
+    // G10 issued while Klipper is already retracted: it moves no filament.
+    int    ignored_retractions = 0;
     double net_e = 0.;
 
     explicit KlipperFirmwareRetraction(const std::string &gcode)
@@ -610,7 +612,8 @@ struct KlipperFirmwareRetraction
                 if (! retracted) {
                     net_e -= active.length;
                     retractions.emplace_back(tool, active);
-                }
+                } else
+                    ++ ignored_retractions;
                 retracted = true;
             } else if (line.rfind("G11", 0) == 0) {
                 if (retracted)
@@ -683,8 +686,9 @@ TEST_CASE("Firmware retraction keeps printer.cfg values unless the slicer owns t
 
 TEST_CASE("Slicer-owned firmware retraction sends each filament's values to Klipper", "[GCodeWriter][Klipper][Retraction]")
 {
-    const bool two_filaments = GENERATE(false, true);
-    const bool shared_nozzle = GENERATE(false, true);
+    // Two filaments on independent nozzles are rejected by validation, see below.
+    const auto [two_filaments, shared_nozzle] = GENERATE(std::make_pair(false, false), std::make_pair(false, true),
+                                                         std::make_pair(true, true));
     CAPTURE(two_filaments, shared_nozzle);
     const std::string gcode = slice_firmware_retraction(firmware_retraction_config(false, shared_nozzle), two_filaments);
     const KlipperFirmwareRetraction klipper(gcode);
@@ -693,6 +697,7 @@ TEST_CASE("Slicer-owned firmware retraction sends each filament's values to Klip
     // The command never lands between a G10 and its G11, where Klipper would drop the G11.
     CHECK(klipper.set_while_retracted == 0);
     CHECK(klipper.dropped_unretractions == 0);
+    CHECK(klipper.ignored_retractions == 0);
     // Every G10 runs with the values of the filament that is printing.
     const KlipperFirmwareRetraction::Values expected[] = { {0.5, 35., 0., 35.}, {1.2, 25., 0.1, 20.} };
     for (const auto &[tool, values] : klipper.retractions) {
@@ -709,9 +714,78 @@ TEST_CASE("Slicer-owned firmware retraction sends each filament's values to Klip
         CHECK(std::any_of(klipper.retractions.begin(), klipper.retractions.end(), [](const auto &r) { return r.first == 1; }));
 }
 
+TEST_CASE("Custom G-code keeps the firmware retraction state in step with Klipper", "[GCodeWriter][Klipper][Retraction]")
+{
+    DynamicPrintConfig config = firmware_retraction_config(false);
+    SECTION("start G-code leaves Klipper retracted") {
+        config.set_key_value("machine_start_gcode", new ConfigOptionString("G10 ; park retracted\n"));
+        const KlipperFirmwareRetraction klipper(slice_firmware_retraction(config, false));
+        // SET_RETRACTION would clear the flag and strand the start G-code's retraction in the nozzle.
+        CHECK(klipper.set_while_retracted == 0);
+        CHECK(klipper.dropped_unretractions == 0);
+        // The start G-code retracted with the printer.cfg values; every later G10 with the filament's.
+        REQUIRE(klipper.retractions.size() > 1);
+        for (size_t i = 1; i < klipper.retractions.size(); ++ i)
+            CHECK(klipper.retractions[i].second.length == Catch::Approx(0.5));
+    }
+    SECTION("layer change G-code sends its own retraction values") {
+        config.set_key_value("layer_change_gcode", new ConfigOptionString(
+            "SET_RETRACTION RETRACT_LENGTH=3 RETRACT_SPEED=10 UNRETRACT_EXTRA_LENGTH=0 UNRETRACT_SPEED=10\n"));
+        const KlipperFirmwareRetraction klipper(slice_firmware_retraction(config, false));
+        CHECK(klipper.set_while_retracted == 0);
+        CHECK(klipper.dropped_unretractions == 0);
+        CHECK(klipper.ignored_retractions == 0);
+        // Every G10 after the custom values runs with the filament's values again.
+        REQUIRE(! klipper.retractions.empty());
+        for (const auto &[tool, values] : klipper.retractions) {
+            CHECK(values.length == Catch::Approx(0.5));
+            CHECK(values.speed == Catch::Approx(35.));
+        }
+    }
+}
+
+TEST_CASE("Firmware retraction on independent nozzles is rejected or warned about", "[GCodeWriter][Klipper][Retraction]")
+{
+    Model model;
+    auto *object = model.add_object();
+    object->add_volume(cube(10));
+    object->add_instance();
+    SECTION("height range on the second nozzle") {
+        DynamicPrintConfig upper_layers;
+        upper_layers.set_key_value("extruder", new ConfigOptionInt(2));
+        upper_layers.set_key_value("layer_height", new ConfigOptionFloat(0.2));
+        object->layer_config_ranges[{2.0, 10.0}].assign_config(std::move(upper_layers));
+    }
+    SECTION("custom tool change to the second nozzle") {
+        CustomGCode::Item tool_change;
+        tool_change.print_z  = 2.0;
+        tool_change.type     = CustomGCode::ToolChange;
+        tool_change.extruder = 2;
+        model.plates_custom_gcodes[model.curr_plate_index].gcodes.push_back(tool_change);
+    }
+
+    DynamicPrintConfig config = firmware_retraction_config(false);
+    Print print;
+    arrange_objects_on_test_bed(model, config);
+    object->ensure_on_bed();
+    print.auto_assign_extruders(object);
+    print.apply(model, config);
+    // Klipper's single "retracted" flag cannot hold the retraction of a parked nozzle.
+    CHECK(print.validate().opt_key == "firmware_owns_retraction");
+
+    config.set_key_value("firmware_owns_retraction", new ConfigOptionBool(true));
+    print.apply(model, config);
+    std::vector<StringObjectException> warnings;
+    CHECK(print.validate(&warnings).string.empty());
+    CHECK(std::any_of(warnings.begin(), warnings.end(), [](const StringObjectException &w) { return w.opt_key == "use_firmware_retraction"; }));
+}
+
 TEST_CASE("Slicer-owned firmware retraction rejects values Klipper refuses", "[GCodeWriter][Klipper][Retraction]")
 {
     DynamicPrintConfig config = firmware_retraction_config(false);
+    SECTION("negative retraction length") {
+        config.set_key_value("retraction_length", new ConfigOptionFloats({0.5, -0.1}));
+    }
     SECTION("negative extra length on restart") {
         config.set_key_value("retract_restart_extra", new ConfigOptionFloats({0., -0.1}));
     }

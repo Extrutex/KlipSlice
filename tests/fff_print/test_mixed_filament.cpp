@@ -322,3 +322,34 @@ TEST_CASE("Print::validate warns when a gradient mixed filament is used without 
         CHECK(count_opt(print, "enable_mixed_color_sublayer") == 0);
     }
 }
+
+TEST_CASE("Print::validate counts a mixed slot's components for slicer-owned firmware retraction", "[MixedFilament][Retraction]")
+{
+    // Klipper's [firmware_retraction] has one "retracted" flag; the writer keeps one retraction per
+    // filament without single_extruder_multi_material. A mixed slot prints with both components.
+    DynamicPrintConfig config = mixed_config(false);
+    config.set_deserialize_strict({
+        {"use_firmware_retraction",  "1"},
+        {"firmware_owns_retraction", "0"},
+
+        {"layer_change_gcode",       "G92 E0\n"},
+    });
+    SECTION("components with a retraction each") {
+        config.set_deserialize_strict({{"single_extruder_multi_material", "0"}});
+        Print print;
+        Model model;
+        init_print({cube(20)}, print, model, config);
+        // The volume prints with the mixed slot too, so the slot is the only filament the print lists.
+        model.objects.front()->volumes.front()->config.set("extruder", 3);
+        print.apply(model, config);
+        REQUIRE(print.extruders() == std::vector<unsigned int>{2});
+        CHECK(print.validate().opt_key == "firmware_owns_retraction");
+    }
+    SECTION("components sharing the nozzle") {
+        config.set_deserialize_strict({{"single_extruder_multi_material", "1"}});
+        Print print;
+        Model model;
+        init_print({cube(20)}, print, model, config);
+        CHECK(print.validate().opt_key != "firmware_owns_retraction");
+    }
+}
