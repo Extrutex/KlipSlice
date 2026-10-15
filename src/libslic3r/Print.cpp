@@ -1962,10 +1962,6 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
             return {L("Ooze prevention is only supported with the wipe tower when 'single_extruder_multi_material' is off.")};
             
 #if 0
-        if (m_config.gcode_flavor != gcfRepRapSprinter && m_config.gcode_flavor != gcfRepRapFirmware &&
-            m_config.gcode_flavor != gcfRepetier && m_config.gcode_flavor != gcfMarlinLegacy && m_config.gcode_flavor != gcfMarlinFirmware)
-            return { L("The prime tower is currently only supported for the Marlin, RepRap/Sprinter, RepRapFirmware and Repetier G-code flavors.")};
-
         if ((m_config.print_sequence == PrintSequence::ByObject) && extruders.size() > 1)
             return { L("A prime tower is not supported in \u201cBy object\u201d print."), nullptr, "enable_prime_tower" };
 
@@ -2241,13 +2237,6 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
             return {L("\"G92 E0\" was found in layer_change_gcode, but the G or E are not uppercase. "
                       "Please change them to the exact uppercase \"G92 E0\"."),
                     nullptr, "layer_change_gcode"};
-
-        // Only Marlin flavours need the reset.
-        if ((m_config.gcode_flavor == gcfMarlinLegacy || m_config.gcode_flavor == gcfMarlinFirmware) &&
-            !before_has_g92_exact && !layer_has_g92_exact)
-            return {L("Relative extruder addressing requires resetting the extruder position at each layer to "
-                      "prevent loss of floating point accuracy. Add \"G92 E0\" to layer_gcode."),
-                    nullptr, "before_layer_change_gcode"};
     } else {
         // Absolute mode: any occurrence of "G92 E0" is incompatible.
         if (before_has_g92_any)
@@ -2323,11 +2312,8 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
                 };
                 std::string warning_key;
 
-                const auto max_junction_deviation = m_config.machine_max_junction_deviation.values[0]; // TODO: fix this
-                const bool ignore_jerk_validation = m_config.gcode_flavor == gcfMarlinFirmware && max_junction_deviation > 0;
-
                 // check jerk
-                if (!ignore_jerk_validation) {
+                {
                     if (m_default_object_config.default_jerk.get_at(extruder_id) == 1 || m_default_object_config.outer_wall_jerk.get_at(extruder_id) == 1 ||
                         m_default_object_config.inner_wall_jerk.get_at(extruder_id) == 1) {
                        motion_warning.string = L("Setting the jerk speed too low could lead to artifacts on curved surfaces");
@@ -2357,25 +2343,11 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
                     }
                 }
 
-                // Check junction deviation
-                // Orca: Only marlin FW supports max junction deviation. Dont display warning if firmware is not supporting it.
-                const bool support_max_junction_deviation = ( m_config.gcode_flavor == gcfMarlinFirmware);
-                if (warning_key.empty() && m_default_object_config.default_junction_deviation.get_at(extruder_id) > max_junction_deviation && support_max_junction_deviation) {
-                    motion_warning.string  = L( "Junction deviation setting exceeds the printer's maximum value (machine_max_junction_deviation).\n"
-                                          "KLIPSLICE will automatically cap the junction deviation to ensure it doesn't surpass the printer's capabilities.\n"
-                                          "You can adjust the machine_max_junction_deviation value in your printer's configuration to get higher limits.");
-                    motion_warning.opt_key = "default_junction_deviation";
-                }
-                
                 // check acceleration
                 const auto max_accel = m_config.machine_max_acceleration_extruding.values[0];
                 if (warning_key.empty() && m_default_object_config.default_acceleration.get_at(extruder_id) > 0 && max_accel > 0) {
-                   const bool support_travel_acc = (m_config.gcode_flavor == gcfRepetier || m_config.gcode_flavor == gcfMarlinFirmware ||
-                                                    m_config.gcode_flavor == gcfRepRapFirmware);
-
-                   std::vector<std::string> accel_to_check;
-                   if (!support_travel_acc)
-                        accel_to_check = {
+                   // Klipper has one acceleration for printing and travel moves.
+                   const std::vector<std::string> accel_to_check = {
                             "default_acceleration",
                             "inner_wall_acceleration",
                             "outer_wall_acceleration",
@@ -2386,17 +2358,6 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
                             "top_surface_acceleration",
                             "travel_acceleration",
                         };
-                   else
-                        accel_to_check = {
-                            "default_acceleration",
-                            "inner_wall_acceleration",
-                            "outer_wall_acceleration",
-                            "bridge_acceleration",
-                            "initial_layer_acceleration",
-                            "sparse_infill_acceleration",
-                            "internal_solid_infill_acceleration",
-                            "top_surface_acceleration",
-                        };
                    warning_key = check_motion_ability_object_setting(accel_to_check, max_accel);
                    if (!warning_key.empty()) {
                         motion_warning.string  = L("The acceleration setting exceeds the printer's maximum acceleration "
@@ -2405,24 +2366,6 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
                                               "capabilities.\nYou can adjust the "
                                               "machine_max_acceleration_extruding value in your printer's configuration to get higher speeds.");
                         motion_warning.opt_key = warning_key;
-                   }
-                   if (support_travel_acc) {
-                        const auto max_travel = m_config.machine_max_acceleration_travel.values[0];
-                        if (max_travel > 0) {
-                            accel_to_check = {
-                                "travel_acceleration",
-                            };
-                            warning_key = check_motion_ability_object_setting(accel_to_check, max_travel);
-                            if (!warning_key.empty()) {
-                                motion_warning.string = L(
-                                    "The travel acceleration setting exceeds the printer's maximum travel acceleration "
-                                    "(machine_max_acceleration_travel).\nKLIPSLICE will "
-                                    "automatically cap the travel acceleration speed to ensure it doesn't surpass the printer's "
-                                    "capabilities.\nYou can adjust the "
-                                    "machine_max_acceleration_travel value in your printer's configuration to get higher speeds.");
-                                motion_warning.opt_key = warning_key;
-                            }
-                        }
                    }
                 }
 
