@@ -3657,9 +3657,12 @@ void PrintConfigDef::init_fff_params()
     def = this->add("accel_to_decel_enable", coBool);
     def->label = L("Enable accel_to_decel");
     def->category = L("Speed");
-    def->tooltip = L("Klipper's minimum_cruise_ratio will be adjusted automatically. Requires Klipper with MINIMUM_CRUISE_RATIO support (v0.13.0 or newer recommended).");
+    def->tooltip = L("Set Klipper's minimum_cruise_ratio with every acceleration change. When disabled, the "
+                     "minimum_cruise_ratio from printer.cfg applies. Requires Klipper with MINIMUM_CRUISE_RATIO "
+                     "support (v0.13.0 or newer recommended).");
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionBool(true));
+    // KLIPSLICE: Klipper owns the cruise ratio unless a profile hands it to the slicer.
+    def->set_default_value(new ConfigOptionBool(false));
     
     def = this->add("accel_to_decel_factor", coPercent);
     def->label = L("accel_to_decel");
@@ -3674,7 +3677,9 @@ void PrintConfigDef::init_fff_params()
     def = this->add("default_jerk", coFloats);
     def->label = L("Default");
     def->category = L("Speed");
-    def->tooltip = L("Default jerk.");
+    def->tooltip = L("Default jerk. On Klipper the jerk values are sent as square_corner_velocity. "
+                     "Set 0 to keep the square_corner_velocity from printer.cfg, which is tuned together "
+                     "with input shaping; the per-feature jerk values are then not used.");
     def->sidetext = L("mm/s");	// millimeters per second, CIS languages need translation
     def->min = 0;
     def->mode = comAdvanced;

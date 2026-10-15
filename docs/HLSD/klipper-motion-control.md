@@ -6,6 +6,20 @@ acceleration-to-deceleration option is enabled, it includes
 same conversion applies to combined acceleration/corner commands and Type1
 prime-tower output.
 
+## Ownership
+
+Klipper's `square_corner_velocity` is tuned together with input shaping, and
+`minimum_cruise_ratio` belongs to the same printer.cfg motion setup. The shipped
+process profiles therefore leave both to the firmware: `default_jerk` is 0, so no
+`SQUARE_CORNER_VELOCITY` is written and the per-feature jerk values are unused,
+and `accel_to_decel_enable` is off, which is also the option's default. The
+slicer still sets the per-feature acceleration with `SET_VELOCITY_LIMIT ACCEL=`.
+
+A user preset or project that sets a non-zero `default_jerk` or enables
+`accel_to_decel_enable` keeps sending these values; nothing is reinterpreted on
+load. Calibration prints that sweep the corner velocity set it explicitly,
+independent of `default_jerk`.
+
 ## Profile Compatibility
 
 The stored keys remain `accel_to_decel_enable` and `accel_to_decel_factor`, so

@@ -18,6 +18,7 @@
 #include "libslic3r/ModelArrange.hpp"
 
 #include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 
 #include "test_helpers.hpp"
 
@@ -999,4 +1000,46 @@ TEST_CASE("Slicer-owned firmware retraction rejects values Klipper refuses", "[G
     config.set_key_value("firmware_owns_retraction", new ConfigOptionBool(true));
     print.apply(model, config);
     CHECK(print.validate().string.empty());
+}
+
+TEST_CASE("Klipper keeps square_corner_velocity and minimum_cruise_ratio by default", "[GCodeWriter][Klipper]")
+{
+    DynamicPrintConfig config = DynamicPrintConfig::full_print_config();
+    config.set_key_value("gcode_flavor", new ConfigOptionEnum<GCodeFlavor>(gcfKlipper));
+    // Per-feature jerk values alone do not hand the corner velocity to the slicer.
+    config.set_key_value("outer_wall_jerk", new ConfigOptionFloatsNullable({7.}));
+    config.set_key_value("travel_jerk", new ConfigOptionFloatsNullable({12.}));
+    const std::string gcode = Slic3r::Test::slice({TestMesh::cube_with_hole}, config);
+    // The slicer still sets the per-feature acceleration.
+    CHECK_THAT(gcode, Catch::Matchers::ContainsSubstring("SET_VELOCITY_LIMIT ACCEL="));
+    CHECK(gcode.find("SQUARE_CORNER_VELOCITY") == std::string::npos);
+    CHECK(gcode.find("MINIMUM_CRUISE_RATIO") == std::string::npos);
+}
+
+TEST_CASE("Shipped process profiles leave the corner velocity and cruise ratio to Klipper", "[GCodeWriter][Klipper][Profiles]")
+{
+    namespace fs = boost::filesystem;
+    std::vector<std::string> offenders;
+    size_t checked = 0;
+    for (fs::directory_iterator vendor(PROFILES_DIR); vendor != fs::directory_iterator(); ++vendor) {
+        const fs::path process_dir = vendor->path() / "process";
+        if (! fs::is_directory(process_dir))
+            continue;
+        for (fs::directory_iterator file(process_dir); file != fs::directory_iterator(); ++file) {
+            if (file->path().extension() != ".json")
+                continue;
+            fs::ifstream stream(file->path());
+            const nlohmann::json profile = nlohmann::json::parse(stream);
+            ++ checked;
+            const auto jerk = profile.find("default_jerk");
+            if (jerk != profile.end() && jerk->is_string() && std::stod(jerk->get<std::string>()) != 0.)
+                offenders.push_back(file->path().string() + ": default_jerk");
+            const auto cruise = profile.find("accel_to_decel_enable");
+            if (cruise != profile.end() && cruise->is_string() && cruise->get<std::string>() != "0")
+                offenders.push_back(file->path().string() + ": accel_to_decel_enable");
+        }
+    }
+    CAPTURE(offenders);
+    REQUIRE(checked > 0);
+    CHECK(offenders.empty());
 }
