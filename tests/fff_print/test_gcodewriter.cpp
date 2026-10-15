@@ -1043,3 +1043,46 @@ TEST_CASE("Shipped process profiles leave the corner velocity and cruise ratio t
     REQUIRE(checked > 0);
     CHECK(offenders.empty());
 }
+
+TEST_CASE("Ironing moves with the top surface acceleration and jerk", "[GCodeWriter][Klipper][Ironing]")
+{
+    DynamicPrintConfig config = DynamicPrintConfig::full_print_config();
+    config.set_deserialize_strict({
+        {"gcode_flavor", "klipper"},
+        {"ironing_type", "top"},
+        {"machine_max_acceleration_extruding", "20000,20000"},
+        {"machine_max_acceleration_x", "20000,20000"},
+        {"machine_max_acceleration_y", "20000,20000"},
+        {"machine_max_jerk_x", "20,20"},
+        {"machine_max_jerk_y", "20,20"},
+        {"default_acceleration", "3000"},
+        {"top_surface_acceleration", "1234"},
+        {"default_jerk", "9"},
+        {"infill_jerk", "12"},
+        {"top_surface_jerk", "6"},
+    });
+    const std::string gcode = Slic3r::Test::slice({TestMesh::cube_with_hole}, config);
+
+    std::string type, accel, scv;
+    int ironing_moves = 0;
+    std::istringstream stream(gcode);
+    std::string line;
+    while (std::getline(stream, line)) {
+        if (line.rfind(";TYPE:", 0) == 0) {
+            type = line.substr(6);
+        } else if (line.rfind("SET_VELOCITY_LIMIT", 0) == 0) {
+            auto value = [&line](const std::string &name, std::string &out) {
+                const auto pos = line.find(" " + name + "=");
+                if (pos != std::string::npos)
+                    out = line.substr(pos + name.size() + 2, line.find_first_of(" ;", pos + 1) - pos - name.size() - 2);
+            };
+            value("ACCEL", accel);
+            value("SQUARE_CORNER_VELOCITY", scv);
+        } else if (type == "Ironing" && line.rfind("G1 X", 0) == 0 && line.find(" E") != std::string::npos) {
+            ++ ironing_moves;
+            CHECK(accel == "1234");
+            CHECK(scv == "6");
+        }
+    }
+    REQUIRE(ironing_moves > 0);
+}

@@ -7908,7 +7908,8 @@ std::string GCode::_extrude(const ExtrusionPath &path, std::string description, 
             acceleration = NOZZLE_CONFIG(outer_wall_acceleration);
         } else if (NOZZLE_CONFIG(inner_wall_acceleration) > 0 && is_internal_perimeter(path.role())) {
             acceleration = NOZZLE_CONFIG(inner_wall_acceleration);
-        } else if (NOZZLE_CONFIG(top_surface_acceleration) > 0 && is_top_surface(path.role())) {
+        } else if (NOZZLE_CONFIG(top_surface_acceleration) > 0 && (is_top_surface(path.role()) || path.role() == erIroning)) {
+            // Ironing retraces the top surface and moves like it.
             acceleration = NOZZLE_CONFIG(top_surface_acceleration);
         } else {
             acceleration = NOZZLE_CONFIG(default_acceleration);
@@ -7924,7 +7925,7 @@ std::string GCode::_extrude(const ExtrusionPath &path, std::string description, 
              jerk = NOZZLE_CONFIG(outer_wall_jerk);
         } else if (NOZZLE_CONFIG(inner_wall_jerk) > 0 && is_internal_perimeter(path.role())) {
             jerk = NOZZLE_CONFIG(inner_wall_jerk);
-        } else if (NOZZLE_CONFIG(top_surface_jerk) > 0 && is_top_surface(path.role())) {
+        } else if (NOZZLE_CONFIG(top_surface_jerk) > 0 && (is_top_surface(path.role()) || path.role() == erIroning)) {
             jerk = NOZZLE_CONFIG(top_surface_jerk);
         } else if (NOZZLE_CONFIG(infill_jerk) > 0 && is_infill(path.role())) {
             jerk = NOZZLE_CONFIG(infill_jerk);
