@@ -2708,8 +2708,8 @@ namespace DoExport {
     static void init_gcode_processor(const PrintConfig& config, GCodeProcessor& processor, bool& silent_time_estimator_enabled,
                                      const std::shared_ptr<MultiNozzleUtils::NozzleGroupResultBase>& nozzle_group_result = nullptr)
     {
-        silent_time_estimator_enabled = (config.gcode_flavor == gcfMarlinLegacy || config.gcode_flavor == gcfMarlinFirmware)
-                                        && config.silent_mode;
+        // The stealth-mode estimate models Marlin's silent machine limits; Klipper has none.
+        silent_time_estimator_enabled = false;
         processor.reset();
         // Slot-resolution context for the streaming replay (reset() just cleared it). This is NOT
         // the post-stream result-field handover at the end of do_export, which gates the richer
@@ -3446,12 +3446,11 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
         if (probe_count_x * probe_count_y <= 6) { // lagrange needs up to a total of 6 mesh points
             bed_mesh_algo = "lagrange";
         }
-        else
-            if(print.config().gcode_flavor == gcfKlipper){
-              // bicubic needs 4 probe points per axis
-              probe_count_x = std::max(probe_count_x,4);
-              probe_count_y = std::max(probe_count_y,4);
-            }
+        else {
+            // bicubic needs 4 probe points per axis
+            probe_count_x = std::max(probe_count_x,4);
+            probe_count_y = std::max(probe_count_y,4);
+        }
         this->placeholder_parser().set("bed_mesh_probe_count", new ConfigOptionInts({probe_count_x, probe_count_y}));
         this->placeholder_parser().set("bed_mesh_algo", bed_mesh_algo);
         // get center without wipe tower
@@ -3676,12 +3675,9 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
 
     // Klipper: the layer count and the current layer for print_stats, so Moonraker clients can show
     // layer progress. Each is written only when the user's G-code does not report it already.
-    const bool is_klipper = print.config().gcode_flavor.value == gcfKlipper;
-    m_report_current_layer = is_klipper && !custom_gcode_sets_print_stats_info(print.config(), "CURRENT_LAYER");
-    if (is_klipper && !custom_gcode_sets_print_stats_info(print.config(), "TOTAL_LAYER"))
+    m_report_current_layer = !custom_gcode_sets_print_stats_info(print.config(), "CURRENT_LAYER");
+    if (!custom_gcode_sets_print_stats_info(print.config(), "TOTAL_LAYER"))
         file.write_format("SET_PRINT_STATS_INFO TOTAL_LAYER=%u\n", m_layer_count);
-
-    // Emit machine envelope limits for the Marlin firmware.
 
     // Disable fan.
     if (m_config.auxiliary_fan.value && print.config().close_fan_the_first_x_layers.get_at(initial_extruder_id)) {
@@ -3691,12 +3687,7 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
     }
 
     std::string machine_start_gcode = this->placeholder_parser_process("machine_start_gcode", print.config().machine_start_gcode.value, initial_extruder_id);
-    if (print.config().gcode_flavor != gcfKlipper) {
-        // Set bed temperature if the start G-code does not contain any bed temp control G-codes.
-        this->_print_first_layer_bed_temperature(file, print, machine_start_gcode, initial_extruder_id, true);
-        // Set extruder(s) temperature before and after start G-code.
-        this->_print_first_layer_extruder_temperatures(file, print, machine_start_gcode, initial_extruder_id, false);
-    }
+    // Klipper heats in the start G-code (PRINT_START), so no temperature commands are added before it.
 
     // adds tag for processor
     file.write_format(";%s%s\n", GCodeProcessor::reserved_tag(GCodeProcessor::ETags::Role).c_str(), ExtrusionEntity::role_to_string(erCustom).c_str());
@@ -3945,28 +3936,11 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
                     bbox_prime.offset(0.5f);
                     bool overlap = bbox_prime.overlap(bbox_print);
 
-                    if (print.config().gcode_flavor == gcfMarlinLegacy || print.config().gcode_flavor == gcfMarlinFirmware) {
-                        file.write(this->retract());
-                        file.write("M300 S800 P500\n"); // Beep for 500ms, tone 800Hz.
-                        if (overlap) {
-                            // Wait for the user to remove the priming extrusions.
-                            file.write("M1 Remove priming towers and click button.\n");
-                        } else {
-                            // Just wait for a bit to let the user check, that the priming succeeded.
-                            //TODO Add a message explaining what the printer is waiting for. This needs a firmware fix.
-                            file.write("M1 S10\n");
-                        }
-                    }
-                    else {
-                        // This is not Marlin, M1 command is probably not supported.
-                        if (overlap) {
-                           print.active_step_add_warning(PrintStateBase::WarningLevel::CRITICAL,
-                               _(L("Your print is very close to the priming regions. "
-                                 "Make sure there is no collision.")));
-                        } else {
-                           // Just continue printing, no action necessary.
-                        }
-                    }
+                    // Klipper has no M1 to wait for the user to remove the priming extrusions.
+                    if (overlap)
+                        print.active_step_add_warning(PrintStateBase::WarningLevel::CRITICAL,
+                            _(L("Your print is very close to the priming regions. "
+                                "Make sure there is no collision.")));
                 }
                 print.throw_if_canceled();
             }
@@ -4596,8 +4570,7 @@ void GCode::_print_first_layer_extruder_temperatures(GCodeOutputStream &file, Pr
 {
     // Is the bed temperature set by the provided custom G-code?
     int  temp_by_gcode = -1;
-    bool include_g10   = print.config().gcode_flavor == gcfRepRapFirmware;
-    if (custom_gcode_sets_temperature(gcode, 104, 109, include_g10, temp_by_gcode)) {
+    if (custom_gcode_sets_temperature(gcode, 104, 109, false, temp_by_gcode)) {
         // Set the extruder temperature at m_writer, but throw away the generated G-code as it will be written with the custom G-code.
         int temp = print.config().nozzle_temperature_initial_layer.get_at(get_filament_config_index((int)first_printing_extruder_id));
         if (temp_by_gcode >= 0 && temp_by_gcode < 1000)
@@ -6283,17 +6256,9 @@ LayerResult GCode::process_layer(
                              std::to_string(inst.id) + "\n";
                 }
                 // exclude objects
-                if (m_enable_exclude_object) {
-                    const auto gflavor = print.config().gcode_flavor.value;
-                    if (gflavor == gcfKlipper) {
-                        m_writer.set_object_start_str(std::string("EXCLUDE_OBJECT_START NAME=") +
-                                                      get_instance_name(&instance_to_print.print_object, inst.id) + "\n");
-                    }
-                    else if (gflavor == gcfMarlinLegacy || gflavor == gcfMarlinFirmware || gflavor == gcfRepRapFirmware) {
-                        std::string str = std::string("M486 S") + std::to_string(inst.unique_id) + "\n";
-                        m_writer.set_object_start_str(str);
-                    }
-                }
+                if (m_enable_exclude_object)
+                    m_writer.set_object_start_str(std::string("EXCLUDE_OBJECT_START NAME=") +
+                                                  get_instance_name(&instance_to_print.print_object, inst.id) + "\n");
 
                 // Orca(#7946): set current obj regardless of the `enable_overhang_speed` value, because
                 // `enable_overhang_speed` is a PrintRegionConfig and here we don't have a region yet.
@@ -6427,13 +6392,8 @@ LayerResult GCode::process_layer(
                 if (!m_writer.is_object_start_str_empty()) {
                     m_writer.set_object_start_str("");
                 } else if (m_enable_exclude_object) {
-                    const auto gflavor = print.config().gcode_flavor.value;
-                    if (gflavor == gcfKlipper) {
-                        m_writer.set_object_end_str(std::string("EXCLUDE_OBJECT_END NAME=") +
-                                                    get_instance_name(&instance_to_print.print_object, inst.id) + "\n");
-                    } else if (gflavor == gcfMarlinLegacy || gflavor == gcfMarlinFirmware || gflavor == gcfRepRapFirmware) {
-                        m_writer.set_object_end_str(std::string("M486 S-1\n"));
-                    }
+                    m_writer.set_object_end_str(std::string("EXCLUDE_OBJECT_END NAME=") +
+                                                get_instance_name(&instance_to_print.print_object, inst.id) + "\n");
                 }
             }
         }
@@ -6494,15 +6454,9 @@ LayerResult GCode::process_layer(
                              " id:" + std::to_string(instance_to_print.print_object.get_id()) + " copy " +
                              std::to_string(inst.id) + "\n";
                 }
-                if (m_enable_exclude_object) {
-                    const auto gflavor = print.config().gcode_flavor.value;
-                    if (gflavor == gcfKlipper) {
-                        m_writer.set_object_start_str(std::string("EXCLUDE_OBJECT_START NAME=") +
-                                                      get_instance_name(&instance_to_print.print_object, inst.id) + "\n");
-                    } else if (gflavor == gcfMarlinLegacy || gflavor == gcfMarlinFirmware || gflavor == gcfRepRapFirmware) {
-                        m_writer.set_object_start_str(std::string("M486 S") + std::to_string(inst.unique_id) + "\n");
-                    }
-                }
+                if (m_enable_exclude_object)
+                    m_writer.set_object_start_str(std::string("EXCLUDE_OBJECT_START NAME=") +
+                                                  get_instance_name(&instance_to_print.print_object, inst.id) + "\n");
 
                 m_extrusion_quality_estimator.set_current_object(&instance_to_print.print_object);
 
@@ -6715,13 +6669,8 @@ LayerResult GCode::process_layer(
                 if (!m_writer.is_object_start_str_empty()) {
                     m_writer.set_object_start_str("");
                 } else if (m_enable_exclude_object) {
-                    const auto gflavor = print.config().gcode_flavor.value;
-                    if (gflavor == gcfKlipper) {
-                        m_writer.set_object_end_str(std::string("EXCLUDE_OBJECT_END NAME=") +
-                                                    get_instance_name(&instance_to_print.print_object, inst.id) + "\n");
-                    } else if (gflavor == gcfMarlinLegacy || gflavor == gcfMarlinFirmware || gflavor == gcfRepRapFirmware) {
-                        m_writer.set_object_end_str(std::string("M486 S-1\n"));
-                    }
+                    m_writer.set_object_end_str(std::string("EXCLUDE_OBJECT_END NAME=") +
+                                                get_instance_name(&instance_to_print.print_object, inst.id) + "\n");
                 }
             }
 
@@ -9642,9 +9591,6 @@ inline std::string polygon_to_string(const Polygon &polygon, Print *print, bool 
 // this function iterator PrintObject and assign a seqential id to each object.
 // this id is used to generate unique object id for each object.
 std::string GCode::set_object_info(Print *print) {
-    const auto gflavor = print->config().gcode_flavor.value;
-    if (gflavor != gcfKlipper && gflavor != gcfMarlinLegacy && gflavor != gcfMarlinFirmware && gflavor != gcfRepRapFirmware)
-        return "";
     std::ostringstream gcode;
     size_t object_id = 0;
     // Orca: check if we are in pa calib mode
@@ -9672,18 +9618,8 @@ std::string GCode::set_object_info(Print *print) {
                 auto bbox      = inst.get_bounding_box();
                 auto center    = print->translate_to_print_space(Vec2d(bbox.center().x(), bbox.center().y()));
                 auto inst_name = get_instance_name(object, inst);
-                if (gflavor == gcfKlipper) {
-                    gcode << "EXCLUDE_OBJECT_DEFINE NAME=" << inst_name << " CENTER=" << center.x() << "," << center.y()
-                          << " POLYGON=" << polygon_to_string(inst.get_convex_hull_2d(), print) << "\n";
-                } else if (gflavor == gcfMarlinLegacy || gflavor == gcfMarlinFirmware || gflavor == gcfRepRapFirmware) {
-                    gcode << "M486 S" << std::to_string(inst.unique_id);
-                    if (gflavor == gcfRepRapFirmware)
-                        gcode << " A"
-                              << "\"" << inst_name << "\"";
-                    else
-                        gcode << "\nM486 A" << inst_name;
-                    gcode << "\nM486 S-1\n";
-                }
+                gcode << "EXCLUDE_OBJECT_DEFINE NAME=" << inst_name << " CENTER=" << center.x() << "," << center.y()
+                      << " POLYGON=" << polygon_to_string(inst.get_convex_hull_2d(), print) << "\n";
             }
         }
     }

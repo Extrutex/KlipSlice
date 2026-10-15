@@ -656,10 +656,10 @@ TEST_CASE("Toolchange temperature commands are unchanged when the wipe tower wai
             { "nozzle_temperature",                     "240,240" },
             { "wait_for_temp_on_wipe_tower",            0 },
         });
-    // The golden trace was captured under main's default flavor, legacy Marlin. The config now
-    // defaults to Klipper, which skips the start-of-print temperature block, so pin the flavor
-    // the golden was recorded with. Set as an enum: handle_legacy() maps the "marlin" string to
-    // "klipper".
+    // The golden trace was captured under main's default flavor, legacy Marlin. The G-code
+    // generator writes Klipper whatever the flavor says, but the time estimator still models the
+    // configured flavor, so pin the one the golden's leads were estimated with. Set as an enum:
+    // handle_legacy() maps the "marlin" string to "klipper".
     config.set_key_value("gcode_flavor", new ConfigOptionEnum<GCodeFlavor>(gcfMarlinLegacy));
     const std::string gcode = slice_with_object_overrides(
         { make_cube(20., 20., 5.), make_cube(20., 20., 5.) },
@@ -704,6 +704,12 @@ TEST_CASE("Toolchange temperature commands are unchanged when the wipe tower wai
                 golden.push_back(std::move(line));
         }
     }
+    // main wrote a start-of-print temperature block ahead of the start G-code. Klipper heats in
+    // PRINT_START, so that block is never written; compare from the priming onwards.
+    const auto priming = std::find_if(golden.begin(), golden.end(),
+        [](const std::string &entry) { return entry.find("; CP PRIMING START") != std::string::npos; });
+    REQUIRE(priming != golden.end());
+    golden.erase(golden.begin(), priming);
     REQUIRE(!golden.empty());
 
     // Reported separately from the golden comparison below: it is a different failure.
@@ -770,7 +776,8 @@ TEST_CASE("Each filament prints with its variant of the extruder's variant strin
             { "filament_extruder_variant",        "Direct Drive Standard;Direct Drive High Flow;Direct Drive Standard" },
             { "filament_self_index",              "1,1,2" },
             { "nozzle_temperature",               "211,239,223" },
-            { "nozzle_temperature_initial_layer", "211,239,223" },
+            // 5 above, so the first-to-second layer change writes the variant's temperature
+            { "nozzle_temperature_initial_layer", "216,244,228" },
             { "sparse_infill_filament_id",        filament },
             { "internal_solid_filament_id",       filament },
             { "top_surface_filament_id",          filament },
@@ -784,10 +791,6 @@ TEST_CASE("Each filament prints with its variant of the extruder's variant strin
             { "machine_start_gcode",              "; start temperature {nozzle_temperature_initial_layer[initial_extruder]}" },
         });
         config.option<ConfigOptionEnumsGeneric>("nozzle_volume_type", true)->values = { nozzle_volume_type };
-        // The temperatures are read from the start-of-print block, which the Klipper default
-        // leaves to the start macro. Pin the legacy Marlin flavor this test was written against
-        // (as an enum: handle_legacy() maps the "marlin" string to "klipper").
-        config.set_key_value("gcode_flavor", new ConfigOptionEnum<GCodeFlavor>(gcfMarlinLegacy));
         const std::string gcode = slice({ cube(20) }, config);
 
         std::set<int> temperatures;
@@ -799,8 +802,12 @@ TEST_CASE("Each filament prints with its variant of the extruder's variant strin
             if (s != std::string::npos && std::stoi(line.substr(s + 2)) > 0)
                 temperatures.insert(std::stoi(line.substr(s + 2)));
         }
-        CHECK(temperatures == std::set<int>{ temperature });
-        CHECK(gcode.find("; start temperature " + std::to_string(temperature) + "\n") != std::string::npos);
+        // Only the filament's variant temperatures: its first layer one where a tool change on the
+        // first layer heats it, and the other layers' one from the second layer on.
+        CHECK(temperatures.count(temperature) == 1);
+        for (const int t : temperatures)
+            CHECK((t == temperature || t == temperature + 5));
+        CHECK(gcode.find("; start temperature " + std::to_string(temperature + 5) + "\n") != std::string::npos);
         // The config the slice ran with holds one value per filament, as the readers that index
         // it by filament (the wipe tower, the filament compatibility check) expect.
         CHECK(gcode.find("; nozzle_temperature = " + resolved + "\n") != std::string::npos);
